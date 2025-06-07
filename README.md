@@ -8,3 +8,5 @@ ADMIN - Marketplace - OK
 Visao do Seller - Pendente
 Visao do Marketplace - Pendente
 
+
+Componentes que faltam - checkout estilo stripe
