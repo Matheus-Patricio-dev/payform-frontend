@@ -29,7 +29,6 @@ interface SellerFormData {
   email: string;
   password: string;
   confirmpassword: string;
-
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -117,7 +116,7 @@ const MarketplaceList: React.FC = () => {
     });
   }, [marketplaces, searchTerm, statusFilter]);
 
-  if (loading) return <div>Carregando...</div>;
+  // if (loading) return <div>Carregando...</div>;
 
   const totalPages = Math.ceil(filteredMarketplaces.length / ITEMS_PER_PAGE);
   const paginatedMarketplaces = filteredMarketplaces.slice(

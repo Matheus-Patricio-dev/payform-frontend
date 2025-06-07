@@ -18,6 +18,7 @@ interface SellerFormData {
   nome: string;
   email: string;
   password: string;
+  confirmpassword:string;
   marketplaceId: string;
 }
 
@@ -38,13 +39,15 @@ const SellerList: React.FC = () => {
     nome: '',
     email: '',
     password: '',
+    confirmpassword:'',
+    marketplaceId: ''
   });
   const [marketplaces, setSellerList] = useState<[]>([]);
   const [sellers, setSellers] = useState<[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   
-  // Função para buscar marketplaces
-  const fetchMarketplaces = async (onDelete: boolean) => {
+  // Função para buscar sellers
+  const fetchSellers = async (onDelete: boolean) => {
     if (onDelete) {
       setLoading(true);
     }
@@ -62,8 +65,8 @@ const SellerList: React.FC = () => {
     }
   };
 
-  // Função para buscar Sellers
-  const fetchSellersList = async () => {
+  // Função para buscar marketplaces
+  const fetchMarketplaces = async () => {
     // setIsViewSellersModalOpen(true);
     try {
       const response = await api.get(`/marketplaces`);
@@ -75,11 +78,10 @@ const SellerList: React.FC = () => {
     }
   };
   // Chama ao montar o componente
-  useEffect(() => {
-    const onDelete = true;
-    fetchMarketplaces(onDelete);
-    fetchSellersList()
-  }, []);
+useEffect(() => {
+  fetchSellers(false);
+  fetchMarketplaces();
+}, []);
 
 
   const filteredSellers = useMemo(() => {
@@ -104,21 +106,83 @@ const SellerList: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handleAddSeller = () => {
-    try {
-      if (!formData.id.trim()) {
-        toast.error('ID do vendedor é obrigatório');
-        return;
-      }
-
-      addSeller(formData);
-      setIsAddModalOpen(false);
-      setFormData({ id: '', nome: '', email: '', password: '', marketplaceId: ''});
-      toast.success('Vendedor adicionado com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao adicionar vendedor');
+const handleAddSeller = async () => {
+  try {
+    if (!formData.id.trim()) {
+      toast.error('ID do vendedor é obrigatório');
+      return;
     }
-  };
+    
+    if ([undefined, '', null].includes(formData.marketplaceId)) {
+      toast.error("Selecione o Marketplace!")
+      return
+    }
+
+    if (!formData.nome || !formData.email || !formData.password || !formData.confirmpassword || !formData.marketplaceId) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (formData.password !== formData.confirmpassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    const payload = {
+      id_seller: formData.id,
+      nome: formData.nome,
+      email: formData.email,
+      password: formData.password,
+      confirmpassword: formData.confirmpassword,
+      marketplaceId: formData.marketplaceId
+    };
+
+    setLoading(true);
+    const response = await api.post('/register-seller', payload);
+    if (response.status === 201) {
+      toast.success('Vendedor adicionado com sucesso!');
+      setIsAddModalOpen(false);
+      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
+      await fetchSellers(true); // Atualiza lista
+    } else {
+      toast.error(response.data?.error || 'Erro ao adicionar vendedor');
+    }
+  } catch (error: any) {
+    toast.error(error?.response?.data?.error || 'Erro inesperado ao adicionar vendedor');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
+  //REMOVE SELLER NA PAGINA DE SELLER
+const handleRemoveSeller = async (id: string, id_cliente: string) => {
+  if (!id || !id_cliente) {
+    toast.error("IDs inválidos.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    const response = await api.delete(`/marketplace-seller/${id}/${id_cliente}`);
+    
+    console.log(response)
+    if (response?.data.dados === true) {
+      toast.success('Vendedor removido com sucesso!');
+      const onDelete = false
+      await fetchSellers(onDelete); // atualiza a lista
+    } else {
+      toast.error('Erro ao remover vendedor.');
+    }
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleEditSeller = async (id: string) => {
     try {
@@ -136,6 +200,7 @@ const SellerList: React.FC = () => {
       toast.error('Erro ao atualizar vendedor');
     }
   };
+  // console.log('Marketplaces:', marketplaces);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -175,8 +240,8 @@ const SellerList: React.FC = () => {
                 options={[
                   { value: 'all', label: 'Todos os Marketplaces' },
                   ...marketplaces.map(m => ({
-                    value: m.id,
-                    label: m.name
+                    value: m.cliente.id,
+                    label: m.cliente.nome
                   }))
                 ]}
                 value={marketplaceFilter}
@@ -195,7 +260,7 @@ const SellerList: React.FC = () => {
                       <tr className="border-b">
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Email</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Marketplace</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">MarketplaceId</th>
                         <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
                       </tr>
                     </thead>
@@ -216,7 +281,7 @@ const SellerList: React.FC = () => {
                             <td className="py-4 px-6">
                               <div className="flex items-center">
                                 <Building2 className="h-4 w-4 text-gray-400 mr-1" />
-                                {seller?.cliente?.marketplaceId || 'Não associado'}
+                                {seller?.marketplaceId || 'Não associado'}
                               </div>
                             </td>
                             <td className="py-4 px-6">
@@ -254,7 +319,7 @@ const SellerList: React.FC = () => {
                                   variant="outline"
                                   size="sm"
                                   className="text-error"
-                                  onClick={() => removeSeller(seller.id)}
+                                  onClick={() => handleRemoveSeller(seller.id, seller.cliente.id)}
                                   icon={<Trash2 className="h-4 w-4" />}
                                 >
                                   Remover
@@ -325,11 +390,26 @@ const SellerList: React.FC = () => {
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
+          <Input
+            label="Confirme a senha"
+            type="password"
+            value={formData.confirmpassword}
+            onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
+          />
           <Select
             label="Marketplace"
-            options={marketplaces.map(m => ({ value: m.id, label: m.cliente.nome }))}
+             options={[
+              { value: '', label: 'Selecione um marketplace' },
+              ...marketplaces.map(m => ({
+                value: m.id,
+                label: m.cliente.nome
+              }))
+            ]}
             value={formData.marketplaceId}
-            onChange={(e) => setFormData({ ...formData, marketplaceId: e.target.value })}
+            onChange={(e) => {
+              console.log('Select onChange value:', e.target.value);
+              setFormData({ ...formData, marketplaceId: e.target.value });
+            }}
           />
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>

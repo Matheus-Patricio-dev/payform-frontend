@@ -109,7 +109,7 @@ export const getAllSellers = () => {
 export const addSeller = (data: any) => {
   const newSeller: User = {
     id: data.id,
-    name: data.name,
+    nome: data.nome,
     email: data.email,
     type: 'seller',
     marketplaceId: data.marketplaceId,

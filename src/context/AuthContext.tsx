@@ -80,7 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (id: string, nome: string, email: string, password: string, confirmpassword:string, status: string) => {
     setLoading(true);
     setError(null);
-    console.log(signup)
     
     try {
       
