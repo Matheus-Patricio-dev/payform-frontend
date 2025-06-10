@@ -154,8 +154,7 @@ const MarketplaceList: React.FC = () => {
     try {
       if (!selectedMarketplace) return;
       const response = await api.put(`/marketplace/${id}`, { ...formData, password: formData?.password ? formData?.password : null, marketplaceId: formData.id });
-      console.log(response)
-      // updateMarketplace(selectedMarketplace.id, formData);
+
       if (response?.data) {
         setIsEditModalOpen(false);
         setSelectedMarketplace(null);
@@ -369,7 +368,7 @@ const MarketplaceList: React.FC = () => {
                                   size="sm"
                                   onClick={() => {
                                     setSelectedMarketplace(marketplace);
-                                    fetchSellersList(marketplace.id);
+                                    fetchSellersList(marketplace.cliente.id);
                                   }}
                                   icon={<Eye className="h-4 w-4" />}
                                 >
@@ -510,6 +509,7 @@ const MarketplaceList: React.FC = () => {
         title="Editar Marketplace"
       >
         <div className="space-y-4">
+
           <Input
             label="ID do Marketplace"
             value={formData.id}
@@ -631,6 +631,7 @@ const MarketplaceList: React.FC = () => {
                         onClick={() => {
                           setSelectedMarketplace(seller);
                           setIsEditModalOpen(true);
+                          setIsViewSellersModalOpen(false)
                           setFormData({
                             id: seller.id,
                             nome: seller.cliente.nome,

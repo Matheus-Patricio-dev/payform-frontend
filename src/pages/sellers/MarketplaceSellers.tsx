@@ -1,8 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Store, Users, Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getMarketplaceSellers, addSeller, removeSeller, updateSeller } from '../../services/marketplaceService';
+import { getMarketplaceSellers } from '../../services/marketplaceService';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
@@ -10,6 +9,7 @@ import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import Pagination from '../../components/ui/Pagination';
 import toast from 'react-hot-toast';
+import api from '../../api/api';
 
 interface SellerFormData {
   id: string;
@@ -17,9 +17,10 @@ interface SellerFormData {
   email: string;
   password: string;
   confirmpassword: string;
+  marketplaceId: string;
 }
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 10;
 
 const MarketplaceSellers: React.FC = () => {
   const { user, signupSeller } = useAuth();
@@ -29,23 +30,45 @@ const MarketplaceSellers: React.FC = () => {
   const [selectedSeller, setSelectedSeller] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sellersData, setSellersData] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const myMarketplaceId = user?.id;
+
   const [formData, setFormData] = useState<SellerFormData>({
     id: '',
     nome: '',
     email: '',
     password: '',
-    confirmpassword: ''
+    confirmpassword: '',
+    marketplaceId: myMarketplaceId || ''
   });
 
-  const sellers = user?.cargo === 'marketplace' ? getMarketplaceSellers(user.id) : [];
+  const fetchSellers = async () => {
+    try {
+      setLoading(true);
+      if (!myMarketplaceId) return;
+      const response = await api.get(`/marketplace-list-seller/${myMarketplaceId}`);
+      const sellers = response.data?.dados || [];
+      setSellersData(sellers);
+    } catch (error) {
+      console.error("Erro ao buscar sellers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSellers();
+  }, [user]);
 
   const filteredSellers = useMemo(() => {
-    return sellers.filter(seller =>
-      seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      seller.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      seller.id.toLowerCase().includes(searchTerm.toLowerCase())
+    return sellersData.filter(seller =>
+      seller.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      seller.cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      seller.cliente.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [sellers, searchTerm]);
+  }, [sellersData, searchTerm]);
 
   const totalPages = Math.ceil(filteredSellers.length / ITEMS_PER_PAGE);
   const paginatedSellers = filteredSellers.slice(
@@ -60,57 +83,66 @@ const MarketplaceSellers: React.FC = () => {
         toast.error('ID do vendedor é obrigatório');
         return;
       }
-      
-      if (sellers.some(seller => seller.id === formData.id)) {
+
+      if (sellersData.some(seller => seller.cliente.id === formData.id)) {
         toast.error('Este ID já está em uso');
         return;
       }
 
-      await signupSeller( {
+      await signupSeller({
+        id_seller: formData.id,
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password,
+        confirmpassword: formData.confirmpassword,
+        marketplaceId: myMarketplaceId
+      });
 
-          id_seller: formData.id,
-          nome: formData.nome,
-          email: formData.email,
-          password: formData.password,
-          confirmpassword: formData.confirmpassword,
-      }
-      )
-
-      // addSeller(user.id, formData);
-      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: ''});
+      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: myMarketplaceId || '' });
       toast.success('Vendedor adicionado com sucesso!');
       setIsAddModalOpen(false);
+      await fetchSellers();
     } catch (error) {
       toast.error('Erro ao adicionar vendedor');
     }
   };
 
-  const handleEditSeller = () => {
+  const handleEditSeller = async () => {
     try {
       if (!user || !selectedSeller) return;
-      updateSeller(user.id, selectedSeller.id, formData);
+
+      await api.put(`/seller/${selectedSeller.cliente.id}`, {
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password || undefined
+      });
+
+      toast.success('Vendedor atualizado com sucesso!');
+      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: myMarketplaceId || '' });
       setIsEditModalOpen(false);
       setSelectedSeller(null);
-      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword:''});
-      toast.success('Vendedor atualizado com sucesso!');
+      await fetchSellers();
     } catch (error) {
       toast.error('Erro ao atualizar vendedor');
+      console.error(error);
     }
   };
 
-  const handleRemoveSeller = (sellerId: string) => {
+  const handleRemoveSeller = async (sellerId: string, marketplaceId: string) => {
     try {
       if (!user) return;
       if (window.confirm('Tem certeza que deseja remover este vendedor?')) {
-        removeSeller(user.id, sellerId);
+        await api.delete(`/marketplace-seller/${sellerId}/${marketplaceId}`);
         toast.success('Vendedor removido com sucesso!');
+        await fetchSellers();
       }
     } catch (error) {
       toast.error('Erro ao remover vendedor');
+      console.error(error);
     }
   };
 
-  return (
+return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
       
@@ -145,82 +177,62 @@ const MarketplaceSellers: React.FC = () => {
               />
             </div>
 
-            <div className="space-y-4">
-              <div className="overflow-x-auto">
-                <div className="inline-flex gap-4 pb-4">
-                  {paginatedSellers.map((seller) => (
-                    <Card key={seller.id} className="w-[300px] flex-shrink-0">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Store className="h-5 w-5 text-primary mr-2" />
-                            <CardTitle className="text-lg">
-                              {seller.name}
-                              <div className="text-sm font-normal text-gray-500">
-                                ID: {seller.id}
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Email</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID</th>
+                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sellersData.map((seller) => (
+                        <tr key={seller.id} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center">
+                              <Store className="h-5 w-5 text-primary mr-2" />
+                              <div>
+                                <div className="font-medium">{seller.cliente.nome}</div>
                               </div>
-                            </CardTitle>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-sm text-gray-500">Email</p>
-                            <p className="font-medium">{seller.email}</p>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedSeller(seller);
-                                setIsEditModalOpen(true);
-                                setFormData({
-                                  id: seller.id,
-                                  nome: seller.name,
-                                  email: seller.email,
-                                  password: '',
-                                  confirmpassword: '',
-                                  marketplaceId:''
-                                });
-                              }}
-                              icon={<Pencil className="h-4 w-4" />}
-                              fullWidth
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-error"
-                              onClick={() => handleRemoveSeller(seller.id)}
-                              icon={<Trash2 className="h-4 w-4" />}
-                              fullWidth
-                            >
-                              Remover
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">{seller.cliente.email}</td>
+                          <td className="py-4 px-6">
+                            <span className="text-sm text-gray-500">{seller.id}</span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsEditModalOpen(true)}
+                                icon={<Pencil className="h-4 w-4" />}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-error"
+                                onClick={() => handleRemoveSeller(seller.id, seller.cliente.id)}
+                                icon={<Trash2 className="h-4 w-4" />}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
 
-              {filteredSellers.length > ITEMS_PER_PAGE && (
-                <div className="mt-6">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              )}
-
-              {filteredSellers.length === 0 && (
-                <Card>
-                  <CardContent className="p-6 text-center">
+                {filteredSellers.length === 0 && (
+                  <div className="text-center py-12">
                     <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">Nenhum vendedor encontrado</p>
                     <Button
@@ -230,10 +242,20 @@ const MarketplaceSellers: React.FC = () => {
                     >
                       Adicionar Vendedor
                     </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {filteredSellers.length > ITEMS_PER_PAGE && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -270,13 +292,6 @@ const MarketplaceSellers: React.FC = () => {
             type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Confime a senha"
-            type="password"
-            value={formData.confirmpassword}
-            onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
             fullWidth
           />
           <div className="flex justify-end gap-2">
@@ -333,6 +348,7 @@ const MarketplaceSellers: React.FC = () => {
           </div>
         </div>
       </Modal>
+
     </div>
   );
 };

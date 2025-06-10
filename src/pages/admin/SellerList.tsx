@@ -56,6 +56,7 @@ const SellerList: React.FC = () => {
       if (response?.data?.dados) {
         setSellers(response.data.dados);
         console.log(response.data.dados)
+        console.log(sellers)
       }
     } catch (err: unknown) {
       console.log(err);
@@ -72,6 +73,8 @@ const SellerList: React.FC = () => {
       const response = await api.get(`/marketplaces`);
       if (response?.data?.dados) {
         setSellerList(response.data.dados);
+        console.log(response.data.dados)
+
       }
     } catch (err: unknown) {
       console.log(err);
@@ -200,7 +203,6 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
       toast.error('Erro ao atualizar vendedor');
     }
   };
-  // console.log('Marketplaces:', marketplaces);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -281,7 +283,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
                             <td className="py-4 px-6">
                               <div className="flex items-center">
                                 <Building2 className="h-4 w-4 text-gray-400 mr-1" />
-                                {seller?.marketplaceId || 'Não associado'}
+                                {seller?.marketplaceId|| 'Não associado'}
                               </div>
                             </td>
                             <td className="py-4 px-6">
@@ -401,7 +403,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
              options={[
               { value: '', label: 'Selecione um marketplace' },
               ...marketplaces.map(m => ({
-                value: m.id,
+                value: m.cliente_id,
                 label: m.cliente.nome
               }))
             ]}
@@ -430,6 +432,11 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
       >
         <div className="space-y-4">
           <Input
+            label="ID"
+            value={formData.id}
+            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+          />
+          <Input
             label="Nome"
             value={formData.nome}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -438,6 +445,13 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
             label="Email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          />
+          <Input
+            label="Nova Senha (opcional)"
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            fullWidth
           />
           <Select
             label="Marketplace"

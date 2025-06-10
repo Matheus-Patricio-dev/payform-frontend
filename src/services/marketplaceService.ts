@@ -1,3 +1,4 @@
+import api from '../api/api';
 import { User } from '../types';
 
 interface MarketplaceProfile {
@@ -105,13 +106,10 @@ export const updateSeller = (marketplaceId: string, sellerId: string, sellerData
   return marketplace.sellers[sellerIndex];
 };
 
-export const removeSeller = (marketplaceId: string, sellerId: string) => {
-  const marketplace = getMarketplaceProfile(marketplaceId);
-  if (!marketplace) return;
+// export const removeSeller = async (sellerId: string, clienteId: string) => {
+//   return await api.delete(`/marketplace-seller/${sellerId}/${clienteId}`);
+// };
 
-  marketplace.sellers = marketplace.sellers.filter(s => s.id !== sellerId);
-  saveData();
-};
 
 export const updateBrandingSettings = (marketplaceId: string, settings: any) => {
   const marketplace = getMarketplaceProfile(marketplaceId);

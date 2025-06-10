@@ -60,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
 
     try {
-      console.log(email, password)
       const response = await api.post('/login', { email, password });
 
       const { user, token } = response.data;
@@ -147,8 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     confirmpassword: string;
   }
   ) => {
-
-    const marketplaceId = user?.marketplaceId;
+    let marketplaceId = user?.marketplaceId
+    if (user?.cargo === 'marketplace') {
+      marketplaceId = user?.id;
+    }
     
     if (!marketplaceId) {
       throw new Error("ID do marketplace não encontrado. Faça login novamente.");
