@@ -120,6 +120,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
         }
       ]
     });
+  } else if (user?.cargo === 'seller') {
+    menuItems.push({
+      title: 'Configurações',
+      items: [
+        {
+          label: 'Configurações',
+          icon: <Settings className="h-5 w-5" />,
+          path: '/settings'
+        }
+      ]
+    })
   }
 
   return (

@@ -33,7 +33,7 @@ const MarketplaceSellers: React.FC = () => {
   const [sellersData, setSellersData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const myMarketplaceId = user?.id;
+  const myMarketplaceId = user?.dataInfo?.id
 
   const [formData, setFormData] = useState<SellerFormData>({
     id: '',
@@ -41,7 +41,7 @@ const MarketplaceSellers: React.FC = () => {
     email: '',
     password: '',
     confirmpassword: '',
-    marketplaceId: myMarketplaceId || ''
+    marketplaceId: myMarketplaceId,
   });
 
   const fetchSellers = async () => {
@@ -95,10 +95,10 @@ const MarketplaceSellers: React.FC = () => {
         email: formData.email,
         password: formData.password,
         confirmpassword: formData.confirmpassword,
-        marketplaceId: myMarketplaceId
+        marketplaceId: formData.marketplaceId
       });
 
-      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: myMarketplaceId || '' });
+      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
       toast.success('Vendedor adicionado com sucesso!');
       setIsAddModalOpen(false);
       await fetchSellers();
@@ -107,32 +107,38 @@ const MarketplaceSellers: React.FC = () => {
     }
   };
 
-  const handleEditSeller = async () => {
+  const handleEditSeller = async (id_seller:string) => {
     try {
+      console.log(id_seller)
       if (!user || !selectedSeller) return;
 
-      await api.put(`/seller/${selectedSeller.cliente.id}`, {
+      const response = await api.put(`/seller/${id_seller}`, {
         nome: formData.nome,
         email: formData.email,
-        password: formData.password || undefined
+        password: formData.password || null,
+        marketplaceId: myMarketplaceId
       });
+      console.log(response)
 
-      toast.success('Vendedor atualizado com sucesso!');
-      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: myMarketplaceId || '' });
-      setIsEditModalOpen(false);
-      setSelectedSeller(null);
-      await fetchSellers();
+      if(response.data) {     
+        toast.success('Vendedor atualizado com sucesso!');
+        setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
+        setIsEditModalOpen(false);
+        setSelectedSeller(null);
+        await fetchSellers();
+      }
+
     } catch (error) {
       toast.error('Erro ao atualizar vendedor');
       console.error(error);
     }
   };
 
-  const handleRemoveSeller = async (sellerId: string, marketplaceId: string) => {
+  const handleRemoveSeller = async (id: string, id_cliente: string) => {
     try {
       if (!user) return;
       if (window.confirm('Tem certeza que deseja remover este vendedor?')) {
-        await api.delete(`/marketplace-seller/${sellerId}/${marketplaceId}`);
+        const response = await api.delete(`/marketplace-seller-remove/${id}/${id_cliente}`);
         toast.success('Vendedor removido com sucesso!');
         await fetchSellers();
       }
@@ -160,7 +166,7 @@ return (
                 onClick={() => setIsAddModalOpen(true)}
                 icon={<Plus className="h-4 w-4" />}
               >
-                Adicionar Vendedor
+                Adicionar 
               </Button>
             </div>
 
@@ -186,7 +192,7 @@ return (
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Email</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID</th>
-                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
+                        <th className="text-center py-4 px-6 bg-gray-50 font-medium">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -202,14 +208,14 @@ return (
                           </td>
                           <td className="py-4 px-6">{seller.cliente.email}</td>
                           <td className="py-4 px-6">
-                            <span className="text-sm text-gray-500">{seller.id}</span>
+                            <span className="text-sm text-gray-500">{seller.cliente.id}</span>
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex items-center justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setIsEditModalOpen(true)}
+                                onClick={() => {setIsEditModalOpen(true), setSelectedSeller(seller)}}
                                 icon={<Pencil className="h-4 w-4" />}
                               >
                                 Editar
@@ -218,7 +224,7 @@ return (
                                 variant="outline"
                                 size="sm"
                                 className="text-error"
-                                onClick={() => handleRemoveSeller(seller.id, seller.cliente.id)}
+                                onClick={() => handleRemoveSeller(seller.id, seller.cliente)}
                                 icon={<Trash2 className="h-4 w-4" />}
                               >
                                 Excluir
@@ -294,6 +300,13 @@ return (
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             fullWidth
           />
+          <Input
+            label="Confirme a senha"
+            type="password"
+            value={formData.confirmpassword}
+            onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
+            fullWidth
+          />
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancelar
@@ -312,12 +325,6 @@ return (
         title="Editar Vendedor"
       >
         <div className="space-y-4">
-          <Input
-            label="ID do Vendedor"
-            value={formData.id}
-            disabled
-            fullWidth
-          />
           <Input
             label="Nome"
             value={formData.nome}
@@ -342,7 +349,7 @@ return (
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleEditSeller}>
+            <Button onClick={() => handleEditSeller(selectedSeller?.id)}>
               Salvar
             </Button>
           </div>

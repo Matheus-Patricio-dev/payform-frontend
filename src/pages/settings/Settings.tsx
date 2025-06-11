@@ -37,14 +37,14 @@ const Settings: React.FC = () => {
                   <CardHeader>
                     <div className="flex items-center">
                       <User className="h-5 w-5 text-primary mr-2" />
-                      <CardTitle>Perfil</CardTitle>
+                      <CardTitle>Perfil e configurações</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <form className="space-y-4">
                       <Input
                         label="Nome Completo"
-                        defaultValue={user?.name}
+                        defaultValue={user?.nome}
                         fullWidth
                       />
                       <Input
@@ -53,6 +53,25 @@ const Settings: React.FC = () => {
                         defaultValue={user?.email}
                         fullWidth
                       />
+                      <div>
+                        <form className="space-y-4">
+                          <Input
+                            type="password"
+                            label="Senha Atual"
+                            fullWidth
+                          />
+                          <Input
+                            type="password"
+                            label="Nova Senha"
+                            fullWidth
+                          />
+                          <Input
+                            type="password"
+                            label="Confirmar Nova Senha"
+                            fullWidth
+                          />
+                        </form>
+                      </div>
                       <Button>Atualizar Perfil</Button>
                     </form>
                   </CardContent>
@@ -83,64 +102,6 @@ const Settings: React.FC = () => {
                           <input type="checkbox" className="sr-only peer" defaultChecked />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium">Notificações por SMS</h3>
-                          <p className="text-sm text-gray-500">Receba alertas por SMS sobre atualizações de pagamento</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Security Settings */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center">
-                      <Shield className="h-5 w-5 text-primary mr-2" />
-                      <CardTitle>Segurança</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-medium mb-2">Alterar Senha</h3>
-                        <form className="space-y-4">
-                          <Input
-                            type="password"
-                            label="Senha Atual"
-                            fullWidth
-                          />
-                          <Input
-                            type="password"
-                            label="Nova Senha"
-                            fullWidth
-                          />
-                          <Input
-                            type="password"
-                            label="Confirmar Nova Senha"
-                            fullWidth
-                          />
-                          <Button>Atualizar Senha</Button>
-                        </form>
-                      </div>
-                      
-                      <div className="pt-4 border-t">
-                        <h3 className="font-medium mb-2">Autenticação em Dois Fatores</h3>
-                        <p className="text-sm text-gray-500 mb-4">Adicione uma camada extra de segurança à sua conta</p>
-                        <Button variant="outline">Ativar 2FA</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -185,11 +146,11 @@ const Settings: React.FC = () => {
                         </div>
                       </div>
                       
-                      <div className="pt-4 border-t">
+                      {/* <div className="pt-4 border-t">
                         <h3 className="font-medium mb-2">Gateway de Pagamento</h3>
                         <p className="text-sm text-gray-500 mb-4">Configure suas configurações de gateway de pagamento</p>
                         <Button variant="outline">Configurar Gateway</Button>
-                      </div>
+                      </div> */}
                     </div>
                   </CardContent>
                 </Card>

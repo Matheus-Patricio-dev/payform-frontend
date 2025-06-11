@@ -363,17 +363,17 @@ const MarketplaceList: React.FC = () => {
                                 >
                                   Adicionar Vendedor
                                 </Button>
-                                <Button
+                                {/* <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
                                     setSelectedMarketplace(marketplace);
-                                    fetchSellersList(marketplace.cliente.id);
+                                    fetchSellersList(marketplace.id);
                                   }}
                                   icon={<Eye className="h-4 w-4" />}
                                 >
                                   Ver Vendedores
-                                </Button>
+                                </Button> */}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -502,11 +502,11 @@ const MarketplaceList: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Edit Marketplace Modal */}
+      {/* Edit Seller Modal
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Editar Marketplace"
+        title="Editar vendedor"
       >
         <div className="space-y-4">
 
@@ -555,7 +555,7 @@ const MarketplaceList: React.FC = () => {
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal> */}
 
       {/* Add Seller Modal */}
       <Modal

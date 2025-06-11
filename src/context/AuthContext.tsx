@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/login', { email, password });
 
       const { user, token } = response.data;
+      console.log(user)
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
@@ -148,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     let marketplaceId = user?.marketplaceId
     if (user?.cargo === 'marketplace') {
-      marketplaceId = user?.id;
+      marketplaceId = user?.dataInfo.id;
     }
     
     if (!marketplaceId) {

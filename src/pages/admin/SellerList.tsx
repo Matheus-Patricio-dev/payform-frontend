@@ -169,6 +169,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
 
   try {
     setLoading(true);
+    console.log(`Tentando deletar o Seller com URL: /marketplace-seller/${id}/${id_cliente}`)
     const response = await api.delete(`/marketplace-seller/${id}/${id_cliente}`);
     
     console.log(response)
@@ -180,13 +181,16 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
       toast.error('Erro ao remover vendedor.');
     }
   } catch (error: any) {
-    toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+  console.error("Erro ao remover Seller:", error);
+  console.error("Detalhes do erro:", error?.response?.data);
+  toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+
   } finally {
     setLoading(false);
   }
 };
 
-
+  //OK FUNCIONANDO
   const handleEditSeller = async (id: string) => {
     try {
       if (!selectedSeller) return;
@@ -198,10 +202,13 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
       setFormData({ id: '', nome: '', email: '', password: '', marketplaceId: '' });
       toast.success('Vendedor atualizado com sucesso!');
       const onCreate = false;
-      fetchMarketplaces(onCreate);
-    } catch (error) {
-      toast.error('Erro ao atualizar vendedor');
-    }
+      fetchSellers(onCreate);
+   } catch (error: any) {
+    console.error("Erro ao remover Seller:", error);
+    console.error("Detalhes do erro:", error?.response?.data);
+    toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+}
+
   };
 
   return (
@@ -403,7 +410,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
              options={[
               { value: '', label: 'Selecione um marketplace' },
               ...marketplaces.map(m => ({
-                value: m.cliente_id,
+                value: m.id,
                 label: m.cliente.nome
               }))
             ]}
