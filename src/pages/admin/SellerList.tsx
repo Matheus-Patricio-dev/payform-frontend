@@ -141,7 +141,8 @@ const handleAddSeller = async () => {
     };
 
     setLoading(true);
-    const response = await api.post('/register-seller', payload);
+    const response = await api.post('/register-seller-to-marketplace', payload);
+    console.log('enviando payload:', payload)
     if (response.status === 201) {
       toast.success('Vendedor adicionado com sucesso!');
       setIsAddModalOpen(false);

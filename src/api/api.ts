@@ -2,7 +2,6 @@ import axios from "axios";
 
 // instancia a api
 const api = axios.create({
-    // baseURL: 'https://payform-backend.onrender.com/api/auth',
     baseURL: 'https://payform-backend.onrender.com/api/auth',
 })
 
