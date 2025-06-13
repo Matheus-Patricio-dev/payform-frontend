@@ -55,8 +55,6 @@ const SellerList: React.FC = () => {
       const response = await api.get("/sellers-list");
       if (response?.data?.dados) {
         setSellers(response.data.dados);
-        console.log(response.data.dados)
-        console.log(sellers)
       }
     } catch (err: unknown) {
       console.log(err);
@@ -72,9 +70,7 @@ const SellerList: React.FC = () => {
     try {
       const response = await api.get(`/marketplaces`);
       if (response?.data?.dados) {
-        setSellerList(response.data.dados);
-        console.log(response.data.dados)
-
+        setSellerList(response.data.dados)
       }
     } catch (err: unknown) {
       console.log(err);
@@ -140,9 +136,14 @@ const handleAddSeller = async () => {
       marketplaceId: formData.marketplaceId
     };
 
-    setLoading(true);
+    // setLoading(true);
+    console.log(payload)
+    
+
     const response = await api.post('/register-seller-to-marketplace', payload);
     console.log('enviando payload:', payload)
+    console.log(response)
+
     if (response.status === 201) {
       toast.success('Vendedor adicionado com sucesso!');
       setIsAddModalOpen(false);
