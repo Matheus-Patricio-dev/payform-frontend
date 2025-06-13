@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo, useEffect } from 'react';
-import { Building2, Store, Users, Plus, Pencil, Trash2, UserPlus, Eye, Search, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Store, Users, Plus, Pencil, Trash2, UserPlus, Eye, Search, CheckCircle, XCircle, Menu } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -62,32 +62,29 @@ const MarketplaceList: React.FC = () => {
     confirmpassword: '',
   });
 
-  // const marketplaces = getAllMarketplaces();
   const [marketplaces, setMarketplaces] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  
   // Função para buscar marketplaces
   const fetchMarketplaces = async (onDelete: boolean) => {
     if (onDelete) {
       setLoading(true);
     }
     try {
-      const response = await api.get("/marketplaces"); //ignorar pois é global
+      const response = await api.get("/marketplaces");
       if (response?.data?.dados) {
         setMarketplaces(response.data.dados);
       }
     } catch (err: unknown) {
       console.log(err);
-      // setError(err.message); // descomente se quiser tratar erro
     } finally {
       setLoading(false);
     }
   };
 
-  // Chama ao montar o componente
   useEffect(() => {
     const onDelete = true;
     fetchMarketplaces(onDelete);
-    
   }, []);
 
   const [sellers, setSellerList] = useState([]);
@@ -99,7 +96,6 @@ const MarketplaceList: React.FC = () => {
       const response = await api.get(`/marketplace-list-seller/${marketplace}`);
       if (response?.data?.dados) {
         setSellerList(response.data.dados);
-        console.log()
       }
     } catch (err: unknown) {
       console.log(err);
@@ -116,8 +112,6 @@ const MarketplaceList: React.FC = () => {
     });
   }, [marketplaces, searchTerm, statusFilter]);
 
-  // if (loading) return <div>Carregando...</div>;
-
   const totalPages = Math.ceil(filteredMarketplaces.length / ITEMS_PER_PAGE);
   const paginatedMarketplaces = filteredMarketplaces.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -130,9 +124,6 @@ const MarketplaceList: React.FC = () => {
         toast.error('ID do marketplace é obrigatório');
         return;
       }
-
-      console.log(formData)
-      // return
 
       const result = await signup(formData.id, formData.nome, formData.email, formData.password, formData.confirmpassword, formData.status);
       if (!result.error) {
@@ -169,10 +160,8 @@ const MarketplaceList: React.FC = () => {
     }
   };
 
-
   const handleRemoveSeller = async (id: string, id_cliente: string) => {
     try {
-      console.log(id)
       if (!id) {
         toast.error("Id de seller não selecionado.");
         return;
@@ -193,7 +182,6 @@ const MarketplaceList: React.FC = () => {
     }
   }
 
-
   const removeMarketplaceId = async (id: string) => {
     try {
       if (!id) {
@@ -205,7 +193,6 @@ const MarketplaceList: React.FC = () => {
 
       if (response) {
         toast.success("Marketplace removido com sucesso!");
-        // Atualiza a lista após remover
         const onDelete = false;
         fetchMarketplaces(onDelete);
       }
@@ -253,29 +240,31 @@ const MarketplaceList: React.FC = () => {
     }
   };
 
-
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-gray-50 flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-        }`}>
-        <div className="p-4 sm:p-6 lg:p-8">
+      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'} ml-0`}>
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
-            <div className="flex items-center justify-between mb-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4">
               <div className="flex items-center">
-                <Building2 className="h-6 w-6 text-gray-600 mr-2" />
-                <h1 className="text-2xl font-bold">Marketplaces</h1>
+                <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mr-2" />
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">Marketplaces</h1>
               </div>
               <Button
                 onClick={() => setIsAddModalOpen(true)}
                 icon={<Plus className="h-4 w-4" />}
+                className="w-full sm:w-auto text-sm"
               >
-                Adicionar Marketplace
+                <span className="hidden sm:inline">Adicionar Marketplace</span>
+                <span className="sm:hidden">Adicionar</span>
               </Button>
             </div>
 
-            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            {/* Filters */}
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <Input
                   placeholder="Buscar marketplaces..."
@@ -288,120 +277,170 @@ const MarketplaceList: React.FC = () => {
                   fullWidth
                 />
               </div>
-              <Select
-                options={[
-                  { value: 'all', label: 'Todos' },
-                  { value: 'active', label: 'Ativos' },
-                  { value: 'inactive', label: 'Inativos' },
-                ]}
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as 'all' | 'active' | 'inactive');
-                  setCurrentPage(1);
-                }}
-              />
+              <div className="w-full sm:w-auto sm:min-w-[150px]">
+                <Select
+                  options={[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'active', label: 'Ativos' },
+                    { value: 'inactive', label: 'Inativos' },
+                  ]}
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as 'all' | 'active' | 'inactive');
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
             </div>
 
+            {/* Table */}
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[800px]">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Email</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Status</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Vendedores</th>
-                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-gray-500">Nome</th>
+                        <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-gray-500">Email</th>
+                        <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-gray-500">Status</th>
+                        <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-gray-500">Vendedores</th>
+                        <th className="text-right py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-gray-500">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedMarketplaces.map((marketplace) => {
-                        
                         return (
                           <tr key={marketplace.cliente.id} className="border-b last:border-0 hover:bg-gray-50">
-                            <td className="py-4 px-6">
+                            <td className="py-3 sm:py-4 px-3 sm:px-6">
                               <div className="flex items-center">
-                                <Store className="h-5 w-5 text-primary mr-2" />
-                                <div>
-                                  <div className="font-medium">{marketplace.cliente.nome}</div>
-                                  <div className="text-sm text-gray-500">ID: {marketplace.cliente.marketplaceId}</div>
+                                <Store className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600 mr-2 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="text-sm sm:text-base font-medium text-gray-900 truncate">{marketplace.cliente.nome}</div>
+                                  <div className="text-xs sm:text-sm text-gray-500 truncate">ID: {marketplace.cliente.marketplaceId}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6">{marketplace.cliente.email}</td>
-                            <td className="py-4 px-6">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${marketplace.cliente.status === 'active'
-                                ? 'bg-success/10 text-success'
-                                : 'bg-error/10 text-error'
+                            <td className="py-3 sm:py-4 px-3 sm:px-6">
+                              <div className="text-sm sm:text-base text-gray-900 truncate">{marketplace.cliente.email}</div>
+                            </td>
+                            <td className="py-3 sm:py-4 px-3 sm:px-6">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${marketplace.cliente.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {marketplace.cliente.status === 'active' ? (
-                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  <CheckCircle className="w-3 h-3 mr-1" />
                                 ) : (
-                                  <XCircle className="w-4 h-4 mr-1" />
+                                  <XCircle className="w-3 h-3 mr-1" />
                                 )}
                                 {marketplace.cliente.status === 'active' ? 'Ativo' : 'Inativo'}
                               </span>
                             </td>
-                            <td className="py-4 px-6">
-                              <div className="flex items-center">
-                                <Users className="h-4 w-4 text-gray-400 mr-1" />
+                            <td className="py-3 sm:py-4 px-3 sm:px-6">
+                              <div className="flex items-center text-sm sm:text-base text-gray-900">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 mr-1" />
                                 {marketplace?.quantidade_vendedores}
                               </div>
                             </td>
-                            <td className="py-4 px-6">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedMarketplace(marketplace);
-                                    setIsAddSellerModalOpen(true);
-                                    setSellerFormData(prev => ({ ...prev, marketplaceId: marketplace.id }));
-                                  }}
-                                  icon={<UserPlus className="h-4 w-4" />}
-                                >
-                                  Adicionar Vendedor
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedMarketplace(marketplace);
-                                    fetchSellersList(marketplace.id);
-                                  }}
-                                  icon={<Eye className="h-4 w-4" />}
-                                >
-                                  Ver Vendedores
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedMarketplace(marketplace);
-                                    setIsEditModalOpen(true);
-                                    setFormData({
-                                      id: marketplace.cliente.marketplaceId,
-                                      nome: marketplace.cliente.nome,
-                                      email: marketplace.cliente.email,
-                                      password: '',
-                                      confirmpassword: '',
-                                      status: marketplace.cliente.status,
-                                    });
-                                  }}
-                                  icon={<Pencil className="h-4 w-4" />}
-                                >
-                                  Editar
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-error"
-                                  onClick={() => removeMarketplaceId(marketplace.cliente.id)}
-                                  icon={<Trash2 className="h-4 w-4" />}
-                                >
-                                  Remover
-                                </Button>
+                            <td className="py-3 sm:py-4 px-3 sm:px-6">
+                              <div className="flex items-center justify-end gap-1 sm:gap-2">
+                                {/* Mobile dropdown menu */}
+                                <div className="sm:hidden">
+                                  <select 
+                                    className="text-xs border rounded px-2 py-1"
+                                    onChange={(e) => {
+                                      const action = e.target.value;
+                                      if (action === 'add-seller') {
+                                        setSelectedMarketplace(marketplace);
+                                        setIsAddSellerModalOpen(true);
+                                        setSellerFormData(prev => ({ ...prev, marketplaceId: marketplace.id }));
+                                      } else if (action === 'view-sellers') {
+                                        setSelectedMarketplace(marketplace);
+                                        fetchSellersList(marketplace.id);
+                                      } else if (action === 'edit') {
+                                        setSelectedMarketplace(marketplace);
+                                        setIsEditModalOpen(true);
+                                        setFormData({
+                                          id: marketplace.cliente.marketplaceId,
+                                          nome: marketplace.cliente.nome,
+                                          email: marketplace.cliente.email,
+                                          password: '',
+                                          confirmpassword: '',
+                                          status: marketplace.cliente.status,
+                                        });
+                                      } else if (action === 'remove') {
+                                        removeMarketplaceId(marketplace.cliente.id);
+                                      }
+                                      e.target.value = '';
+                                    }}
+                                  >
+                                    <option value="">Ações</option>
+                                    <option value="add-seller">Add Vendedor</option>
+                                    <option value="view-sellers">Ver Vendedores</option>
+                                    <option value="edit">Editar</option>
+                                    <option value="remove">Remover</option>
+                                  </select>
+                                </div>
+
+                                {/* Desktop buttons */}
+                                <div className="hidden sm:flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMarketplace(marketplace);
+                                      setIsAddSellerModalOpen(true);
+                                      setSellerFormData(prev => ({ ...prev, marketplaceId: marketplace.id }));
+                                    }}
+                                    icon={<UserPlus className="h-4 w-4" />}
+                                    className="text-xs"
+                                  >
+                                    <span className="hidden lg:inline">Adicionar Vendedor</span>
+                                    <span className="lg:hidden">Add</span>
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMarketplace(marketplace);
+                                      fetchSellersList(marketplace.id);
+                                    }}
+                                    icon={<Eye className="h-4 w-4" />}
+                                    className="text-xs"
+                                  >
+                                    <span className="hidden lg:inline">Ver Vendedores</span>
+                                    <span className="lg:hidden">Ver</span>
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMarketplace(marketplace);
+                                      setIsEditModalOpen(true);
+                                      setFormData({
+                                        id: marketplace.cliente.marketplaceId,
+                                        nome: marketplace.cliente.nome,
+                                        email: marketplace.cliente.email,
+                                        password: '',
+                                        confirmpassword: '',
+                                        status: marketplace.cliente.status,
+                                      });
+                                    }}
+                                    icon={<Pencil className="h-4 w-4" />}
+                                    className="text-xs"
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 text-xs"
+                                    onClick={() => removeMarketplaceId(marketplace.cliente.id)}
+                                    icon={<Trash2 className="h-4 w-4" />}
+                                  >
+                                    Remover
+                                  </Button>
+                                </div>
                               </div>
                             </td>
                           </tr>
@@ -412,13 +451,13 @@ const MarketplaceList: React.FC = () => {
                 </div>
 
                 {filteredMarketplaces.length === 0 && (
-                  <div className="text-center py-12">
-                    <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Nenhum marketplace encontrado</p>
+                  <div className="text-center py-8 sm:py-12">
+                    <Building2 className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm sm:text-base text-gray-500 mb-4">Nenhum marketplace encontrado</p>
                     <Button
                       onClick={() => setIsAddModalOpen(true)}
                       icon={<Plus className="h-4 w-4" />}
-                      className="mt-4"
+                      className="text-sm"
                     >
                       Adicionar Marketplace
                     </Button>
@@ -427,8 +466,9 @@ const MarketplaceList: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* Pagination */}
             {filteredMarketplaces.length > ITEMS_PER_PAGE && (
-              <div className="mt-6">
+              <div className="mt-4 sm:mt-6">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -491,71 +531,16 @@ const MarketplaceList: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
             fullWidth
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleAddMarketplace}>
+            <Button onClick={handleAddMarketplace} className="w-full sm:w-auto">
               Adicionar
             </Button>
           </div>
         </div>
       </Modal>
-
-      {/* Edit Seller Modal
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Editar vendedor"
-      >
-        <div className="space-y-4">
-
-          <Input
-            label="ID do Marketplace"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Nova Senha (opcional)"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            fullWidth
-          />
-          <Select
-            label="Status"
-            options={[
-              { value: 'active', label: 'Ativo' },
-              { value: 'inactive', label: 'Inativo' },
-            ]}
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-            fullWidth
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={() => handleEditMarketplace(selectedMarketplace.cliente.id)}>
-              Salvar
-            </Button>
-          </div>
-        </div>
-      </Modal> */}
 
       {/* Add Seller Modal */}
       <Modal
@@ -591,11 +576,11 @@ const MarketplaceList: React.FC = () => {
             value={sellerFormData.confirmpassword}
             onChange={(e) => setSellerFormData({ ...sellerFormData, confirmpassword: e.target.value })}
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddSellerModalOpen(false)}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddSellerModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleAddSeller}>
+            <Button onClick={handleAddSeller} className="w-full sm:w-auto">
               Adicionar
             </Button>
           </div>
@@ -611,18 +596,18 @@ const MarketplaceList: React.FC = () => {
         }}
         title={`Vendedores`}
       >
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           {selectedMarketplace && sellers
             ?.map(seller => (
               <Card key={seller.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center">
-                        <Store className="h-4 w-4 text-primary mr-2" />
-                        <h4 className="font-semibold">{seller.cliente.nome}</h4>
+                        <Store className="h-4 w-4 text-indigo-600 mr-2 flex-shrink-0" />
+                        <h4 className="font-semibold text-sm sm:text-base truncate">{seller.cliente.nome}</h4>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{seller.cliente.email}</p>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">{seller.cliente.email}</p>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -637,17 +622,19 @@ const MarketplaceList: React.FC = () => {
                             nome: seller.cliente.nome,
                             email: seller.cliente.email,
                             password: '',
+                            confirmpassword: '',
                             status: 'active',
                           });
                         }}
                         icon={<Pencil className="h-4 w-4" />}
+                        className="text-xs"
                       >
                         Editar
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-error"
+                        className="text-red-600 hover:text-red-700 text-xs"
                         onClick={() => handleRemoveSeller(seller.id, seller.cliente.id)}
                         icon={<Trash2 className="h-4 w-4" />}
                       >
@@ -660,7 +647,7 @@ const MarketplaceList: React.FC = () => {
             ))}
           {selectedMarketplace && sellers.filter(seller => seller.marketplaceId === selectedMarketplace.id).length === 0 && (
             <div className="text-center py-4">
-              <p className="text-gray-500">Nenhum vendedor encontrado para este marketplace</p>
+              <p className="text-sm text-gray-500">Nenhum vendedor encontrado para este marketplace</p>
             </div>
           )}
         </div>

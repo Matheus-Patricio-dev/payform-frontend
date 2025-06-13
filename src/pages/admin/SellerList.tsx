@@ -86,9 +86,9 @@ useEffect(() => {
   const filteredSellers = useMemo(() => {
     return sellers.filter(seller => {
       const matchesSearch =
-        seller.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        seller.cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        seller.cliente.id.toLowerCase().includes(searchTerm.toLowerCase());
+        seller.cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        seller.cliente?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        seller.cliente?.id.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesMarketplace =
         marketplaceFilter === 'all' ||
@@ -287,7 +287,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6">{seller.cliente.email}</td>
+                            <td className="py-4 px-6">{seller?.cliente.email}</td>
                             <td className="py-4 px-6">
                               <div className="flex items-center">
                                 <Building2 className="h-4 w-4 text-gray-400 mr-1" />

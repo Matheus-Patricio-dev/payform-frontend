@@ -111,43 +111,49 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-gray-50 flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
       
       <main className={`flex-1 transition-all duration-300 ${
         isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-      }`}>
-        <div className="p-4 sm:p-6 lg:p-8">
+      } ml-0`}>
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
-            <div className="flex items-center justify-between mb-6 lg:mb-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 lg:mb-8 gap-4">
               <div className="flex items-center">
-                <TrendingUp className="h-6 w-6 text-gray-600 mr-2" />
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mr-2" />
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
               </div>
               <Link to="/create-payment-link">
-                <Button icon={<PlusCircle className="h-4 w-4" />}>
-                  Criar Link de Pagamento
+                <Button 
+                  icon={<PlusCircle className="h-4 w-4" />}
+                  className="w-full sm:w-auto text-sm"
+                >
+                  <span className="hidden sm:inline">Criar Link de Pagamento</span>
+                  <span className="sm:hidden">Criar Link</span>
                 </Button>
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                        <h3 className="text-2xl font-bold mt-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Revenue</p>
+                        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1 truncate">
                           {formatCurrency(totalStats.totalAmount)}
                         </h3>
                       </div>
-                      <div className="p-2 rounded-full bg-primary/10">
-                        <CreditCard className="h-5 w-5 text-primary" />
+                      <div className="p-2 rounded-full bg-indigo-100 flex-shrink-0 ml-2">
+                        <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -160,14 +166,14 @@ const AdminDashboard: React.FC = () => {
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Marketplaces</p>
-                        <h3 className="text-2xl font-bold mt-1">{marketplaces.length}</h3>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Marketplaces</p>
+                        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{marketplaces.length}</h3>
                       </div>
-                      <div className="p-2 rounded-full bg-secondary/10">
-                        <Building2 className="h-5 w-5 text-secondary" />
+                      <div className="p-2 rounded-full bg-green-100 flex-shrink-0 ml-2">
+                        <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -180,14 +186,14 @@ const AdminDashboard: React.FC = () => {
                 transition={{ duration: 0.3, delay: 0.2 }}
               >
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Total Sellers</p>
-                        <h3 className="text-2xl font-bold mt-1">{sellers.length}</h3>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Sellers</p>
+                        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{sellers.length}</h3>
                       </div>
-                      <div className="p-2 rounded-full bg-success/10">
-                        <Store className="h-5 w-5 text-success" />
+                      <div className="p-2 rounded-full bg-blue-100 flex-shrink-0 ml-2">
+                        <Store className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -200,14 +206,14 @@ const AdminDashboard: React.FC = () => {
                 transition={{ duration: 0.3, delay: 0.3 }}
               >
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Total Transactions</p>
-                        <h3 className="text-2xl font-bold mt-1">{totalStats.totalTransactions}</h3>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Transactions</p>
+                        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{totalStats.totalTransactions}</h3>
                       </div>
-                      <div className="p-2 rounded-full bg-warning/10">
-                        <Users className="h-5 w-5 text-warning" />
+                      <div className="p-2 rounded-full bg-yellow-100 flex-shrink-0 ml-2">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -215,28 +221,49 @@ const AdminDashboard: React.FC = () => {
               </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            {/* Charts */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 lg:mb-8">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Transaction Volume</CardTitle>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg">Transaction Volume</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-[400px] w-full">
+                  <CardContent className="p-3 sm:p-6 pt-0">
+                    <div className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
                       <Line
                         data={timelineData}
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              labels: {
+                                usePointStyle: true,
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12
+                                }
+                              }
+                            }
+                          },
                           scales: {
+                            x: {
+                              ticks: {
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12
+                                }
+                              }
+                            },
                             y: {
                               beginAtZero: true,
                               ticks: {
                                 callback: (value) => formatCurrency(Number(value)),
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12
+                                }
                               },
                             },
                           },
@@ -253,11 +280,11 @@ const AdminDashboard: React.FC = () => {
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Revenue by Marketplace</CardTitle>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg">Revenue by Marketplace</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-[400px] w-full flex items-center justify-center">
+                  <CardContent className="p-3 sm:p-6 pt-0">
+                    <div className="h-[250px] sm:h-[300px] lg:h-[400px] w-full flex items-center justify-center">
                       <Doughnut
                         data={marketplaceData}
                         options={{
@@ -266,6 +293,13 @@ const AdminDashboard: React.FC = () => {
                           plugins: {
                             legend: {
                               position: 'bottom',
+                              labels: {
+                                usePointStyle: true,
+                                font: {
+                                  size: window.innerWidth < 640 ? 10 : 12
+                                },
+                                padding: window.innerWidth < 640 ? 10 : 20
+                              }
                             },
                           },
                         }}
@@ -276,25 +310,26 @@ const AdminDashboard: React.FC = () => {
               </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            {/* Marketplace Overview Table */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Marketplace Overview</CardTitle>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base sm:text-lg">Marketplace Overview</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full min-w-[600px]">
                         <thead>
                           <tr className="border-b">
-                            <th className="text-left py-3 px-4">Marketplace</th>
-                            <th className="text-left py-3 px-4">Sellers</th>
-                            <th className="text-left py-3 px-4">Total Revenue</th>
-                            <th className="text-left py-3 px-4">Success Rate</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Marketplace</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Sellers</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Total Revenue</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Success Rate</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -319,13 +354,13 @@ const AdminDashboard: React.FC = () => {
                               : '0.0';
 
                             return (
-                              <tr key={marketplace.id} className="border-b">
-                                <td className="py-3 px-4">{marketplace.name}</td>
-                                <td className="py-3 px-4">{marketplaceSellers.length}</td>
-                                <td className="py-3 px-4">
+                              <tr key={marketplace.id} className="border-b hover:bg-gray-50">
+                                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium">{marketplace.name}</td>
+                                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">{marketplaceSellers.length}</td>
+                                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">
                                   {formatCurrency(marketplaceStats.totalAmount)}
                                 </td>
-                                <td className="py-3 px-4">{successRate}%</td>
+                                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">{successRate}%</td>
                               </tr>
                             );
                           })}
