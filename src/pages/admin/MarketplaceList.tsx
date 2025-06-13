@@ -363,7 +363,7 @@ const MarketplaceList: React.FC = () => {
                                 >
                                   Adicionar Vendedor
                                 </Button>
-                                {/* <Button
+                                <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
@@ -373,7 +373,7 @@ const MarketplaceList: React.FC = () => {
                                   icon={<Eye className="h-4 w-4" />}
                                 >
                                   Ver Vendedores
-                                </Button> */}
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"

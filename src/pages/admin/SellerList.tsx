@@ -136,7 +136,7 @@ const handleAddSeller = async () => {
       marketplaceId: formData.marketplaceId
     };
 
-    // setLoading(true);
+    setLoading(true);
     console.log(payload)
     
 
@@ -173,8 +173,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
     setLoading(true);
     console.log(`Tentando deletar o Seller com URL: /marketplace-seller/${id}/${id_cliente}`)
     const response = await api.delete(`/marketplace-seller/${id}/${id_cliente}`);
-    
-    console.log(response)
+  
     if (response?.data.dados === true) {
       toast.success('Vendedor removido com sucesso!');
       const onDelete = false
@@ -443,6 +442,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
           <Input
             label="ID"
             value={formData.id}
+            readOnly
             onChange={(e) => setFormData({ ...formData, id: e.target.value })}
           />
           <Input
