@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 
 const PaymentLinks: React.FC = () => {
   const { user } = useAuth();
-  const paymentLinks = user ? getPaymentLinks(user.id) : [];
+  const paymentLinks = user ? [] : [];
 
   return (
     <div className="p-6">

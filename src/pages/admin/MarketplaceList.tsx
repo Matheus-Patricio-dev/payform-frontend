@@ -8,8 +8,6 @@ import Select from '../../components/ui/Select';
 import Modal from '../../components/ui/Modal';
 import Pagination from '../../components/ui/Pagination';
 import Sidebar from '../../components/layout/Sidebar';
-import { getAllMarketplaces, removeMarketplace, updateMarketplace } from '../../services/adminService';
-import { getAllSellers, addSeller } from '../../services/adminService';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../api/api';
@@ -36,6 +34,7 @@ const ITEMS_PER_PAGE = 10;
 const MarketplaceList: React.FC = () => {
   const { signup, error } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddSellerModalOpen, setIsAddSellerModalOpen] = useState(false);
@@ -64,11 +63,12 @@ const MarketplaceList: React.FC = () => {
 
   const [marketplaces, setMarketplaces] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  
+
   // Função para buscar marketplaces
   const fetchMarketplaces = async (onDelete: boolean) => {
     if (onDelete) {
       setLoading(true);
+      setIsLoading(true);
     }
     try {
       const response = await api.get("/marketplaces");
@@ -79,6 +79,7 @@ const MarketplaceList: React.FC = () => {
       console.log(err);
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -105,7 +106,7 @@ const MarketplaceList: React.FC = () => {
   const filteredMarketplaces = useMemo(() => {
     return marketplaces.filter(marketplace => {
       const matchesSearch = marketplace.cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        marketplace.cliente?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        marketplace.cliente?.marketplaceId.toLowerCase().includes(searchTerm.toLowerCase()) || marketplace.cliente?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         marketplace.cliente?.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || marketplace.cliente?.status === statusFilter;
       return matchesSearch && matchesStatus;
@@ -117,11 +118,15 @@ const MarketplaceList: React.FC = () => {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+  const [isCreateMKT, setIsCreateMKT] = useState(false)
 
   const handleAddMarketplace = async () => {
+    setIsCreateMKT(true)
     try {
       if (!formData.id.trim()) {
         toast.error('ID do marketplace é obrigatório');
+        setIsCreateMKT(false)
+
         return;
       }
 
@@ -133,11 +138,17 @@ const MarketplaceList: React.FC = () => {
         const onCreate = true;
         fetchMarketplaces(onCreate);
       } else {
+        setIsCreateMKT(false)
+
         toast.error(error)
       }
     } catch (error) {
       console.log(error)
+      setIsCreateMKT(false)
+
       toast.error('Erro ao adicionar marketplace');
+    } finally {
+      setIsCreateMKT(false)
     }
   };
 
@@ -160,12 +171,16 @@ const MarketplaceList: React.FC = () => {
     }
   };
 
+  const [isRemoveMKT, setIsRemoveMKT] = useState(false)
   const handleRemoveSeller = async (id: string, id_cliente: string) => {
+    setIsRemoveMKT(true)
     try {
       if (!id) {
         toast.error("Id de seller não selecionado.");
+        setIsRemoveMKT(false)
         return;
       }
+      setIsRemoveMKT(true)
 
       const response = api.delete(`marketplace-seller/${id}/${id_cliente}`);
 
@@ -177,8 +192,11 @@ const MarketplaceList: React.FC = () => {
         const onCreate = false;
         fetchMarketplaces(onCreate);
       }
+
     } catch (error) {
       console.log(error)
+    } finally {
+      setIsRemoveMKT(false)
     }
   }
 
@@ -239,6 +257,29 @@ const MarketplaceList: React.FC = () => {
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex">
+        <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
+
+        <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+          }`}>
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="max-w-[2000px] mx-auto">
+              <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center">
+                  <div className="loader w-12 h-12 mx-auto mb-4"></div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando Marketplaces</h2>
+                  <p className="text-gray-500">Aguarde enquanto carregamos os dados...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -346,7 +387,7 @@ const MarketplaceList: React.FC = () => {
                               <div className="flex items-center justify-end gap-1 sm:gap-2">
                                 {/* Mobile dropdown menu */}
                                 <div className="sm:hidden">
-                                  <select 
+                                  <select
                                     className="text-xs border rounded px-2 py-1"
                                     onChange={(e) => {
                                       const action = e.target.value;
@@ -535,7 +576,7 @@ const MarketplaceList: React.FC = () => {
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleAddMarketplace} className="w-full sm:w-auto">
+            <Button loading={isCreateMKT} onClick={handleAddMarketplace} className="w-full sm:w-auto">
               Adicionar
             </Button>
           </div>
@@ -634,6 +675,7 @@ const MarketplaceList: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        loading={isRemoveMKT}
                         className="text-red-600 hover:text-red-700 text-xs"
                         onClick={() => handleRemoveSeller(seller.id, seller.cliente.id)}
                         icon={<Trash2 className="h-4 w-4" />}

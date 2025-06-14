@@ -109,7 +109,7 @@ const Settings: React.FC = () => {
               </motion.div>
 
               {/* Payment Settings */}
-              <motion.div
+              {/* <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.3 }}
@@ -145,16 +145,10 @@ const Settings: React.FC = () => {
                           </label>
                         </div>
                       </div>
-                      
-                      {/* <div className="pt-4 border-t">
-                        <h3 className="font-medium mb-2">Gateway de Pagamento</h3>
-                        <p className="text-sm text-gray-500 mb-4">Configure suas configurações de gateway de pagamento</p>
-                        <Button variant="outline">Configurar Gateway</Button>
-                      </div> */}
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </motion.div> */}
 
               {user?.cargo === 'marketplace' && (
                 <motion.div

@@ -1,11 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CreditCard } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import * as yup from 'yup';
+import { 
+  CreditCard, 
+  Smartphone, 
+  Lock, 
+  Check, 
+  AlertCircle, 
+  ArrowLeft,
+  Shield,
+  Loader2,
+  Clock,
+  Copy,
+  User,
+  Mail,
+  CreditCard as CardIcon
+} from 'lucide-react';
 import { getPaymentLink, processPayment } from '../../services/paymentService';
 import { PaymentMethod } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import PaymentMethods from '../../components/payment/PaymentMethods';
+import toast from 'react-hot-toast';
+
+// Card validation schema
+const cardValidationSchema = yup.object().shape({
+  number: yup
+    .string()
+    .required('Número do cartão é obrigatório')
+    .matches(/^\d{4}\s\d{4}\s\d{4}\s\d{4}$/, 'Número do cartão inválido'),
+  expiry: yup
+    .string()
+    .required('Data de validade é obrigatória')
+    .matches(/^\d{2}\/\d{2}$/, 'Data inválida (MM/AA)'),
+  cvc: yup
+    .string()
+    .required('CVC é obrigatório')
+    .matches(/^\d{3,4}$/, 'CVC inválido'),
+  name: yup
+    .string()
+    .required('Nome no cartão é obrigatório')
+    .min(2, 'Nome muito curto'),
+  cpf: yup
+    .string()
+    .required('CPF é obrigatório')
+    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF inválido'),
+  email: yup
+    .string()
+    .required('Email é obrigatório')
+    .email('Email inválido')
+});
 
 const PaymentPage: React.FC = () => {
   const { linkId } = useParams<{ linkId: string }>();
@@ -15,7 +58,63 @@ const PaymentPage: React.FC = () => {
   const [paymentLink, setPaymentLink] = useState<any>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
   
+  // PIX specific states
+  const [pixTimeLeft, setPixTimeLeft] = useState<number>(15 * 60); // 15 minutes in seconds
+  const [pixExpired, setPixExpired] = useState<boolean>(false);
+  const [pixCode, setPixCode] = useState<string>('');
+  const [paymentDetected, setPaymentDetected] = useState<boolean>(false);
+  
+  // Card form state
+  const [cardData, setCardData] = useState({
+    number: '',
+    expiry: '',
+    cvc: '',
+    name: '',
+    cpf: '',
+    email: ''
+  });
+  const [cardErrors, setCardErrors] = useState<any>({});
+  const [cardBrand, setCardBrand] = useState<string>('');
+
+  // PIX timer effect
+  useEffect(() => {
+    if (selectedMethod === 'pix' && showPaymentForm && !paymentDetected && !pixExpired) {
+      const timer = setInterval(() => {
+        setPixTimeLeft(prev => {
+          if (prev <= 1) {
+            setPixExpired(true);
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired]);
+
+  // Simulate payment detection for PIX
+  useEffect(() => {
+    if (selectedMethod === 'pix' && showPaymentForm && !paymentDetected && !pixExpired) {
+      // Simulate payment detection after random time (5-10 seconds)
+      const detectionTime = Math.random() * 5000 + 5000;
+      const timer = setTimeout(() => {
+        setPaymentDetected(true);
+        setIsProcessing(true);
+        
+        // Process payment after detection
+        setTimeout(() => {
+          navigate('/payment-success');
+        }, 2000);
+      }, detectionTime);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired, navigate]);
+
   useEffect(() => {
     if (!linkId) {
       setError('Link de pagamento inválido');
@@ -27,10 +126,16 @@ const PaymentPage: React.FC = () => {
       const link = getPaymentLink(linkId);
       if (!link) {
         setError('Link de pagamento não encontrado');
-      } else if (link.status !== 'active') {
+      } else if (link.status !== 'active' && link.status !== 'pending') {
         setError('Este link de pagamento expirou ou não está mais ativo');
       } else {
         setPaymentLink(link);
+        // Auto-select first available method
+        if (link.paymentMethods.length > 0) {
+          setSelectedMethod(link.paymentMethods[0]);
+        }
+        // Generate PIX code
+        setPixCode(`00020126580014BR.GOV.BCB.PIX0136${linkId}5204000053039865802BR5925PAYLINK PAGAMENTOS LTDA6009SAO PAULO62070503***6304`);
       }
     } catch (err) {
       setError('Falha ao carregar os detalhes do pagamento');
@@ -38,34 +143,159 @@ const PaymentPage: React.FC = () => {
       setLoading(false);
     }
   }, [linkId]);
-  
-  const handlePay = () => {
-    if (!linkId || !selectedMethod) return;
+
+  const detectCardBrand = (number: string) => {
+    const cleanNumber = number.replace(/\s/g, '');
     
-    setIsProcessing(true);
+    if (/^4/.test(cleanNumber)) return 'visa';
+    if (/^5[1-5]/.test(cleanNumber)) return 'mastercard';
+    if (/^3[47]/.test(cleanNumber)) return 'amex';
+    if (/^6/.test(cleanNumber)) return 'discover';
+    if (/^(4011|4312|4389|4514|4573|5041|5066|5067|6277|6362|6363)/.test(cleanNumber)) return 'elo';
     
+    return '';
+  };
+
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = v.match(/\d{4,16}/g);
+    const match = (matches && matches[0]) || '';
+    const parts = [];
+
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return value;
+    }
+  };
+
+  const formatExpiry = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    if (v.length >= 2) {
+      return v.slice(0, 2) + '/' + v.slice(2, 4);
+    }
+    return v;
+  };
+
+  const formatCPF = (value: string) => {
+    const v = value.replace(/\D/g, '');
+    if (v.length <= 11) {
+      return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return value;
+  };
+
+  const validateCardField = async (field: string, value: string) => {
     try {
-      const transaction = processPayment(linkId, selectedMethod);
+      await cardValidationSchema.validateAt(field, { ...cardData, [field]: value });
+      setCardErrors((prev: any) => ({ ...prev, [field]: undefined }));
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        setCardErrors((prev: any) => ({ ...prev, [field]: error.message }));
+      }
+    }
+  };
+
+  const handleCardInputChange = (field: string, value: string) => {
+    let formattedValue = value;
+    
+    if (field === 'number') {
+      formattedValue = formatCardNumber(value);
+      setCardBrand(detectCardBrand(formattedValue));
+    } else if (field === 'expiry') {
+      formattedValue = formatExpiry(value);
+    } else if (field === 'cvc') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 4);
+    } else if (field === 'cpf') {
+      formattedValue = formatCPF(value);
+    }
+    
+    setCardData(prev => ({ ...prev, [field]: formattedValue }));
+    validateCardField(field, formattedValue);
+  };
+
+  const handleMethodSelect = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    setShowPaymentForm(true);
+    
+    if (method === 'pix') {
+      setPixTimeLeft(15 * 60);
+      setPixExpired(false);
+      setPaymentDetected(false);
+    }
+  };
+
+  const handleCardPayment = async () => {
+    try {
+      await cardValidationSchema.validate(cardData);
+      setIsProcessing(true);
       
-      setTimeout(() => {
-        if (transaction.status === 'completed') {
-          navigate('/payment-success');
-        } else {
-          navigate('/payment-declined');
-        }
-      }, 2000);
-    } catch (err) {
-      setError('Falha no processamento do pagamento');
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const transaction = processPayment(
+        linkId!,
+        selectedMethod!,
+        cardData.name,
+        cardData.email
+      );
+      
+      if (transaction.status === 'completed') {
+        navigate('/payment-success');
+      } else {
+        navigate('/payment-declined');
+      }
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const newErrors: any = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            newErrors[err.path] = err.message;
+          }
+        });
+        setCardErrors(newErrors);
+        toast.error('Por favor, corrija os erros no formulário');
+      }
       setIsProcessing(false);
     }
   };
-  
+
+  const handleCopyPixCode = () => {
+    navigator.clipboard.writeText(pixCode);
+    toast.success('Código PIX copiado!');
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getCardBrandIcon = () => {
+    switch (cardBrand) {
+      case 'visa':
+        return <div className="text-blue-600 font-bold text-xs">VISA</div>;
+      case 'mastercard':
+        return <div className="text-red-600 font-bold text-xs">MC</div>;
+      case 'elo':
+        return <div className="text-yellow-600 font-bold text-xs">ELO</div>;
+      case 'amex':
+        return <div className="text-blue-800 font-bold text-xs">AMEX</div>;
+      default:
+        return <CardIcon className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="loader"></div>
-          <p className="mt-4 text-gray-600">Carregando detalhes do pagamento...</p>
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Carregando pagamento...</p>
         </div>
       </div>
     );
@@ -73,45 +303,440 @@ const PaymentPage: React.FC = () => {
   
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-sm p-8 text-center">
-          <div className="text-error mb-4">
-            <CreditCard className="h-16 w-16 mx-auto" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-gray-100"
+        >
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="h-8 w-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Erro</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Erro no Pagamento</h2>
+          <p className="text-gray-600 mb-8">{error}</p>
           <button
             onClick={() => navigate('/')}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+            className="w-full bg-gray-900 text-white py-3 px-6 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
           >
             Voltar ao Início
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
-  
+
+  const paymentMethods = [
+    {
+      id: 'pix' as PaymentMethod,
+      name: 'PIX',
+      description: 'Transferência instantânea',
+      icon: <Smartphone className="h-6 w-6" />,
+      available: paymentLink.paymentMethods.includes('pix'),
+      instant: true
+    },
+    {
+      id: 'credit_card' as PaymentMethod,
+      name: 'Cartão',
+      description: 'Crédito ou débito',
+      icon: <CreditCard className="h-6 w-6" />,
+      available: paymentLink.paymentMethods.includes('credit_card') || paymentLink.paymentMethods.includes('debit_card'),
+      instant: false
+    }
+  ].filter(method => method.available);
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-white py-4 px-4 sm:px-6 lg:px-8 border-b border-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center">
-            <CreditCard className="h-8 w-8 text-primary" />
-            <span className="ml-2 text-xl font-bold text-gray-900">PayLink</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">PayLink</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Pagamento seguro</span>
+            </div>
           </div>
         </div>
       </header>
-      
-      <main className="max-w-[480px] mx-auto px-4 py-8">
-        <PaymentMethods
-          amount={paymentLink.amount}
-          selectedMethod={selectedMethod}
-          availableMethods={paymentLink.paymentMethods}
-          onSelectMethod={setSelectedMethod}
-          onPay={handlePay}
-          isProcessing={isProcessing}
-          description={paymentLink.description}
-        />
+
+      <main className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-8"
+        >
+          {/* Payment Summary */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 sm:p-8">
+              <div className="text-center">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  {paymentLink.description || 'Pagamento'}
+                </h1>
+                <div className="text-4xl sm:text-5xl font-bold text-primary mb-4">
+                  {formatCurrency(paymentLink.amount)}
+                </div>
+                {paymentLink.customerEmail && (
+                  <p className="text-gray-600">Para: {paymentLink.customerEmail}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Methods Selection */}
+            {!showPaymentForm && (
+              <div className="p-6 sm:p-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                  Escolha como pagar
+                </h2>
+                <div className="space-y-3">
+                  {paymentMethods.map((method, index) => (
+                    <motion.button
+                      key={method.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      onClick={() => handleMethodSelect(method.id)}
+                      className="w-full p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-200 text-left group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-gray-100 rounded-lg group-hover:bg-primary/10 transition-colors">
+                            {method.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <h3 className="font-semibold text-gray-900">{method.name}</h3>
+                              {method.instant && (
+                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                  Instantâneo
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-600 text-sm">{method.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-gray-400 group-hover:text-primary transition-colors">
+                          <ArrowLeft className="h-5 w-5 rotate-180" />
+                        </div>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Payment Form */}
+            <AnimatePresence>
+              {showPaymentForm && selectedMethod && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="border-t border-gray-200"
+                >
+                  <div className="p-6 sm:p-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {selectedMethod === 'pix' ? 'Pagamento via PIX' : 'Dados do cartão'}
+                      </h2>
+                      <button
+                        onClick={() => setShowPaymentForm(false)}
+                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    {selectedMethod === 'pix' ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-center space-y-6"
+                      >
+                        {/* PIX Timer */}
+                        {!paymentDetected && !pixExpired && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                            <div className="flex items-center justify-center space-x-2 text-blue-700">
+                              <Clock className="h-5 w-5" />
+                              <span className="font-semibold">
+                                Tempo restante: {formatTime(pixTimeLeft)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Payment Detected */}
+                        {paymentDetected && (
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-green-50 border border-green-200 rounded-xl p-6"
+                          >
+                            <div className="flex items-center justify-center space-x-3 text-green-700">
+                              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                <Check className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold">Pagamento detectado!</h3>
+                                <p className="text-sm">Processando sua transação...</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* PIX Expired */}
+                        {pixExpired && (
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-red-50 border border-red-200 rounded-xl p-6"
+                          >
+                            <div className="flex items-center justify-center space-x-3 text-red-700">
+                              <AlertCircle className="h-8 w-8" />
+                              <div>
+                                <h3 className="font-semibold">QR Code expirado</h3>
+                                <p className="text-sm">Gere um novo código para continuar</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {!paymentDetected && !pixExpired && (
+                          <>
+                            <div className="w-48 h-48 mx-auto bg-white border-2 border-gray-200 rounded-2xl flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-32 h-32 bg-gray-100 rounded-xl mb-4 flex items-center justify-center">
+                                  <div className="grid grid-cols-8 gap-1">
+                                    {Array.from({ length: 64 }).map((_, i) => (
+                                      <div
+                                        key={i}
+                                        className={`w-1 h-1 rounded-sm ${
+                                          Math.random() > 0.5 ? 'bg-gray-800' : 'bg-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-xs text-gray-500">QR Code PIX</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <p className="text-gray-700 font-medium">
+                                Escaneie o QR code com seu app do banco
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Ou copie e cole a chave PIX no seu aplicativo
+                              </p>
+                              <div className="bg-gray-50 rounded-xl p-4">
+                                <div className="flex items-center justify-between">
+                                  <code className="text-xs font-mono text-gray-700 break-all flex-1 mr-3">
+                                    {pixCode}
+                                  </code>
+                                  <button
+                                    onClick={handleCopyPixCode}
+                                    className="p-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                O pagamento será detectado automaticamente
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-6"
+                      >
+                        {/* Email Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Email *
+                          </label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <input
+                              type="email"
+                              value={cardData.email}
+                              onChange={(e) => handleCardInputChange('email', e.target.value)}
+                              placeholder="seu@email.com"
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                cardErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                            />
+                          </div>
+                          {cardErrors.email && (
+                            <p className="mt-1 text-sm text-red-600">{cardErrors.email}</p>
+                          )}
+                        </div>
+
+                        {/* Card Number */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Número do cartão *
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={cardData.number}
+                              onChange={(e) => handleCardInputChange('number', e.target.value)}
+                              placeholder="1234 5678 9012 3456"
+                              maxLength={19}
+                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all pr-12 ${
+                                cardErrors.number ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                            />
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              {getCardBrandIcon()}
+                            </div>
+                          </div>
+                          {cardErrors.number && (
+                            <p className="mt-1 text-sm text-red-600">{cardErrors.number}</p>
+                          )}
+                        </div>
+
+                        {/* Expiry and CVC */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Validade *
+                            </label>
+                            <input
+                              type="text"
+                              value={cardData.expiry}
+                              onChange={(e) => handleCardInputChange('expiry', e.target.value)}
+                              placeholder="MM/AA"
+                              maxLength={5}
+                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                cardErrors.expiry ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                            />
+                            {cardErrors.expiry && (
+                              <p className="mt-1 text-sm text-red-600">{cardErrors.expiry}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              CVC *
+                            </label>
+                            <input
+                              type="text"
+                              value={cardData.cvc}
+                              onChange={(e) => handleCardInputChange('cvc', e.target.value)}
+                              placeholder="123"
+                              maxLength={4}
+                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                cardErrors.cvc ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                            />
+                            {cardErrors.cvc && (
+                              <p className="mt-1 text-sm text-red-600">{cardErrors.cvc}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Cardholder Name */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Nome no cartão *
+                          </label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <input
+                              type="text"
+                              value={cardData.name}
+                              onChange={(e) => handleCardInputChange('name', e.target.value)}
+                              placeholder="JOÃO M SILVA"
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                cardErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                            />
+                          </div>
+                          {cardErrors.name && (
+                            <p className="mt-1 text-sm text-red-600">{cardErrors.name}</p>
+                          )}
+                        </div>
+
+                        {/* CPF */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            CPF *
+                          </label>
+                          <input
+                            type="text"
+                            value={cardData.cpf}
+                            onChange={(e) => handleCardInputChange('cpf', e.target.value)}
+                            placeholder="000.000.000-00"
+                            maxLength={14}
+                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                              cardErrors.cpf ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                          />
+                          {cardErrors.cpf && (
+                            <p className="mt-1 text-sm text-red-600">{cardErrors.cpf}</p>
+                          )}
+                        </div>
+
+                        {/* Pay Button */}
+                        <button
+                          onClick={handleCardPayment}
+                          disabled={isProcessing}
+                          className="w-full bg-primary text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-primary-dark transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              <span>Processando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="h-5 w-5" />
+                              <span>Pagar {formatCurrency(paymentLink.amount)}</span>
+                            </>
+                          )}
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {/* Security Footer */}
+                    <div className="flex items-center justify-center space-x-2 mt-6 text-sm text-gray-500">
+                      <Shield className="h-4 w-4" />
+                      <span>Seus dados estão protegidos com criptografia SSL</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Security Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-center text-sm text-gray-500"
+          >
+            <div className="flex items-center justify-center space-x-4">
+              <div className="flex items-center space-x-1">
+                <Lock className="h-4 w-4" />
+                <span>Pagamento seguro</span>
+              </div>
+              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+              <span>Powered by PayLink</span>
+            </div>
+          </motion.div>
+        </motion.div>
       </main>
     </div>
   );

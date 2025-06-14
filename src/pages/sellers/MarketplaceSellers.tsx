@@ -32,6 +32,7 @@ const MarketplaceSellers: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sellersData, setSellersData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const myMarketplaceId = user?.dataInfo?.id
 
@@ -47,6 +48,7 @@ const MarketplaceSellers: React.FC = () => {
   const fetchSellers = async () => {
     try {
       setLoading(true);
+      setIsLoading(true)
       if (!myMarketplaceId) return;
       const response = await api.get(`/marketplace-list-seller/${myMarketplaceId}`);
       const sellers = response.data?.dados || [];
@@ -54,6 +56,8 @@ const MarketplaceSellers: React.FC = () => {
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
     } finally {
+      setIsLoading(false)
+
       setLoading(false);
     }
   };
@@ -76,13 +80,18 @@ const MarketplaceSellers: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const [isCreateSeller, setIsCreateSeller] = useState(false)
   const handleAddSeller = async () => {
+    setIsCreateSeller(true)
     try {
       if (!user) return;
       if (!formData.id.trim()) {
         toast.error('ID do vendedor é obrigatório');
+        setIsCreateSeller(false)
+
         return;
       }
+      setIsCreateSeller(true)
 
       if (sellersData.some(seller => seller.cliente.id === formData.id)) {
         toast.error('Este ID já está em uso');
@@ -104,10 +113,13 @@ const MarketplaceSellers: React.FC = () => {
       await fetchSellers();
     } catch (error) {
       toast.error('Erro ao adicionar vendedor');
+    } finally {
+      setIsCreateSeller(false)
+
     }
   };
 
-  const handleEditSeller = async (id_seller:string) => {
+  const handleEditSeller = async (id_seller: string) => {
     try {
       console.log(id_seller)
       if (!user || !selectedSeller) return;
@@ -120,7 +132,7 @@ const MarketplaceSellers: React.FC = () => {
       });
       console.log(response)
 
-      if(response.data) {     
+      if (response.data) {
         toast.success('Vendedor atualizado com sucesso!');
         setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
         setIsEditModalOpen(false);
@@ -134,7 +146,9 @@ const MarketplaceSellers: React.FC = () => {
     }
   };
 
+  const [isRemoveSeller, setIsRemoveSeller] = useState(false)
   const handleRemoveSeller = async (id: string, id_cliente: string) => {
+    setIsRemoveSeller(true)
     try {
       if (!user) return;
       if (window.confirm('Tem certeza que deseja remover este vendedor?')) {
@@ -145,16 +159,41 @@ const MarketplaceSellers: React.FC = () => {
     } catch (error) {
       toast.error('Erro ao remover vendedor');
       console.error(error);
+    } finally {
+      setIsRemoveSeller(false)
     }
   };
 
-return (
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex">
+        <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
+
+        <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+          }`}>
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="max-w-[2000px] mx-auto">
+              <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center">
+                  <div className="loader w-12 h-12 mx-auto mb-4"></div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando Vendedores</h2>
+                  <p className="text-gray-500">Aguarde enquanto carregamos os dados...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+
+  return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
-      
-      <main className={`flex-1 transition-all duration-300 ${
-        isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-      }`}>
+
+      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+        }`}>
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -163,10 +202,11 @@ return (
                 <h1 className="text-2xl font-bold">Meus Vendedores</h1>
               </div>
               <Button
+                loading={isCreateSeller}
                 onClick={() => setIsAddModalOpen(true)}
                 icon={<Plus className="h-4 w-4" />}
               >
-                Adicionar 
+                Adicionar
               </Button>
             </div>
 
@@ -215,12 +255,13 @@ return (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {setIsEditModalOpen(true), setSelectedSeller(seller)}}
+                                onClick={() => { setIsEditModalOpen(true), setSelectedSeller(seller) }}
                                 icon={<Pencil className="h-4 w-4" />}
                               >
                                 Editar
                               </Button>
                               <Button
+                                loading={isRemoveSeller}
                                 variant="outline"
                                 size="sm"
                                 className="text-error"

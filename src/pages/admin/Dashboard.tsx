@@ -147,7 +147,7 @@ const AdminDashboard: React.FC = () => {
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Revenue</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Faturado</p>
                         <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1 truncate">
                           {formatCurrency(totalStats.totalAmount)}
                         </h3>
@@ -189,7 +189,7 @@ const AdminDashboard: React.FC = () => {
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Sellers</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Vendedores</p>
                         <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{sellers.length}</h3>
                       </div>
                       <div className="p-2 rounded-full bg-blue-100 flex-shrink-0 ml-2">
@@ -209,7 +209,7 @@ const AdminDashboard: React.FC = () => {
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Transactions</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total De Transações</p>
                         <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{totalStats.totalTransactions}</h3>
                       </div>
                       <div className="p-2 rounded-full bg-yellow-100 flex-shrink-0 ml-2">
@@ -230,7 +230,7 @@ const AdminDashboard: React.FC = () => {
               >
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base sm:text-lg">Transaction Volume</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Gráfico de Transações</CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 sm:p-6 pt-0">
                     <div className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
@@ -281,7 +281,7 @@ const AdminDashboard: React.FC = () => {
               >
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base sm:text-lg">Revenue by Marketplace</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Receita por Marketplace</CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 sm:p-6 pt-0">
                     <div className="h-[250px] sm:h-[300px] lg:h-[400px] w-full flex items-center justify-center">
@@ -319,7 +319,7 @@ const AdminDashboard: React.FC = () => {
               >
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base sm:text-lg">Marketplace Overview</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Visão Geral de Marketplaces</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
@@ -327,9 +327,9 @@ const AdminDashboard: React.FC = () => {
                         <thead>
                           <tr className="border-b">
                             <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Marketplace</th>
-                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Sellers</th>
-                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Total Revenue</th>
-                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Success Rate</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Vendedores</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">Total Faturado</th>
+                            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-500">status</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -360,7 +360,7 @@ const AdminDashboard: React.FC = () => {
                                 <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">
                                   {formatCurrency(marketplaceStats.totalAmount)}
                                 </td>
-                                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">{successRate}%</td>
+                                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">ativo</td>
                               </tr>
                             );
                           })}

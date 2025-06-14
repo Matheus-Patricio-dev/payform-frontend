@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Store, Users, Plus, Pencil, Trash2, Building2, BarChart as ChartBar, Search } from 'lucide-react';
+import { Store, Plus, Pencil, Trash2, Building2, Search } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -9,7 +8,7 @@ import Modal from '../../components/ui/Modal';
 import Pagination from '../../components/ui/Pagination';
 import Sidebar from '../../components/layout/Sidebar';
 import SellerReport from '../../components/reports/SellerReport';
-import { getAllSellers, addSeller, removeSeller, updateSeller, getAllMarketplaces } from '../../services/adminService';
+import { updateSeller } from '../../services/adminService';
 import toast from 'react-hot-toast';
 import api from '../../api/api';
 
@@ -18,7 +17,7 @@ interface SellerFormData {
   nome: string;
   email: string;
   password: string;
-  confirmpassword:string;
+  confirmpassword: string;
   marketplaceId: string;
 }
 
@@ -34,21 +33,23 @@ const SellerList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<SellerFormData>({
     id: '',
     nome: '',
     email: '',
     password: '',
-    confirmpassword:'',
+    confirmpassword: '',
     marketplaceId: ''
   });
   const [marketplaces, setSellerList] = useState<[]>([]);
   const [sellers, setSellers] = useState<[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  
+
   // Função para buscar sellers
   const fetchSellers = async (onDelete: boolean) => {
     if (onDelete) {
+      setIsLoading(true);
       setLoading(true);
     }
     try {
@@ -61,6 +62,7 @@ const SellerList: React.FC = () => {
       // setError(err.message); // descomente se quiser tratar erro
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -77,17 +79,17 @@ const SellerList: React.FC = () => {
     }
   };
   // Chama ao montar o componente
-useEffect(() => {
-  fetchSellers(false);
-  fetchMarketplaces();
-}, []);
-
+  useEffect(() => {
+    fetchSellers(true);
+    fetchMarketplaces();
+  }, []);
 
   const filteredSellers = useMemo(() => {
     return sellers.filter(seller => {
       const matchesSearch =
         seller.cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.cliente?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        seller.id_seller.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.cliente?.id.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesMarketplace =
@@ -97,7 +99,6 @@ useEffect(() => {
       return matchesSearch && matchesMarketplace;
     });
   }, [sellers, searchTerm, marketplaceFilter]);
-  if (loading) return <div>Carregando...</div>;
 
   const totalPages = Math.ceil(filteredSellers.length / ITEMS_PER_PAGE);
   const paginatedSellers = filteredSellers.slice(
@@ -105,91 +106,113 @@ useEffect(() => {
     currentPage * ITEMS_PER_PAGE
   );
 
-const handleAddSeller = async () => {
-  try {
-    if (!formData.id.trim()) {
-      toast.error('ID do vendedor é obrigatório');
-      return;
+  const [isCreateSeller, setIsCreateSeller] = useState(false)
+  const handleAddSeller = async () => {
+    setIsCreateSeller(true)
+    try {
+      if (!formData.id.trim()) {
+        toast.error('ID do vendedor é obrigatório');
+        setIsCreateSeller(false)
+        return;
+      }
+
+      if ([undefined, '', null].includes(formData.marketplaceId)) {
+        toast.error("Selecione o Marketplace!")
+        setIsCreateSeller(false)
+
+        return
+      }
+
+      if (!formData.nome || !formData.email || !formData.password || !formData.confirmpassword || !formData.marketplaceId) {
+        toast.error('Preencha todos os campos obrigatórios');
+        setIsCreateSeller(false)
+
+        return;
+      }
+
+      if (formData.password !== formData.confirmpassword) {
+        toast.error('As senhas não coincidem');
+        setIsCreateSeller(false)
+
+        return;
+      }
+
+      const payload = {
+        id_seller: formData.id,
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password,
+        confirmpassword: formData.confirmpassword,
+        marketplaceId: formData.marketplaceId
+      };
+      setIsCreateSeller(true)
+      setLoading(true);
+      console.log(payload)
+
+
+      const response = await api.post('/register-seller-to-marketplace', payload);
+      console.log('enviando payload:', payload)
+      console.log(response)
+
+      if (response.status === 201) {
+        toast.success('Vendedor adicionado com sucesso!');
+        setIsAddModalOpen(false);
+        setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
+        await fetchSellers(true); // Atualiza lista
+      } else {
+        setIsCreateSeller(false)
+
+        toast.error(response.data?.error || 'Erro ao adicionar vendedor');
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Erro inesperado ao adicionar vendedor');
+    } finally {
+      setIsCreateSeller(false)
+
+      setLoading(false);
     }
-    
-    if ([undefined, '', null].includes(formData.marketplaceId)) {
-      toast.error("Selecione o Marketplace!")
-      return
-    }
-
-    if (!formData.nome || !formData.email || !formData.password || !formData.confirmpassword || !formData.marketplaceId) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    if (formData.password !== formData.confirmpassword) {
-      toast.error('As senhas não coincidem');
-      return;
-    }
-
-    const payload = {
-      id_seller: formData.id,
-      nome: formData.nome,
-      email: formData.email,
-      password: formData.password,
-      confirmpassword: formData.confirmpassword,
-      marketplaceId: formData.marketplaceId
-    };
-
-    setLoading(true);
-    console.log(payload)
-    
-
-    const response = await api.post('/register-seller-to-marketplace', payload);
-    console.log('enviando payload:', payload)
-    console.log(response)
-
-    if (response.status === 201) {
-      toast.success('Vendedor adicionado com sucesso!');
-      setIsAddModalOpen(false);
-      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
-      await fetchSellers(true); // Atualiza lista
-    } else {
-      toast.error(response.data?.error || 'Erro ao adicionar vendedor');
-    }
-  } catch (error: any) {
-    toast.error(error?.response?.data?.error || 'Erro inesperado ao adicionar vendedor');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
-
+  const [isRemoveSeller, setIsRemoveSeller] = useState(false)
 
   //REMOVE SELLER NA PAGINA DE SELLER
-const handleRemoveSeller = async (id: string, id_cliente: string) => {
-  if (!id || !id_cliente) {
-    toast.error("IDs inválidos.");
-    return;
-  }
+  const handleRemoveSeller = async (id: string, id_cliente: string) => {
+    setIsRemoveSeller(true)
+    if (!id || !id_cliente) {
+      toast.error("IDs inválidos.");
+      setIsRemoveSeller(false)
 
-  try {
-    setLoading(true);
-    console.log(`Tentando deletar o Seller com URL: /marketplace-seller/${id}/${id_cliente}`)
-    const response = await api.delete(`/marketplace-seller/${id}/${id_cliente}`);
-  
-    if (response?.data.dados === true) {
-      toast.success('Vendedor removido com sucesso!');
-      const onDelete = false
-      await fetchSellers(onDelete); // atualiza a lista
-    } else {
-      toast.error('Erro ao remover vendedor.');
+      return;
     }
-  } catch (error: any) {
-  console.error("Erro ao remover Seller:", error);
-  console.error("Detalhes do erro:", error?.response?.data);
-  toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
 
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setIsRemoveSeller(true)
+
+      setLoading(true);
+      console.log(`Tentando deletar o Seller com URL: /marketplace-seller/${id}/${id_cliente}`)
+      const response = await api.delete(`/marketplace-seller/${id}/${id_cliente}`);
+
+      if (response?.data.dados === true) {
+        toast.success('Vendedor removido com sucesso!');
+        const onDelete = false
+        await fetchSellers(onDelete); // atualiza a lista
+      } else {
+        setIsRemoveSeller(false)
+
+        toast.error('Erro ao remover vendedor.');
+      }
+    } catch (error: any) {
+      console.error("Erro ao remover Seller:", error);
+      console.error("Detalhes do erro:", error?.response?.data);
+      toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+
+    } finally {
+      setIsRemoveSeller(false)
+
+      setLoading(false);
+    }
+  };
 
   //OK FUNCIONANDO
   const handleEditSeller = async (id: string) => {
@@ -204,13 +227,36 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
       toast.success('Vendedor atualizado com sucesso!');
       const onCreate = false;
       fetchSellers(onCreate);
-   } catch (error: any) {
-    console.error("Erro ao remover Seller:", error);
-    console.error("Detalhes do erro:", error?.response?.data);
-    toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
-}
+    } catch (error: any) {
+      console.error("Erro ao remover Seller:", error);
+      console.error("Detalhes do erro:", error?.response?.data);
+      toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+    }
 
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex">
+        <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
+
+        <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+          }`}>
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="max-w-[2000px] mx-auto">
+              <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center">
+                  <div className="loader w-12 h-12 mx-auto mb-4"></div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando Vendedores</h2>
+                  <p className="text-gray-500">Aguarde enquanto carregamos os dados...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -291,7 +337,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
                             <td className="py-4 px-6">
                               <div className="flex items-center">
                                 <Building2 className="h-4 w-4 text-gray-400 mr-1" />
-                                {seller?.marketplaceId|| 'Não associado'}
+                                {seller?.marketplaceId || 'Não associado'}
                               </div>
                             </td>
                             <td className="py-4 px-6">
@@ -327,6 +373,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
                                 </Button>
                                 <Button
                                   variant="outline"
+                                  loading={isRemoveSeller}
                                   size="sm"
                                   className="text-error"
                                   onClick={() => handleRemoveSeller(seller.id, seller.cliente.id)}
@@ -408,7 +455,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
           />
           <Select
             label="Marketplace"
-             options={[
+            options={[
               { value: '', label: 'Selecione um marketplace' },
               ...marketplaces.map(m => ({
                 value: m.id,
@@ -425,7 +472,7 @@ const handleRemoveSeller = async (id: string, id_cliente: string) => {
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleAddSeller}>
+            <Button onClick={handleAddSeller} loading={isCreateSeller}>
               Adicionar
             </Button>
           </div>

@@ -26,23 +26,28 @@ const Dashboard: React.FC = () => {
 
   const transactions = user ? getUserTransactions(user.id) : [];
   const stats = user
-    ? getTransactionStats(user.id)
+    ? {
+      totalTransactions: 0,
+      completed: 0,
+      pending: 0,
+      declined: 0,
+      totalAmount: 0,
+    }
     : {
-        totalTransactions: 0,
-        completed: 0,
-        pending: 0,
-        declined: 0,
-        totalAmount: 0,
-      };
+      totalTransactions: 0,
+      completed: 0,
+      pending: 0,
+      declined: 0,
+      totalAmount: 0,
+    };
 
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-      <main 
-        className={`flex-1 transition-all duration-300 ${
-          isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-        }`}
+      <main
+        className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+          }`}
       >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
@@ -53,7 +58,7 @@ const Dashboard: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-sm sm:text-base text-gray-600">Bem-vindo, {user?.name}</p>
+                <p className="text-sm sm:text-base text-gray-600">Bem-vindo, {user?.nome}. 📊</p>
               </motion.div>
 
               <motion.div
@@ -75,7 +80,7 @@ const Dashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
-                  <TransactionsTable transactions={transactions} />
+                  <TransactionsTable transactions={[]} />
                 </div>
 
                 <div className="w-full">

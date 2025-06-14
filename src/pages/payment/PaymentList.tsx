@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -22,6 +22,7 @@ const PaymentList: React.FC = () => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<PaymentLinkFormData>({
@@ -36,6 +37,30 @@ const PaymentList: React.FC = () => {
     link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     link.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const paymentMethodOptions = [
+    {
+      id: 'pix',
+      name: 'PIX',
+      description: 'Transferência instantânea',
+      icon: <Smartphone className="h-4 w-4" />,
+      color: 'from-green-500 to-emerald-600'
+    },
+    {
+      id: 'credit_card',
+      name: 'Cartão de Crédito',
+      description: 'Visa, Mastercard, Elo',
+      icon: <CreditCard className="h-4 w-4" />,
+      color: 'from-blue-500 to-indigo-600'
+    },
+    {
+      id: 'debit_card',
+      name: 'Cartão de Débito',
+      description: 'Débito online',
+      icon: <CreditCard className="h-4 w-4" />,
+      color: 'from-purple-500 to-violet-600'
+    }
+  ];
 
   const handleEditPayment = () => {
     try {
@@ -53,22 +78,58 @@ const PaymentList: React.FC = () => {
     }
   };
 
-  const handleDeletePayment = (paymentId: string) => {
+  const handleDeletePayment = () => {
     try {
+      if (!selectedPayment) return;
+
       // Delete payment link logic here
       toast.success('Link de pagamento removido com sucesso!');
+      setIsDeleteModalOpen(false);
+      setSelectedPayment(null);
     } catch (error) {
       toast.error('Erro ao remover link de pagamento');
     }
   };
 
+  const handleViewPaymentLink = (paymentId: string) => {
+    const baseUrl = window.location.origin;
+    const paymentUrl = `${baseUrl}/pay/${paymentId}`;
+    window.open(paymentUrl, '_blank');
+  };
+
+  const togglePaymentMethod = (method: string) => {
+    const newMethods = formData.paymentMethods.includes(method)
+      ? formData.paymentMethods.filter(m => m !== method)
+      : [...formData.paymentMethods, method];
+
+    setFormData(prev => ({ ...prev, paymentMethods: newMethods }));
+  };
+
+  const openEditModal = (payment: any) => {
+    if (payment.status !== 'pending') {
+      toast.error('Apenas links pendentes podem ser editados');
+      return;
+    }
+    setSelectedPayment(payment);
+    setIsEditModalOpen(true);
+    setFormData({
+      amount: payment.amount,
+      description: payment.description,
+      paymentMethods: payment.paymentMethods,
+    });
+  };
+
+  const openDeleteModal = (payment: any) => {
+    setSelectedPayment(payment);
+    setIsDeleteModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
-      
-      <main className={`flex-1 transition-all duration-300 ${
-        isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-      }`}>
+
+      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+        }`}>
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -112,15 +173,14 @@ const PaymentList: React.FC = () => {
                           <td className="py-4 px-6">{payment.description}</td>
                           <td className="py-4 px-6">{formatCurrency(payment.amount)}</td>
                           <td className="py-4 px-6">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              payment.status === 'active' 
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${payment.status === 'active'
                                 ? 'bg-success/10 text-success'
                                 : payment.status === 'pending'
-                                ? 'bg-warning/10 text-warning'
-                                : 'bg-error/10 text-error'
-                            }`}>
-                              {payment.status === 'active' ? 'Ativo' : 
-                               payment.status === 'pending' ? 'Pendente' : 'Expirado'}
+                                  ? 'bg-warning/10 text-warning'
+                                  : 'bg-error/10 text-error'
+                              }`}>
+                              {payment.status === 'active' ? 'Ativo' :
+                                payment.status === 'pending' ? 'Pendente' : 'Expirado'}
                             </span>
                           </td>
                           <td className="py-4 px-6">
@@ -128,19 +188,16 @@ const PaymentList: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  if (payment.status !== 'pending') {
-                                    toast.error('Apenas links pendentes podem ser editados');
-                                    return;
-                                  }
-                                  setSelectedPayment(payment);
-                                  setIsEditModalOpen(true);
-                                  setFormData({
-                                    amount: payment.amount,
-                                    description: payment.description,
-                                    paymentMethods: payment.paymentMethods,
-                                  });
-                                }}
+                                onClick={() => handleViewPaymentLink(payment.id)}
+                                icon={<Eye className="h-4 w-4" />}
+                                title="Visualizar link de pagamento"
+                              >
+                                Ver Link
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditModal(payment)}
                                 icon={<Pencil className="h-4 w-4" />}
                                 disabled={payment.status !== 'pending'}
                               >
@@ -150,7 +207,7 @@ const PaymentList: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 className="text-error"
-                                onClick={() => handleDeletePayment(payment.id)}
+                                onClick={() => openDeleteModal(payment)}
                                 icon={<Trash2 className="h-4 w-4" />}
                               >
                                 Remover
@@ -188,75 +245,172 @@ const PaymentList: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         title="Editar Link de Pagamento"
       >
-        <div className="space-y-4">
-          <Input
-            label="Valor"
-            type="number"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-            fullWidth
-          />
-          <Input
-            label="Descrição"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            fullWidth
-          />
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Métodos de Pagamento
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Valor
             </label>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.paymentMethods.includes('pix')}
-                  onChange={(e) => {
-                    const methods = e.target.checked
-                      ? [...formData.paymentMethods, 'pix']
-                      : formData.paymentMethods.filter(m => m !== 'pix');
-                    setFormData({ ...formData, paymentMethods: methods });
-                  }}
-                  className="rounded border-gray-300"
-                />
-                <span>PIX</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.paymentMethods.includes('credit_card')}
-                  onChange={(e) => {
-                    const methods = e.target.checked
-                      ? [...formData.paymentMethods, 'credit_card']
-                      : formData.paymentMethods.filter(m => m !== 'credit_card');
-                    setFormData({ ...formData, paymentMethods: methods });
-                  }}
-                  className="rounded border-gray-300"
-                />
-                <span>Cartão de Crédito</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.paymentMethods.includes('debit_card')}
-                  onChange={(e) => {
-                    const methods = e.target.checked
-                      ? [...formData.paymentMethods, 'debit_card']
-                      : formData.paymentMethods.filter(m => m !== 'debit_card');
-                    setFormData({ ...formData, paymentMethods: methods });
-                  }}
-                  className="rounded border-gray-300"
-                />
-                <span>Cartão de Débito</span>
-              </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                R$
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
+                className="w-full pl-10 pr-4 py-3 text-lg font-semibold border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descrição
+            </label>
+            <Input
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descrição do produto ou serviço"
+              fullWidth
+              className="py-3"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-4">
+              Métodos de Pagamento *
+            </label>
+            <div className="space-y-3">
+              {paymentMethodOptions.map((option) => (
+                <motion.div
+                  key={option.id}
+                  className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${formData.paymentMethods.includes(option.id)
+                      ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm hover:bg-gray-50/50'
+                    }`}
+                  onClick={() => togglePaymentMethod(option.id)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg transition-all duration-300 ${formData.paymentMethods.includes(option.id)
+                          ? `bg-gradient-to-r ${option.color} text-white shadow-md`
+                          : 'bg-gray-100 text-gray-600'
+                        }`}>
+                        {option.icon}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-900">
+                          {option.name}
+                        </span>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {option.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${formData.paymentMethods.includes(option.id)
+                        ? 'border-primary bg-primary shadow-md'
+                        : 'border-gray-300'
+                      }`}>
+                      {formData.paymentMethods.includes(option.id) && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        >
+                          <Check className="h-3 w-3 text-white" />
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            {formData.paymentMethods.length === 0 && (
+              <p className="text-red-600 text-sm mt-2">
+                Selecione pelo menos um método de pagamento
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleEditPayment}>
-              Salvar
+            <Button
+              onClick={handleEditPayment}
+              disabled={formData.paymentMethods.length === 0}
+              className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary"
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirmar Exclusão"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Excluir link de pagamento
+              </h3>
+              <p className="text-gray-600">
+                Tem certeza que deseja excluir este link de pagamento? Esta ação não pode ser desfeita.
+              </p>
+            </div>
+          </div>
+
+          {selectedPayment && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 mb-2">Detalhes do link:</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Descrição:</span>
+                  <span className="font-medium">{selectedPayment.description}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Valor:</span>
+                  <span className="font-medium">{formatCurrency(selectedPayment.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className={`font-medium ${selectedPayment.status === 'active' ? 'text-green-600' :
+                      selectedPayment.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                    {selectedPayment.status === 'active' ? 'Ativo' :
+                      selectedPayment.status === 'pending' ? 'Pendente' : 'Expirado'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeletePayment}
+              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
+            >
+              Excluir Link
             </Button>
           </div>
         </div>
