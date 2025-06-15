@@ -15,7 +15,7 @@ const loginSchema = yup.object().shape({
   password: yup
     .string()
     .required('Senha é obrigatória')
-    .min(6, 'A senha deve ter pelo menos 6 caracteres')
+    .min(3, 'A senha deve ter pelo menos 3 caracteres')
 });
 
 interface FormData {

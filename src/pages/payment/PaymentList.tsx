@@ -11,6 +11,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
+import Select from '../../components/ui/Select';
 
 interface PaymentLinkFormData {
   amount: number;
@@ -23,16 +24,21 @@ const PaymentList: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [sellerFilter, setSellerFilter] = useState<string>('all');
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<PaymentLinkFormData>({
     amount: 0,
     description: '',
     paymentMethods: [],
   });
-
+  // Get data based on user type
+  const isAdmin = user?.cargo === 'admin';
   const paymentLinks = user ? getPaymentLinks(user.id) : [];
-
+  const sellers = isAdmin ? [] : [];
+  const marketplaces = isAdmin ? [] : [];
   const filteredPayments = paymentLinks.filter(link =>
     link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     link.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -53,13 +59,7 @@ const PaymentList: React.FC = () => {
       icon: <CreditCard className="h-4 w-4" />,
       color: 'from-blue-500 to-indigo-600'
     },
-    {
-      id: 'debit_card',
-      name: 'Cartão de Débito',
-      description: 'Débito online',
-      icon: <CreditCard className="h-4 w-4" />,
-      color: 'from-purple-500 to-violet-600'
-    }
+
   ];
 
   const handleEditPayment = () => {
@@ -124,6 +124,7 @@ const PaymentList: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
@@ -133,22 +134,60 @@ const PaymentList: React.FC = () => {
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold">Links de Pagamento</h1>
-              <Link to="/create-payment-link">
-                <Button icon={<Plus className="h-4 w-4" />}>
-                  Criar Link
-                </Button>
-              </Link>
+              <h1 className="text-2xl font-bold">
+                {isAdmin ? 'Todos os Links de Pagamento' : 'Links de Pagamento'}
+              </h1>
+              {!isAdmin && (
+                <Link to="/create-payment-link">
+                  <Button icon={<Plus className="h-4 w-4" />}>
+                    Criar Link
+                  </Button>
+                </Link>
+              )}
             </div>
 
             <div className="mb-6">
               <Input
-                placeholder="Buscar links de pagamento..."
+                placeholder={isAdmin ? "Buscar por descrição, ID, email ou vendedor..." : "Buscar links de pagamento..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 icon={<Search className="h-4 w-4" />}
                 fullWidth
               />
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Select
+                  options={[
+                    { value: 'all', label: 'Todos os Status' },
+                    { value: 'active', label: 'Ativos' },
+                    { value: 'pending', label: 'Pendentes' },
+                    { value: 'expired', label: 'Expirados' }
+                  ]}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                />
+
+                {isAdmin && (
+                  <>
+                    <Select
+                      options={[
+                        { value: 'all', label: 'Todos os Marketplaces' },
+                        ...marketplaces.map(m => ({ value: m.id, label: m.name }))
+                      ]}
+                      value={marketplaceFilter}
+                      onChange={(e) => setMarketplaceFilter(e.target.value)}
+                    />
+                    <Select
+                      options={[
+                        { value: 'all', label: 'Todos os Vendedores' },
+                        ...sellers.map(s => ({ value: s.id, label: s.name }))
+                      ]}
+                      value={sellerFilter}
+                      onChange={(e) => setSellerFilter(e.target.value)}
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
             <Card>
@@ -174,10 +213,10 @@ const PaymentList: React.FC = () => {
                           <td className="py-4 px-6">{formatCurrency(payment.amount)}</td>
                           <td className="py-4 px-6">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${payment.status === 'active'
-                                ? 'bg-success/10 text-success'
-                                : payment.status === 'pending'
-                                  ? 'bg-warning/10 text-warning'
-                                  : 'bg-error/10 text-error'
+                              ? 'bg-success/10 text-success'
+                              : payment.status === 'pending'
+                                ? 'bg-warning/10 text-warning'
+                                : 'bg-error/10 text-error'
                               }`}>
                               {payment.status === 'active' ? 'Ativo' :
                                 payment.status === 'pending' ? 'Pendente' : 'Expirado'}
@@ -287,8 +326,8 @@ const PaymentList: React.FC = () => {
                 <motion.div
                   key={option.id}
                   className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                      ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm hover:bg-gray-50/50'
+                    ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm hover:bg-gray-50/50'
                     }`}
                   onClick={() => togglePaymentMethod(option.id)}
                   whileHover={{ scale: 1.02 }}
@@ -297,8 +336,8 @@ const PaymentList: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className={`p-2 rounded-lg transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                          ? `bg-gradient-to-r ${option.color} text-white shadow-md`
-                          : 'bg-gray-100 text-gray-600'
+                        ? `bg-gradient-to-r ${option.color} text-white shadow-md`
+                        : 'bg-gray-100 text-gray-600'
                         }`}>
                         {option.icon}
                       </div>
@@ -312,8 +351,8 @@ const PaymentList: React.FC = () => {
                       </div>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                        ? 'border-primary bg-primary shadow-md'
-                        : 'border-gray-300'
+                      ? 'border-primary bg-primary shadow-md'
+                      : 'border-gray-300'
                       }`}>
                       {formData.paymentMethods.includes(option.id) && (
                         <motion.div
@@ -389,7 +428,7 @@ const PaymentList: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className={`font-medium ${selectedPayment.status === 'active' ? 'text-green-600' :
-                      selectedPayment.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
+                    selectedPayment.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
                     }`}>
                     {selectedPayment.status === 'active' ? 'Ativo' :
                       selectedPayment.status === 'pending' ? 'Pendente' : 'Expirado'}

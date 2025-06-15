@@ -58,7 +58,7 @@ const Dashboard: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-sm sm:text-base text-gray-600">Bem-vindo, {user?.nome}. 📊</p>
+                <p className="text-sm sm:text-base text-gray-600">Bem-vindo, {user?.nome}.</p>
               </motion.div>
 
               <motion.div

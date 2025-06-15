@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Store, Plus, Pencil, Trash2, Building2, Search } from 'lucide-react';
+import { Store, Plus, Pencil, Trash2, Building2, Search, Phone, User, MapPin } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -11,16 +11,55 @@ import SellerReport from '../../components/reports/SellerReport';
 import { updateSeller } from '../../services/adminService';
 import toast from 'react-hot-toast';
 import api from '../../api/api';
+import * as yup from 'yup';
+import { motion } from 'framer-motion';
 
 interface SellerFormData {
   id: string;
-  nome: string;
+  name: string;
   email: string;
   password: string;
-  confirmpassword: string;
   marketplaceId: string;
+  // Contact info
+  phone: string;
+  website: string;
+  contactPerson: string;
+  // Address info
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
+interface FormErrors {
+  [key: string]: string;
+}
+
+// Validation schemas
+const personalInfoSchema = yup.object().shape({
+  id: yup.string().required('ID é obrigatório').min(3, 'ID deve ter pelo menos 3 caracteres'),
+  name: yup.string().required('Nome é obrigatório').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: yup.string().required('Email é obrigatório').email('Email inválido'),
+  password: yup.string().when('isEdit', {
+    is: false,
+    then: (schema) => schema.required('Senha é obrigatória').min(3, 'Senha deve ter pelo menos 3 caracteres'),
+    otherwise: (schema) => schema.min(3, 'Senha deve ter pelo menos 3 caracteres')
+  }),
+  marketplaceId: yup.string().required('Marketplace é obrigatório'),
+});
+
+const contactInfoSchema = yup.object().shape({
+  phone: yup.string().matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido (ex: (11) 99999-9999)'),
+  website: yup.string().url('Website deve ser uma URL válida'),
+});
+
+const addressInfoSchema = yup.object().shape({
+  zipCode: yup.string().matches(/^\d{5}-\d{3}$/, 'CEP inválido (ex: 00000-000)'),
+});
 const ITEMS_PER_PAGE = 10;
 
 const SellerList: React.FC = () => {
@@ -34,18 +73,29 @@ const SellerList: React.FC = () => {
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState<SellerFormData>({
     id: '',
-    nome: '',
+    name: '',
     email: '',
     password: '',
-    confirmpassword: '',
-    marketplaceId: ''
+    marketplaceId: '',
+    phone: '',
+    website: '',
+    contactPerson: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'Brasil',
   });
   const [marketplaces, setSellerList] = useState<[]>([]);
   const [sellers, setSellers] = useState<[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-
+  const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'address'>('personal');
   // Função para buscar sellers
   const fetchSellers = async (onDelete: boolean) => {
     if (onDelete) {
@@ -106,10 +156,128 @@ const SellerList: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const resetForm = () => {
+    setFormData({
+      id: '',
+      name: '',
+      email: '',
+      password: '',
+      marketplaceId: '',
+      phone: '',
+      website: '',
+      contactPerson: '',
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'Brasil',
+    });
+    setFormErrors({});
+    setActiveTab('personal');
+  };
+
+  const validateCurrentTab = async (isEdit = false) => {
+    try {
+      let schema;
+      switch (activeTab) {
+        case 'personal':
+          schema = personalInfoSchema;
+          break;
+        case 'contact':
+          schema = contactInfoSchema;
+          break;
+        case 'address':
+          schema = addressInfoSchema;
+          break;
+        default:
+          return true;
+      }
+
+      await schema.validate(formData, {
+        abortEarly: false,
+        context: { isEdit }
+      });
+
+      // Clear errors for current tab
+      const newErrors = { ...formErrors };
+      Object.keys(newErrors).forEach(key => {
+        if (getFieldsForTab(activeTab).includes(key)) {
+          delete newErrors[key];
+        }
+      });
+      setFormErrors(newErrors);
+
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const newErrors: FormErrors = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            newErrors[err.path] = err.message;
+          }
+        });
+        setFormErrors(prev => ({ ...prev, ...newErrors }));
+      }
+      return false;
+    }
+  };
+
+  const validateAllTabs = async (isEdit = false) => {
+    try {
+      const allSchemas = yup.object().shape({
+        ...personalInfoSchema.fields,
+        ...contactInfoSchema.fields,
+        ...addressInfoSchema.fields,
+      });
+
+      await allSchemas.validate(formData, {
+        abortEarly: false,
+        context: { isEdit }
+      });
+
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const newErrors: FormErrors = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            newErrors[err.path] = err.message;
+          }
+        });
+        setFormErrors(newErrors);
+      }
+      return false;
+    }
+  };
+
+  const getFieldsForTab = (tab: string) => {
+    switch (tab) {
+      case 'personal':
+        return ['id', 'name', 'email', 'password', 'marketplaceId', 'contactPerson'];
+      case 'contact':
+        return ['phone', 'website'];
+      case 'address':
+        return ['street', 'number', 'complement', 'neighborhood', 'city', 'state', 'zipCode', 'country'];
+      default:
+        return [];
+    }
+  };
+
   const [isCreateSeller, setIsCreateSeller] = useState(false)
   const handleAddSeller = async () => {
     setIsCreateSeller(true)
+    console.log(formData, selectedSeller)
     try {
+      const isValid = await validateAllTabs(false);
+      if (!isValid) {
+        toast.error('Por favor, corrija os erros no formulário');
+        return;
+      }
+
       if (!formData.id.trim()) {
         toast.error('ID do vendedor é obrigatório');
         setIsCreateSeller(false)
@@ -136,6 +304,7 @@ const SellerList: React.FC = () => {
 
         return;
       }
+
 
       const payload = {
         id_seller: formData.id,
@@ -172,7 +341,6 @@ const SellerList: React.FC = () => {
       setLoading(false);
     }
   };
-
 
   const [isRemoveSeller, setIsRemoveSeller] = useState(false)
 
@@ -218,6 +386,12 @@ const SellerList: React.FC = () => {
   const handleEditSeller = async (id: string) => {
     try {
       if (!selectedSeller) return;
+      const isValid = await validateAllTabs(true);
+      if (!isValid) {
+        toast.error('Por favor, corrija os erros no formulário');
+        return;
+      }
+
       const response = await api.put(`/seller/${id}`, { ...formData, password: formData?.password ? formData?.password : null, marketplaceId: formData.id });
       console.log(response)
       updateSeller(selectedSeller.id, formData);
@@ -233,6 +407,253 @@ const SellerList: React.FC = () => {
       toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
     }
 
+  };
+
+
+  const openEditModal = (seller: any) => {
+    setSelectedSeller(seller);
+    setFormData({
+      id: seller.id,
+      name: seller.name,
+      email: seller.email,
+      password: '',
+      marketplaceId: seller.marketplaceId || '',
+      phone: seller.phone || '',
+      website: seller.website || '',
+      contactPerson: seller.contactPerson || '',
+      street: seller.street || '',
+      number: seller.number || '',
+      complement: seller.complement || '',
+      neighborhood: seller.neighborhood || '',
+      city: seller.city || '',
+      state: seller.state || '',
+      zipCode: seller.zipCode || '',
+      country: seller.country || 'Brasil',
+    });
+    setFormErrors({});
+    setActiveTab('personal');
+    setIsEditModalOpen(true);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setIsAddModalOpen(true);
+  };
+
+  const tabs = [
+    {
+      id: 'personal' as const,
+      label: 'Informações Pessoais',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      id: 'contact' as const,
+      label: 'Contato',
+      icon: <Phone className="h-4 w-4" />,
+    },
+    {
+      id: 'address' as const,
+      label: 'Endereço',
+      icon: <MapPin className="h-4 w-4" />,
+    },
+  ];
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'personal':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="ID do Vendedor *"
+                value={formData.id}
+                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                placeholder="ex: seller-123"
+                fullWidth
+                disabled={isEditModalOpen}
+                error={formErrors.id}
+              />
+              <Input
+                label="Nome Completo *"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome do vendedor"
+                fullWidth
+                error={formErrors.name}
+              />
+            </div>
+            <Input
+              label="Email *"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="vendedor@email.com"
+              fullWidth
+              error={formErrors.email}
+            />
+            <Input
+              label={isEditModalOpen ? "Nova Senha (opcional)" : "Senha *"}
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="••••••••"
+              fullWidth
+              error={formErrors.password}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Marketplace *"
+                options={marketplaces.map(m => ({ value: m.id, label: m.name }))}
+                value={formData.marketplaceId}
+                onChange={(e) => setFormData({ ...formData, marketplaceId: e.target.value })}
+                fullWidth
+                error={formErrors.marketplaceId}
+              />
+              <Input
+                label="Pessoa de Contato"
+                value={formData.contactPerson}
+                onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                placeholder="Nome do responsável"
+                fullWidth
+                error={formErrors.contactPerson}
+              />
+            </div>
+          </motion.div>
+        );
+
+      case 'contact':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Telefone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+                fullWidth
+                error={formErrors.phone}
+              />
+              <Input
+                label="Website"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                placeholder="https://www.loja.com"
+                fullWidth
+                error={formErrors.website}
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Phone className="h-3 w-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">Informações de Contato</h4>
+                  <p className="text-blue-700 text-xs mt-1">
+                    Essas informações serão usadas para comunicação e suporte técnico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+
+      case 'address':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  label="Logradouro"
+                  value={formData.street}
+                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  placeholder="Rua, Avenida, etc."
+                  fullWidth
+                  error={formErrors.street}
+                />
+              </div>
+              <Input
+                label="Número"
+                value={formData.number}
+                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                placeholder="123"
+                fullWidth
+                error={formErrors.number}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Complemento"
+                value={formData.complement}
+                onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                placeholder="Apto, Sala, etc."
+                fullWidth
+                error={formErrors.complement}
+              />
+              <Input
+                label="Bairro"
+                value={formData.neighborhood}
+                onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                placeholder="Nome do bairro"
+                fullWidth
+                error={formErrors.neighborhood}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                label="Cidade"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="São Paulo"
+                fullWidth
+                error={formErrors.city}
+              />
+              <Input
+                label="Estado"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="SP"
+                fullWidth
+                error={formErrors.state}
+              />
+              <Input
+                label="CEP"
+                value={formData.zipCode}
+                onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                placeholder="00000-000"
+                fullWidth
+                error={formErrors.zipCode}
+              />
+            </div>
+            <Input
+              label="País"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              placeholder="Brasil"
+              fullWidth
+              error={formErrors.country}
+            />
+          </motion.div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   if (isLoading) {
@@ -422,10 +843,13 @@ const SellerList: React.FC = () => {
       {/* Add Seller Modal */}
       <Modal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          resetForm();
+        }}
         title="Adicionar Vendedor"
       >
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <Input
             label="ID"
             value={formData.id}
@@ -467,7 +891,34 @@ const SellerList: React.FC = () => {
               console.log('Select onChange value:', e.target.value);
               setFormData({ ...formData, marketplaceId: e.target.value });
             }}
-          />
+          /> */}
+        <div className="space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                >
+                  <span className={`mr-2 transition-colors ${activeTab === tab.id ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}>
+                    {tab.icon}
+                  </span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="min-h-[300px]">
+            {renderTabContent()}
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancelar
@@ -482,39 +933,41 @@ const SellerList: React.FC = () => {
       {/* Edit Seller Modal */}
       <Modal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedSeller(null);
+          resetForm();
+        }}
         title="Editar Vendedor"
       >
-        <div className="space-y-4">
-          <Input
-            label="ID"
-            value={formData.id}
-            readOnly
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-          />
-          <Input
-            label="Email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
-          <Input
-            label="Nova Senha (opcional)"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            fullWidth
-          />
-          <Select
-            label="Marketplace"
-            options={marketplaces.map(m => ({ value: m.id, label: m.cliente.nome }))}
-            value={formData.marketplaceId}
-            onChange={(e) => setFormData({ ...formData, marketplaceId: e.target.value })}
-          />
+        <div className="space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                >
+                  <span className={`mr-2 transition-colors ${activeTab === tab.id ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}>
+                    {tab.icon}
+                  </span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="min-h-[300px]">
+            {renderTabContent()}
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar

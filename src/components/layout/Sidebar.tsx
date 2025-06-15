@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CreditCard, 
+import {
+  CreditCard,
   LayoutDashboard,
-  Settings, 
+  Settings,
   History,
   LogOut,
   ChevronLeft,
@@ -29,12 +29,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   const handleCollapse = (collapsed: boolean) => {
     setIsCollapsed(collapsed);
     onCollapse?.(collapsed);
   };
-  
+
   const isActive = (path: string) => location.pathname === path;
 
   const menuItems = [
@@ -55,6 +55,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           label: 'Todos os Vendedores',
           icon: <Store className="h-5 w-5" />,
           path: '/admin/sellers'
+        },
+        {
+          label: 'Pagamentos',
+          icon: <Wallet className="h-5 w-5" />,
+          path: '/payments'
+        },
+        {
+          label: 'Transações',
+          icon: <History className="h-5 w-5" />,
+          path: '/history'
         }
       ] : user?.cargo === 'marketplace' ? [
         {
@@ -136,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   return (
     <>
       {/* Mobile Menu Button */}
-      
+
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-md lg:hidden"
@@ -163,16 +173,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <motion.aside 
+      <motion.aside
         initial={false}
-        animate={{ 
+        animate={{
           width: isCollapsed ? 80 : 256,
           x: isMobileMenuOpen ? 0 : (window.innerWidth < 1024 ? -256 : 0)
         }}
         transition={{ duration: 0.3 }}
-        className={`fixed top-0 left-0 h-screen bg-white border-r border-border z-40 ${
-          isMobileMenuOpen ? 'shadow-xl' : ''
-        }`}
+        className={`fixed top-0 left-0 h-screen bg-white border-r border-border z-40 ${isMobileMenuOpen ? 'shadow-xl' : ''
+          }`}
       >
         <div className="flex flex-col h-full">
           <div className="p-6">
@@ -191,7 +200,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                 )}
               </AnimatePresence>
             </div>
-            
+
             <nav className="space-y-6">
               {menuItems.map((section, index) => (
                 <div key={index}>
@@ -209,15 +218,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                   </AnimatePresence>
                   <div className="space-y-1">
                     {section.items.map((item, itemIndex) => (
-                      <Link 
+                      <Link
                         key={itemIndex}
-                        to={item.path} 
+                        to={item.path}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${
-                          isActive(item.path) 
-                            ? 'text-primary bg-primary/5' 
+                        className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${isActive(item.path)
+                            ? 'text-primary bg-primary/5'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <div className={`shrink-0 ${isActive(item.path) ? 'text-primary' : ''}`}>
                           {item.icon}
@@ -246,7 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
               ))}
             </nav>
           </div>
-          
+
           <div className="mt-auto p-6">
             <AnimatePresence mode="wait">
               {!isCollapsed && (
@@ -293,9 +301,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       {/* Toggle Button - Only visible on desktop */}
       <button
         onClick={() => handleCollapse(!isCollapsed)}
-        className={`fixed top-6 z-40 bg-white rounded-full shadow-lg p-1.5 transition-all duration-300 hidden lg:block ${
-          isCollapsed ? 'left-[4.5rem]' : 'left-60'
-        }`}
+        className={`fixed top-6 z-40 bg-white rounded-full shadow-lg p-1.5 transition-all duration-300 hidden lg:block ${isCollapsed ? 'left-[4.5rem]' : 'left-60'
+          }`}
       >
         {isCollapsed ? (
           <ChevronRight className="h-4 w-4" />

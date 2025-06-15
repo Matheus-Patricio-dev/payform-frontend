@@ -18,7 +18,9 @@ import {
   ArrowDownRight,
   MoreVertical,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Store,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserTransactions, getTransactionStats } from '../../services/paymentService';
@@ -40,13 +42,15 @@ const PaymentHistory: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
+  const [sellerFilter, setSellerFilter] = useState<string>('all');
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   // Simulate loading
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1200);
     return () => clearTimeout(timer);
   }, []);
-
+  // Get data based on user type
+  const isAdmin = user?.cargo === 'admin';
   const transactions = user ? [] : [];
   const stats = user ? {
     totalTransactions: 0,
@@ -61,6 +65,12 @@ const PaymentHistory: React.FC = () => {
     declined: 0,
     totalAmount: 0
   };
+
+
+  // Get sellers and marketplaces for admin filters
+  const sellers = isAdmin ? [] : [];
+  const marketplaces = isAdmin ? [] : [];
+
 
   const filteredTransactions = useMemo(() => {
     let filtered = transactions.filter(transaction => {
@@ -150,12 +160,12 @@ const PaymentHistory: React.FC = () => {
           icon: <CreditCard className="h-4 w-4" />,
           color: 'text-blue-600 bg-blue-50'
         };
-      case 'debit_card':
-        return {
-          label: 'Cartão de Débito',
-          icon: <CreditCard className="h-4 w-4" />,
-          color: 'text-purple-600 bg-purple-50'
-        };
+      // case 'debit_card':
+      //   return {
+      //     label: 'Cartão de Débito',
+      //     icon: <CreditCard className="h-4 w-4" />,
+      //     color: 'text-purple-600 bg-purple-50'
+      //   };
       case 'pix':
         return {
           label: 'PIX',
@@ -180,6 +190,11 @@ const PaymentHistory: React.FC = () => {
   const handleRefresh = () => {
     setIsLoading(true);
     setTimeout(() => setIsLoading(false), 800);
+  };
+  const getSellerInfo = (sellerId: string) => {
+    const seller = sellers.find(s => s.id === sellerId);
+    const marketplace = seller ? marketplaces.find(m => m.id === seller.marketplaceId) : null;
+    return { seller, marketplace };
   };
 
   if (isLoading) {
@@ -226,10 +241,13 @@ const PaymentHistory: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    Histórico de Transações
+                    {isAdmin ? 'Todas as Transações' : 'Histórico de Transações'}
                   </h1>
                   <p className="text-gray-600 text-sm sm:text-base">
-                    Acompanhe todas as suas transações em tempo real
+                    {isAdmin
+                      ? 'Visualize e gerencie todas as transações do sistema'
+                      : 'Acompanhe todas as suas transações em tempo real'
+                    }
                   </p>
                 </div>
               </div>
@@ -329,10 +347,10 @@ const PaymentHistory: React.FC = () => {
             >
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="space-y-4">
                     <div className="flex-1">
                       <Input
-                        placeholder="Buscar por cliente, email ou ID..."
+                        placeholder={isAdmin ? "Buscar por cliente, email, ID da transação ou vendedor..." : "Buscar por cliente, email ou ID..."}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         icon={<Search className="h-4 w-4" />}
@@ -340,7 +358,7 @@ const PaymentHistory: React.FC = () => {
                         className="bg-white"
                       />
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:w-auto">
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                       <Select
                         options={[
                           { value: 'all', label: 'Todos os Status' },
@@ -371,6 +389,26 @@ const PaymentHistory: React.FC = () => {
                         value={dateFilter}
                         onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
                       />
+                      {isAdmin && (
+                        <>
+                          <Select
+                            options={[
+                              { value: 'all', label: 'Todos os Marketplaces' },
+                              ...marketplaces.map(m => ({ value: m.id, label: m.name }))
+                            ]}
+                            value={marketplaceFilter}
+                            onChange={(e) => setMarketplaceFilter(e.target.value)}
+                          />
+                          <Select
+                            options={[
+                              { value: 'all', label: 'Todos os Vendedores' },
+                              ...sellers.map(s => ({ value: s.id, label: s.name }))
+                            ]}
+                            value={sellerFilter}
+                            onChange={(e) => setSellerFilter(e.target.value)}
+                          />
+                        </>
+                      )}
                       <div className="flex items-center space-x-2">
                         <Button
                           variant="outline"
@@ -412,7 +450,7 @@ const PaymentHistory: React.FC = () => {
                         {filteredTransactions.map((transaction, index) => {
                           const statusConfig = getStatusConfig(transaction.status);
                           const methodConfig = getPaymentMethodConfig(transaction.paymentMethod);
-
+                          const { seller, marketplace } = isAdmin ? getSellerInfo(transaction.sellerId) : { seller: null, marketplace: null };
                           return (
                             <motion.div
                               key={transaction.id}
@@ -438,6 +476,20 @@ const PaymentHistory: React.FC = () => {
                                       <p className="text-sm text-gray-600 truncate">
                                         {transaction.customerEmail || 'Email não informado'}
                                       </p>
+                                      {isAdmin && seller && (
+                                        <div className="flex items-center space-x-2 mt-1">
+                                          <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                            <Store className="h-3 w-3" />
+                                            <span>{seller.name}</span>
+                                          </div>
+                                          {marketplace && (
+                                            <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                              <Building2 className="h-3 w-3" />
+                                              <span>{marketplace.name}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                                         <span className="flex items-center space-x-1">
                                           <Calendar className="h-3 w-3" />

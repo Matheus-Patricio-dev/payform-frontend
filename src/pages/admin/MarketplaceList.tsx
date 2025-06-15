@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo, useEffect } from 'react';
-import { Building2, Store, Users, Plus, Pencil, Trash2, UserPlus, Eye, Search, CheckCircle, XCircle, Menu } from 'lucide-react';
+import { Building2, Store, Users, Plus, Pencil, Trash2, UserPlus, Eye, Search, CheckCircle, XCircle, Menu, Phone, MapPin, User } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -11,24 +11,62 @@ import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../api/api';
+import * as yup from 'yup';
+import { motion } from 'framer-motion';
 
 interface MarketplaceFormData {
   id: string;
-  nome: string;
+  name: string;
   email: string;
   password: string;
-  confirmpassword: string;
   status: 'active' | 'inactive';
+  // Contact info
+  phone: string;
+  website: string;
+  contactPerson: string;
+  // Address info
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
 interface SellerFormData {
   id: string;
-  nome: string;
+  name: string;
   email: string;
   password: string;
-  confirmpassword: string;
+  marketplaceId: string;
 }
 
+interface FormErrors {
+  [key: string]: string;
+}
+// Validation schemas
+const personalInfoSchema = yup.object().shape({
+  id: yup.string().required('ID é obrigatório').min(3, 'ID deve ter pelo menos 3 caracteres'),
+  name: yup.string().required('Nome é obrigatório').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: yup.string().required('Email é obrigatório').email('Email inválido'),
+  password: yup.string().when('isEdit', {
+    is: false,
+    then: (schema) => schema.required('Senha é obrigatória').min(6, 'Senha deve ter pelo menos 6 caracteres'),
+    otherwise: (schema) => schema.min(6, 'Senha deve ter pelo menos 6 caracteres')
+  }),
+  status: yup.string().required('Status é obrigatório'),
+});
+
+const contactInfoSchema = yup.object().shape({
+  phone: yup.string().matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido (ex: (11) 99999-9999)'),
+  website: yup.string().url('Website deve ser uma URL válida'),
+});
+
+const addressInfoSchema = yup.object().shape({
+  zipCode: yup.string().matches(/^\d{5}-\d{3}$/, 'CEP inválido (ex: 00000-000)'),
+});
 const ITEMS_PER_PAGE = 10;
 
 const MarketplaceList: React.FC = () => {
@@ -43,16 +81,26 @@ const MarketplaceList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-
+  const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'address'>('personal');
   const [formData, setFormData] = useState<MarketplaceFormData>({
     id: '',
-    nome: '',
+    name: '',
     email: '',
     password: '',
-    confirmpassword: '',
     status: 'active',
+    phone: '',
+    website: '',
+    contactPerson: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'Brasil',
   });
-
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [sellerFormData, setSellerFormData] = useState<SellerFormData>({
     id: '',
     nome: '',
@@ -120,9 +168,67 @@ const MarketplaceList: React.FC = () => {
   );
   const [isCreateMKT, setIsCreateMKT] = useState(false)
 
+  const resetForm = () => {
+    setFormData({
+      id: '',
+      name: '',
+      email: '',
+      password: '',
+      status: 'active',
+      phone: '',
+      website: '',
+      contactPerson: '',
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'Brasil',
+    });
+    setFormErrors({});
+    setActiveTab('personal');
+  };
+
+  const validateAllTabs = async (isEdit = false) => {
+    try {
+      const allSchemas = yup.object().shape({
+        ...personalInfoSchema.fields,
+        ...contactInfoSchema.fields,
+        ...addressInfoSchema.fields,
+      });
+
+      await allSchemas.validate(formData, {
+        abortEarly: false,
+        context: { isEdit }
+      });
+
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const newErrors: FormErrors = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            newErrors[err.path] = err.message;
+          }
+        });
+        setFormErrors(newErrors);
+      }
+      return false;
+    }
+  };
+
   const handleAddMarketplace = async () => {
     setIsCreateMKT(true)
     try {
+      const isValid = await validateAllTabs(false);
+      if (!isValid) {
+        toast.error('Por favor, corrija os erros no formulário');
+        return;
+      }
+
       if (!formData.id.trim()) {
         toast.error('ID do marketplace é obrigatório');
         setIsCreateMKT(false)
@@ -136,6 +242,7 @@ const MarketplaceList: React.FC = () => {
         setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', status: 'active' });
         toast.success('Marketplace adicionado com sucesso!');
         const onCreate = true;
+        resetForm();
         fetchMarketplaces(onCreate);
       } else {
         setIsCreateMKT(false)
@@ -163,6 +270,7 @@ const MarketplaceList: React.FC = () => {
         setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', status: 'active' });
         toast.success('Marketplace atualizado com sucesso!');
         const onCreate = false;
+        resetForm();
         fetchMarketplaces(onCreate);
       }
     } catch (error) {
@@ -258,6 +366,254 @@ const MarketplaceList: React.FC = () => {
     }
   };
 
+
+  const openEditModal = (marketplace: any) => {
+    setSelectedMarketplace(marketplace);
+    setFormData({
+      id: marketplace.id,
+      name: marketplace.name,
+      email: marketplace.email,
+      password: '',
+      status: marketplace.status,
+      phone: marketplace.phone || '',
+      website: marketplace.website || '',
+      contactPerson: marketplace.contactPerson || '',
+      street: marketplace.street || '',
+      number: marketplace.number || '',
+      complement: marketplace.complement || '',
+      neighborhood: marketplace.neighborhood || '',
+      city: marketplace.city || '',
+      state: marketplace.state || '',
+      zipCode: marketplace.zipCode || '',
+      country: marketplace.country || 'Brasil',
+    });
+    setFormErrors({});
+    setActiveTab('personal');
+    setIsEditModalOpen(true);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setIsAddModalOpen(true);
+  };
+  const tabs = [
+    {
+      id: 'personal' as const,
+      label: 'Informações Pessoais',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      id: 'contact' as const,
+      label: 'Contato',
+      icon: <Phone className="h-4 w-4" />,
+    },
+    {
+      id: 'address' as const,
+      label: 'Endereço',
+      icon: <MapPin className="h-4 w-4" />,
+    },
+  ];
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'personal':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="ID do Marketplace *"
+                value={formData.id}
+                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                placeholder="ex: marketplace-123"
+                fullWidth
+                disabled={isEditModalOpen}
+                error={formErrors.id}
+              />
+              <Input
+                label="Nome da Empresa *"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome do marketplace"
+                fullWidth
+                error={formErrors.name}
+              />
+            </div>
+            <Input
+              label="Email Principal *"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="contato@marketplace.com"
+              fullWidth
+              error={formErrors.email}
+            />
+            <Input
+              label={isEditModalOpen ? "Nova Senha (opcional)" : "Senha *"}
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="••••••••"
+              fullWidth
+              error={formErrors.password}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Pessoa de Contato"
+                value={formData.contactPerson}
+                onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                placeholder="Nome do responsável"
+                fullWidth
+                error={formErrors.contactPerson}
+              />
+              <Select
+                label="Status *"
+                options={[
+                  { value: 'active', label: 'Ativo' },
+                  { value: 'inactive', label: 'Inativo' },
+                ]}
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+                fullWidth
+                error={formErrors.status}
+              />
+            </div>
+          </motion.div>
+        );
+
+      case 'contact':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Telefone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+                fullWidth
+                error={formErrors.phone}
+              />
+              <Input
+                label="Website"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                placeholder="https://www.marketplace.com"
+                fullWidth
+                error={formErrors.website}
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Phone className="h-3 w-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">Informações de Contato</h4>
+                  <p className="text-blue-700 text-xs mt-1">
+                    Essas informações serão usadas para comunicação oficial e suporte técnico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+
+      case 'address':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  label="Logradouro"
+                  value={formData.street}
+                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  placeholder="Rua, Avenida, etc."
+                  fullWidth
+                  error={formErrors.street}
+                />
+              </div>
+              <Input
+                label="Número"
+                value={formData.number}
+                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                placeholder="123"
+                fullWidth
+                error={formErrors.number}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Complemento"
+                value={formData.complement}
+                onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                placeholder="Apto, Sala, etc."
+                fullWidth
+                error={formErrors.complement}
+              />
+              <Input
+                label="Bairro"
+                value={formData.neighborhood}
+                onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                placeholder="Nome do bairro"
+                fullWidth
+                error={formErrors.neighborhood}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                label="Cidade"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="São Paulo"
+                fullWidth
+                error={formErrors.city}
+              />
+              <Input
+                label="Estado"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="SP"
+                fullWidth
+                error={formErrors.state}
+              />
+              <Input
+                label="CEP"
+                value={formData.zipCode}
+                onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                placeholder="00000-000"
+                fullWidth
+                error={formErrors.zipCode}
+              />
+            </div>
+            <Input
+              label="País"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              placeholder="Brasil"
+              fullWidth
+              error={formErrors.country}
+            />
+          </motion.div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex">
@@ -300,7 +656,7 @@ const MarketplaceList: React.FC = () => {
                 className="w-full sm:w-auto text-sm"
               >
                 <span className="hidden sm:inline">Adicionar Marketplace</span>
-                <span className="sm:hidden">Adicionar</span>
+                <span onClick={openAddModal} className="sm:hidden">Adicionar</span>
               </Button>
             </div>
 
@@ -431,6 +787,7 @@ const MarketplaceList: React.FC = () => {
                                     onClick={() => {
                                       setSelectedMarketplace(marketplace);
                                       setIsAddSellerModalOpen(true);
+
                                       setSellerFormData(prev => ({ ...prev, marketplaceId: marketplace.id }));
                                     }}
                                     icon={<UserPlus className="h-4 w-4" />}
@@ -466,6 +823,7 @@ const MarketplaceList: React.FC = () => {
                                         confirmpassword: '',
                                         status: marketplace.cliente.status,
                                       });
+                                      openEditModal(marketplace)
                                     }}
                                     icon={<Pencil className="h-4 w-4" />}
                                     className="text-xs"
@@ -524,11 +882,40 @@ const MarketplaceList: React.FC = () => {
       {/* Add Marketplace Modal */}
       <Modal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          resetForm();
+        }}
         title="Adicionar Marketplace"
       >
         <div className="space-y-4">
-          <Input
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                >
+                  <span className={`mr-2 transition-colors ${activeTab === tab.id ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}>
+                    {tab.icon}
+                  </span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="min-h-[300px]">
+            {renderTabContent()}
+          </div>
+          {/* <Input
             label="ID do Marketplace"
             value={formData.id}
             onChange={(e) => setFormData({ ...formData, id: e.target.value })}
@@ -571,7 +958,7 @@ const MarketplaceList: React.FC = () => {
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
             fullWidth
-          />
+          /> */}
           <div className="flex flex-col sm:flex-row justify-end gap-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
