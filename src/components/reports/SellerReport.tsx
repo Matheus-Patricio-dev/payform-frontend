@@ -30,7 +30,7 @@ const SellerReport: React.FC<SellerReportProps> = ({ sellerId }) => {
     labels: report.salesByPaymentMethod.map(item => {
       switch (item.method) {
         case 'credit_card': return 'Cartão de Crédito';
-        case 'debit_card': return 'Cartão de Débito';
+        case 'dbank_slip': return 'Boleto bancário';
         case 'pix': return 'PIX';
         default: return item.method;
       }

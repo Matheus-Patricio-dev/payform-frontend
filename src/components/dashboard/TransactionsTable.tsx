@@ -50,7 +50,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
   const getPaymentMethodName = (method: string) => {
     switch (method) {
       case 'credit_card': return 'Cartão de Crédito';
-      case 'debit_card': return 'Cartão de Débito';
+      case 'bank_slip': return 'Cartão de Débito';
       case 'pix': return 'PIX';
       case 'bank_transfer': return 'Transferência Bancária';
       default: return method;

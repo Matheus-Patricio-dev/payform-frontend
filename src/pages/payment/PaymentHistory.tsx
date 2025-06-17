@@ -374,7 +374,7 @@ const PaymentHistory: React.FC = () => {
                           { value: 'all', label: 'Todos os Métodos' },
                           { value: 'pix', label: 'PIX' },
                           { value: 'credit_card', label: 'Cartão de Crédito' },
-                          { value: 'debit_card', label: 'Cartão de Débito' }
+                          { value: 'bank_slip', label: 'Boleto bancário' }
                         ]}
                         value={methodFilter}
                         onChange={(e) => setMethodFilter(e.target.value as PaymentMethod | 'all')}

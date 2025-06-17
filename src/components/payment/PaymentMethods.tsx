@@ -91,7 +91,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 </button>
               )}
 
-              {(availableMethods.includes('credit_card') || availableMethods.includes('debit_card')) && (
+              {(availableMethods.includes('credit_card') || availableMethods.includes('bank_slip')) && (
                 <button
                   onClick={() => onSelectMethod('credit_card')}
                   className={`flex items-center justify-center gap-2 p-4 rounded-lg border transition-all ${

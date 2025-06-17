@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Check, Clock, CreditCard, DollarSign, XCircle } from 'lucide-react';
+import { BarChart3, Check, Clock, CreditCard, DollarSign, Wallet, XCircle } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -20,6 +20,12 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
       title: 'Receita Total',
       value: formatCurrency(stats.totalAmount),
       icon: <DollarSign className="h-5 w-5 text-primary" />,
+      color: 'bg-primary/10',
+    },
+    {
+      title: 'Saldo em conta',
+      value: formatCurrency(stats.totalAmount),
+      icon: <Wallet className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
     },
     {

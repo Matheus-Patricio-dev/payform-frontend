@@ -736,9 +736,10 @@ const SellerList: React.FC = () => {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID referencia do documento</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Email</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">MarketplaceId</th>
-                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
+                        <th className="text-center py-4 px-6 bg-gray-50 font-medium">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -754,6 +755,7 @@ const SellerList: React.FC = () => {
                                 </div>
                               </div>
                             </td>
+                            <td className="py-4 px-6">{seller?.id}</td>
                             <td className="py-4 px-6">{seller?.cliente.email}</td>
                             <td className="py-4 px-6">
                               <div className="flex items-center">

@@ -36,7 +36,7 @@ export interface PaymentLink {
   status: 'active' | 'pending' | 'expired';
 }
 
-export type PaymentMethod = 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer';
+export type PaymentMethod = 'pix' | 'credit_card' | 'bank_slip' | 'bank_transfer';
 
 export type TransactionStatus = 'completed' | 'pending' | 'declined';
 

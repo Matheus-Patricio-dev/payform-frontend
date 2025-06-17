@@ -78,7 +78,7 @@ const SellerDetail: React.FC = () => {
     labels: report.salesByPaymentMethod.map(item => {
       switch (item.method) {
         case 'credit_card': return 'Cartão de Crédito';
-        case 'debit_card': return 'Cartão de Débito';
+        case 'bank_slip': return 'Boleto bancário';
         case 'pix': return 'PIX';
         default: return item.method;
       }

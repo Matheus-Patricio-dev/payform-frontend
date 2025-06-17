@@ -339,7 +339,7 @@ const PaymentPage: React.FC = () => {
       name: 'Cartão',
       description: 'Crédito ou débito',
       icon: <CreditCard className="h-6 w-6" />,
-      available: paymentLink.paymentMethods.includes('credit_card') || paymentLink.paymentMethods.includes('debit_card'),
+      available: paymentLink.paymentMethods.includes('credit_card') || paymentLink.paymentMethods.includes('bank_slip'),
       instant: false
     }
   ].filter(method => method.available);

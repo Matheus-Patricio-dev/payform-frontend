@@ -56,11 +56,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           icon: <Store className="h-5 w-5" />,
           path: '/admin/sellers'
         },
-        {
-          label: 'Pagamentos',
-          icon: <Wallet className="h-5 w-5" />,
-          path: '/payments'
-        },
+        // {
+        //   label: 'Pagamentos',
+        //   icon: <Wallet className="h-5 w-5" />,
+        //   path: '/payments'
+        // },
         {
           label: 'Transações',
           icon: <History className="h-5 w-5" />,
@@ -77,11 +77,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           icon: <Store className="h-5 w-5" />,
           path: '/marketplace-sellers'
         },
-        {
-          label: 'Pagamentos',
-          icon: <Wallet className="h-5 w-5" />,
-          path: '/payments'
-        },
+        // {
+        //   label: 'Pagamentos',
+        //   icon: <Wallet className="h-5 w-5" />,
+        //   path: '/payments'
+        // },
         {
           label: 'Transações',
           icon: <History className="h-5 w-5" />,

@@ -76,9 +76,9 @@ const PaymentLinkForm: React.FC = () => {
       color: 'from-blue-500 to-indigo-600'
     },
     {
-      id: 'debit_card' as PaymentMethod,
-      name: 'Cartão de Débito',
-      description: 'Débito online',
+      id: 'bank_slip' as PaymentMethod,
+      name: 'Boleto Bancário',
+      description: 'Pagamento aprovado em até 1 dia',
       icon: <CreditCard className="h-5 w-5" />,
       popular: false,
       color: 'from-purple-500 to-violet-600'
