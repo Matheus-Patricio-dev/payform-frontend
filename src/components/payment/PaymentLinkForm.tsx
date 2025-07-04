@@ -10,6 +10,7 @@ import { createPaymentLink } from '../../services/paymentService';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import api from '../../api/api';
 
 // Validation schema with Yup
 const validationSchema = yup.object().shape({
@@ -81,6 +82,7 @@ const PaymentLinkForm: React.FC = () => {
       description: 'Pagamento aprovado em até 1 dia',
       icon: <CreditCard className="h-5 w-5" />,
       popular: false,
+      disabled: true,
       color: 'from-purple-500 to-violet-600'
     }
   ];
@@ -119,6 +121,8 @@ const PaymentLinkForm: React.FC = () => {
     e.preventDefault();
     if (!user) return;
 
+    const userData = JSON.parse(localStorage.getItem("user"));
+
     const isValid = await validateForm();
     if (!isValid) {
       toast.error('Por favor, corrija os erros no formulário');
@@ -128,23 +132,25 @@ const PaymentLinkForm: React.FC = () => {
     setLoading(true);
     try {
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Create payment link
-      const link = createPaymentLink(
-        user.id,
-        parseFloat(formData.amount),
-        formData.description.trim() || 'Pagamento',
-        formData.paymentMethods,
-        formData.customerEmail
-      );
+      const formDataNew = {
+        ...formData,
+        marketplaceId: userData?.marketplaceId,
+        seller_id: userData?.id
+      }
 
-      // Generate link URL
-      const baseUrl = window.location.origin;
-      const paymentUrl = `${baseUrl}/pay/${link.id}`;
-      setGeneratedLink(paymentUrl);
+      const response = await api.post('/register-payment', formDataNew);
+      console.log(response)
 
-      toast.success('Link de pagamento criado com sucesso!');
+
+      if (response?.data) {
+        const baseUrl = window.location.origin;
+        const paymentUrl = `${baseUrl}/pay/${response?.data?.payment?.id}`;
+        setGeneratedLink(paymentUrl);
+
+        toast.success('Link de pagamento criado com sucesso!');
+      }
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ocorreu um erro');
     } finally {
@@ -349,8 +355,8 @@ const PaymentLinkForm: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4 + index * 0.1 }}
                             className={`relative border-2 rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-300 group ${formData.paymentMethods.includes(option.id)
-                                ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-lg transform scale-105'
-                                : 'border-gray-200 hover:border-gray-300 hover:shadow-md hover:bg-gray-50/50 hover:transform hover:scale-102'
+                              ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-lg transform scale-105'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-md hover:bg-gray-50/50 hover:transform hover:scale-102'
                               }`}
                             onClick={() => togglePaymentMethod(option.id)}
                             whileHover={{ y: -2 }}
@@ -359,8 +365,8 @@ const PaymentLinkForm: React.FC = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
                                 <div className={`p-2 sm:p-3 rounded-lg transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                                    ? `bg-gradient-to-r ${option.color} text-white shadow-lg`
-                                    : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                                  ? `bg-gradient-to-r ${option.color} text-white shadow-lg`
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                   }`}>
                                   {option.icon}
                                 </div>
@@ -385,8 +391,8 @@ const PaymentLinkForm: React.FC = () => {
                                 </div>
                               </div>
                               <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                                  ? 'border-primary bg-primary shadow-lg'
-                                  : 'border-gray-300 group-hover:border-gray-400'
+                                ? 'border-primary bg-primary shadow-lg'
+                                : 'border-gray-300 group-hover:border-gray-400'
                                 }`}>
                                 {formData.paymentMethods.includes(option.id) && (
                                   <motion.div

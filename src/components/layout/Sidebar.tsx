@@ -15,7 +15,8 @@ import {
   Users,
   Building2,
   Cog,
-  Wallet
+  Wallet,
+  Crown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
@@ -92,6 +93,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           label: 'Dashboard',
           icon: <LayoutDashboard className="h-5 w-5" />,
           path: '/dashboard'
+        },
+        {
+          label: 'Planos',
+          icon: <LayoutDashboard className="h-5 w-5" />,
+          path: '/planos'
+        },
+        {
+          label: 'Assinaturas',
+          icon: <Crown className="h-5 w-5" />,
+          path: '/assinaturas'
         },
         {
           label: 'Pagamentos',

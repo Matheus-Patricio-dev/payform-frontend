@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle } from 'lucide-react';
@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal';
 import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import Select from '../../components/ui/Select';
+import api from '../../api/api';
 
 interface PaymentLinkFormData {
   amount: number;
@@ -29,6 +30,7 @@ const PaymentList: React.FC = () => {
   const [sellerFilter, setSellerFilter] = useState<string>('all');
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [paymentLinks, setPaymentLinks] = useState([]);
   const [formData, setFormData] = useState<PaymentLinkFormData>({
     amount: 0,
     description: '',
@@ -36,9 +38,24 @@ const PaymentList: React.FC = () => {
   });
   // Get data based on user type
   const isAdmin = user?.cargo === 'admin';
-  const paymentLinks = user ? getPaymentLinks(user.id) : [];
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
+
+  const fetchPayments = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+
+      const response = await api.get(`/payment/${userData?.id}`);
+      setPaymentLinks(response?.data?.payments);
+    } catch (error) {
+      console.error("Erro ao buscar sellers:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+  }, [user])
+
   const filteredPayments = paymentLinks.filter(link =>
     link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     link.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -78,16 +95,19 @@ const PaymentList: React.FC = () => {
     }
   };
 
-  const handleDeletePayment = () => {
+  const handleDeletePayment = async () => {
     try {
       if (!selectedPayment) return;
-
-      // Delete payment link logic here
-      toast.success('Link de pagamento removido com sucesso!');
+      const response = await api.delete(`/payment-remove/${selectedPayment?.id}`);
+      if (response?.data) {
+        toast.success('Link de pagamento removido com sucesso!');
+        await fetchPayments();
+        setIsDeleteModalOpen(false);
+        setSelectedPayment(null);
+      }
       setIsDeleteModalOpen(false);
-      setSelectedPayment(null);
     } catch (error) {
-      toast.error('Erro ao remover link de pagamento');
+      toast.error(error?.response?.data?.error);
     }
   };
 
@@ -106,10 +126,7 @@ const PaymentList: React.FC = () => {
   };
 
   const openEditModal = (payment: any) => {
-    if (payment.status !== 'pending') {
-      toast.error('Apenas links pendentes podem ser editados');
-      return;
-    }
+
     setSelectedPayment(payment);
     setIsEditModalOpen(true);
     setFormData({
@@ -147,16 +164,16 @@ const PaymentList: React.FC = () => {
             </div>
 
             <div className="mb-6">
-              <Input
+              {/* <Input
                 placeholder={isAdmin ? "Buscar por descrição, ID, email ou vendedor..." : "Buscar links de pagamento..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 icon={<Search className="h-4 w-4" />}
                 fullWidth
-              />
+              /> */}
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <Select
+                {/* <Select
                   options={[
                     { value: 'all', label: 'Todos os Status' },
                     { value: 'active', label: 'Ativos' },
@@ -165,7 +182,7 @@ const PaymentList: React.FC = () => {
                   ]}
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                />
+                /> */}
 
                 {isAdmin && (
                   <>
@@ -199,7 +216,6 @@ const PaymentList: React.FC = () => {
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Data</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Descrição</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Valor</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Status</th>
                         <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
                       </tr>
                     </thead>
@@ -207,21 +223,11 @@ const PaymentList: React.FC = () => {
                       {filteredPayments.map((payment) => (
                         <tr key={payment.id} className="border-b last:border-0 hover:bg-gray-50">
                           <td className="py-4 px-6">
-                            {formatDate(new Date(payment.createdAt))}
+                            {formatDate(new Date(payment.data_criacao_pagamento))}
                           </td>
                           <td className="py-4 px-6">{payment.description}</td>
                           <td className="py-4 px-6">{formatCurrency(payment.amount)}</td>
-                          <td className="py-4 px-6">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${payment.status === 'active'
-                              ? 'bg-success/10 text-success'
-                              : payment.status === 'pending'
-                                ? 'bg-warning/10 text-warning'
-                                : 'bg-error/10 text-error'
-                              }`}>
-                              {payment.status === 'active' ? 'Ativo' :
-                                payment.status === 'pending' ? 'Pendente' : 'Expirado'}
-                            </span>
-                          </td>
+
                           <td className="py-4 px-6">
                             <div className="flex items-center justify-end gap-2">
                               <Button
@@ -238,7 +244,6 @@ const PaymentList: React.FC = () => {
                                 size="sm"
                                 onClick={() => openEditModal(payment)}
                                 icon={<Pencil className="h-4 w-4" />}
-                                disabled={payment.status !== 'pending'}
                               >
                                 Editar
                               </Button>
@@ -425,7 +430,7 @@ const PaymentList: React.FC = () => {
                   <span className="text-gray-600">Valor:</span>
                   <span className="font-medium">{formatCurrency(selectedPayment.amount)}</span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className={`font-medium ${selectedPayment.status === 'active' ? 'text-green-600' :
                     selectedPayment.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
@@ -433,7 +438,7 @@ const PaymentList: React.FC = () => {
                     {selectedPayment.status === 'active' ? 'Ativo' :
                       selectedPayment.status === 'pending' ? 'Pendente' : 'Expirado'}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           )}

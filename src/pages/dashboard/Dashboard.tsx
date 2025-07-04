@@ -13,9 +13,11 @@ import StatsCards from '../../components/dashboard/StatsCards';
 import TransactionsTable from '../../components/dashboard/TransactionsTable';
 import TransactionChart from '../../components/dashboard/TransactionChart';
 import Button from '../../components/ui/Button';
+import api from '../../api/api';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const [transactions, setTransactions] = useState([]);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
@@ -24,22 +26,51 @@ const Dashboard: React.FC = () => {
     }
   }, [user]);
 
-  const transactions = user ? getUserTransactions(user.id) : [];
-  const stats = user
-    ? {
-      totalTransactions: 0,
-      completed: 0,
-      pending: 0,
-      declined: 0,
-      totalAmount: 0,
+  const fetchPayments = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+
+      const response = await api.get(`/seller-dash/${userData?.id}`);
+      setTransactions(response?.data?.dados);
+      // setIsLoading(false)
+    } catch (error) {
+      console.error("Erro ao buscar sellers:", error);
     }
-    : {
-      totalTransactions: 0,
-      completed: 0,
-      pending: 0,
-      declined: 0,
-      totalAmount: 0,
-    };
+  };
+
+  React.useEffect(() => {
+    fetchPayments();
+  }, [user])
+
+  console.log(transactions)
+  // Inicializa as estatísticas
+  const stats = {
+    totalTransactions: 0,
+    completed: 0,
+    pending: 0,
+    declined: 0,
+    totalAmount: 0,
+  };
+
+  //Processa os pagamentos e transações
+  if (transactions?.pagamentos && transactions?.pagamentos.length > 0) {
+    stats.totalTransactions = transactions?.transacoes.length; // Total de transações
+    stats.totalAmount = transactions?.transacoes.reduce((total, transacao) => {
+      return total + parseFloat(transacao?.valor); // Soma dos valores das transações
+    }, 0);
+
+    // Conta os status das transações
+    transactions?.transacoes.forEach(transacao => {
+      if (transacao.status === "completa") {
+        stats.completed++;
+      } else if (transacao.status === "pendente") {
+        stats.pending++;
+      } else if (transacao.status === "recusada") {
+        stats.declined++;
+      }
+    });
+  }
+
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -80,7 +111,7 @@ const Dashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
-                  <TransactionsTable transactions={[]} />
+                  <TransactionsTable transactions={(transactions?.transacoes || [])?.slice(0, 5)} />
                 </div>
 
                 <div className="w-full">

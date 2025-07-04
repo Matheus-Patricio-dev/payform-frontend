@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as yup from 'yup';
-import { 
-  CreditCard, 
-  Smartphone, 
-  Lock, 
-  Check, 
-  AlertCircle, 
+import {
+  CreditCard,
+  Smartphone,
+  Lock,
+  Check,
+  AlertCircle,
   ArrowLeft,
   Shield,
   Loader2,
@@ -59,13 +59,13 @@ const PaymentPage: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
-  
+
   // PIX specific states
   const [pixTimeLeft, setPixTimeLeft] = useState<number>(15 * 60); // 15 minutes in seconds
   const [pixExpired, setPixExpired] = useState<boolean>(false);
   const [pixCode, setPixCode] = useState<string>('');
   const [paymentDetected, setPaymentDetected] = useState<boolean>(false);
-  
+
   // Card form state
   const [cardData, setCardData] = useState({
     number: '',
@@ -77,7 +77,85 @@ const PaymentPage: React.FC = () => {
   });
   const [cardErrors, setCardErrors] = useState<any>({});
   const [cardBrand, setCardBrand] = useState<string>('');
+  const [link, setLink] = useState(null);
 
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const result = await getPaymentLink(linkId);
+        // Se result for array, pegue o primeiro item
+        if (Array.isArray(result) && result.length > 0) {
+          setLink(result[0]);
+        } else if (result && typeof result === 'object') {
+          setLink(result); // Caso venha objeto direto
+          if (!result) {
+            setError('Link de pagamento inválido');
+            setLoading(false);
+            return;
+          }
+
+          console.log(result)
+
+          if (result === null) {
+            setError('Link de pagamento não encontrado');
+            setLoading(false);
+            return;
+          }
+
+          if (result.status !== 'ativo' && result.status !== 'pendente') {
+            setError('Este link de pagamento expirou ou não está mais ativo');
+            setLoading(false);
+            return;
+          }
+
+          setPaymentLink(link);
+
+          if (result?.paymentMethods && result?.paymentMethods.length > 0) {
+            setSelectedMethod(result?.paymentMethods[0]);
+          }
+
+          setPixCode(`00020126580014BR.GOV.BCB.PIX0136${linkId}5204000053039865802BR5925PAYLINK PAGAMENTOS LTDA6009SAO PAULO62070503***6304`);
+          setLoading(false);
+        } else {
+          if (!result) {
+            setError('Link de pagamento inválido');
+            setLoading(false);
+            return;
+          }
+
+          console.log(result)
+
+          if (result === null) {
+            setError('Link de pagamento não encontrado');
+            setLoading(false);
+            return;
+          }
+
+          if (result.status !== 'ativo' && result.status !== 'pendente') {
+            setError('Este link de pagamento expirou ou não está mais ativo');
+            setLoading(false);
+            return;
+          }
+
+          setPaymentLink(link);
+
+          if (result?.paymentMethods && result?.paymentMethods.length > 0) {
+            setSelectedMethod(result?.paymentMethods[0]);
+          }
+
+          setPixCode(`00020126580014BR.GOV.BCB.PIX0136${linkId}5204000053039865802BR5925PAYLINK PAGAMENTOS LTDA6009SAO PAULO62070503***6304`);
+          setLoading(false);
+          setLink(null);
+        }
+      } catch {
+        setError('Link de pagamento inválido');
+        setLoading(false);
+        setLink(null);
+      }
+    };
+    fetchPayments();
+  }, [linkId]);
   // PIX timer effect
   useEffect(() => {
     if (selectedMethod === 'pix' && showPaymentForm && !paymentDetected && !pixExpired) {
@@ -104,7 +182,7 @@ const PaymentPage: React.FC = () => {
       const timer = setTimeout(() => {
         setPaymentDetected(true);
         setIsProcessing(true);
-        
+
         // Process payment after detection
         setTimeout(() => {
           navigate('/payment-success');
@@ -115,44 +193,19 @@ const PaymentPage: React.FC = () => {
     }
   }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired, navigate]);
 
-  useEffect(() => {
-    if (!linkId) {
-      setError('Link de pagamento inválido');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      const link = getPaymentLink(linkId);
-      if (!link) {
-        setError('Link de pagamento não encontrado');
-      } else if (link.status !== 'active' && link.status !== 'pending') {
-        setError('Este link de pagamento expirou ou não está mais ativo');
-      } else {
-        setPaymentLink(link);
-        // Auto-select first available method
-        if (link.paymentMethods.length > 0) {
-          setSelectedMethod(link.paymentMethods[0]);
-        }
-        // Generate PIX code
-        setPixCode(`00020126580014BR.GOV.BCB.PIX0136${linkId}5204000053039865802BR5925PAYLINK PAGAMENTOS LTDA6009SAO PAULO62070503***6304`);
-      }
-    } catch (err) {
-      setError('Falha ao carregar os detalhes do pagamento');
-    } finally {
-      setLoading(false);
-    }
-  }, [linkId]);
+  // useEffect(() => {
+
+  // }, [link, linkId]);
 
   const detectCardBrand = (number: string) => {
     const cleanNumber = number.replace(/\s/g, '');
-    
+
     if (/^4/.test(cleanNumber)) return 'visa';
     if (/^5[1-5]/.test(cleanNumber)) return 'mastercard';
     if (/^3[47]/.test(cleanNumber)) return 'amex';
     if (/^6/.test(cleanNumber)) return 'discover';
     if (/^(4011|4312|4389|4514|4573|5041|5066|5067|6277|6362|6363)/.test(cleanNumber)) return 'elo';
-    
+
     return '';
   };
 
@@ -202,7 +255,7 @@ const PaymentPage: React.FC = () => {
 
   const handleCardInputChange = (field: string, value: string) => {
     let formattedValue = value;
-    
+
     if (field === 'number') {
       formattedValue = formatCardNumber(value);
       setCardBrand(detectCardBrand(formattedValue));
@@ -213,7 +266,7 @@ const PaymentPage: React.FC = () => {
     } else if (field === 'cpf') {
       formattedValue = formatCPF(value);
     }
-    
+
     setCardData(prev => ({ ...prev, [field]: formattedValue }));
     validateCardField(field, formattedValue);
   };
@@ -221,7 +274,7 @@ const PaymentPage: React.FC = () => {
   const handleMethodSelect = (method: PaymentMethod) => {
     setSelectedMethod(method);
     setShowPaymentForm(true);
-    
+
     if (method === 'pix') {
       setPixTimeLeft(15 * 60);
       setPixExpired(false);
@@ -233,17 +286,17 @@ const PaymentPage: React.FC = () => {
     try {
       await cardValidationSchema.validate(cardData);
       setIsProcessing(true);
-      
+
       // Simulate processing time
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
       const transaction = processPayment(
         linkId!,
         selectedMethod!,
         cardData.name,
         cardData.email
       );
-      
+
       if (transaction.status === 'completed') {
         navigate('/payment-success');
       } else {
@@ -300,7 +353,7 @@ const PaymentPage: React.FC = () => {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4">
@@ -331,7 +384,7 @@ const PaymentPage: React.FC = () => {
       name: 'PIX',
       description: 'Transferência instantânea',
       icon: <Smartphone className="h-6 w-6" />,
-      available: paymentLink.paymentMethods.includes('pix'),
+      available: link?.paymentMethods.includes('pix'),
       instant: true
     },
     {
@@ -339,7 +392,7 @@ const PaymentPage: React.FC = () => {
       name: 'Cartão',
       description: 'Crédito ou débito',
       icon: <CreditCard className="h-6 w-6" />,
-      available: paymentLink.paymentMethods.includes('credit_card') || paymentLink.paymentMethods.includes('bank_slip'),
+      available: link?.paymentMethods.includes('credit_card') || link?.paymentMethods.includes('bank_slip'),
       instant: false
     }
   ].filter(method => method.available);
@@ -376,13 +429,13 @@ const PaymentPage: React.FC = () => {
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 sm:p-8">
               <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                  {paymentLink.description || 'Pagamento'}
+                  {link?.description || 'Pagamento'}
                 </h1>
                 <div className="text-4xl sm:text-5xl font-bold text-primary mb-4">
-                  {formatCurrency(paymentLink.amount)}
+                  {formatCurrency(link?.amount)}
                 </div>
-                {paymentLink.customerEmail && (
-                  <p className="text-gray-600">Para: {paymentLink.customerEmail}</p>
+                {link?.customerEmail && (
+                  <p className="text-gray-600">Para: {link?.customerEmail}</p>
                 )}
               </div>
             </div>
@@ -516,9 +569,8 @@ const PaymentPage: React.FC = () => {
                                     {Array.from({ length: 64 }).map((_, i) => (
                                       <div
                                         key={i}
-                                        className={`w-1 h-1 rounded-sm ${
-                                          Math.random() > 0.5 ? 'bg-gray-800' : 'bg-gray-300'
-                                        }`}
+                                        className={`w-1 h-1 rounded-sm ${Math.random() > 0.5 ? 'bg-gray-800' : 'bg-gray-300'
+                                          }`}
                                       />
                                     ))}
                                   </div>
@@ -571,9 +623,8 @@ const PaymentPage: React.FC = () => {
                               value={cardData.email}
                               onChange={(e) => handleCardInputChange('email', e.target.value)}
                               placeholder="seu@email.com"
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                                cardErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${cardErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                }`}
                             />
                           </div>
                           {cardErrors.email && (
@@ -593,9 +644,8 @@ const PaymentPage: React.FC = () => {
                               onChange={(e) => handleCardInputChange('number', e.target.value)}
                               placeholder="1234 5678 9012 3456"
                               maxLength={19}
-                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all pr-12 ${
-                                cardErrors.number ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                              }`}
+                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all pr-12 ${cardErrors.number ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                }`}
                             />
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                               {getCardBrandIcon()}
@@ -618,9 +668,8 @@ const PaymentPage: React.FC = () => {
                               onChange={(e) => handleCardInputChange('expiry', e.target.value)}
                               placeholder="MM/AA"
                               maxLength={5}
-                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                                cardErrors.expiry ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                              }`}
+                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${cardErrors.expiry ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                }`}
                             />
                             {cardErrors.expiry && (
                               <p className="mt-1 text-sm text-red-600">{cardErrors.expiry}</p>
@@ -636,9 +685,8 @@ const PaymentPage: React.FC = () => {
                               onChange={(e) => handleCardInputChange('cvc', e.target.value)}
                               placeholder="123"
                               maxLength={4}
-                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                                cardErrors.cvc ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                              }`}
+                              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${cardErrors.cvc ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                }`}
                             />
                             {cardErrors.cvc && (
                               <p className="mt-1 text-sm text-red-600">{cardErrors.cvc}</p>
@@ -658,9 +706,8 @@ const PaymentPage: React.FC = () => {
                               value={cardData.name}
                               onChange={(e) => handleCardInputChange('name', e.target.value)}
                               placeholder="JOÃO M SILVA"
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                                cardErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${cardErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                }`}
                             />
                           </div>
                           {cardErrors.name && (
@@ -679,9 +726,8 @@ const PaymentPage: React.FC = () => {
                             onChange={(e) => handleCardInputChange('cpf', e.target.value)}
                             placeholder="000.000.000-00"
                             maxLength={14}
-                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                              cardErrors.cpf ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${cardErrors.cpf ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
                           />
                           {cardErrors.cpf && (
                             <p className="mt-1 text-sm text-red-600">{cardErrors.cpf}</p>
@@ -702,7 +748,7 @@ const PaymentPage: React.FC = () => {
                           ) : (
                             <>
                               <Lock className="h-5 w-5" />
-                              <span>Pagar {formatCurrency(paymentLink.amount)}</span>
+                              <span>Pagar {formatCurrency(link?.amount)}</span>
                             </>
                           )}
                         </button>

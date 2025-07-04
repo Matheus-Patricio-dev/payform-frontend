@@ -9,11 +9,11 @@ interface TransactionsTableProps {
 const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
   const getStatusClasses = () => {
     switch (status) {
-      case 'completed':
+      case 'completa':
         return 'bg-success/10 text-success';
-      case 'pending':
+      case 'pendente':
         return 'bg-warning/10 text-warning';
-      case 'declined':
+      case 'rejeitada':
         return 'bg-error/10 text-error';
       default:
         return 'bg-gray-100 text-gray-700';
@@ -22,11 +22,11 @@ const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
 
   const getStatusText = () => {
     switch (status) {
-      case 'completed':
+      case 'completa':
         return 'Completada';
-      case 'pending':
+      case 'pendente':
         return 'Pendente';
-      case 'declined':
+      case 'rejeitada':
         return 'Recusada';
       default:
         return status;
@@ -43,8 +43,8 @@ const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
 const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) => {
   const [filter, setFilter] = useState<TransactionStatus | 'all'>('all');
 
-  const filteredTransactions = filter === 'all' 
-    ? transactions 
+  const filteredTransactions = filter === 'all'
+    ? transactions
     : transactions.filter(tx => tx.status === filter);
 
   const getPaymentMethodName = (method: string) => {
@@ -64,41 +64,37 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 text-sm rounded-full transition-colors ${
-              filter === 'all' 
-                ? 'bg-primary text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-4 py-2 text-sm rounded-full transition-colors ${filter === 'all'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Todas
           </button>
           <button
-            onClick={() => setFilter('completed')}
-            className={`px-4 py-2 text-sm rounded-full transition-colors ${
-              filter === 'completed' 
-                ? 'bg-success text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onClick={() => setFilter('completa')}
+            className={`px-4 py-2 text-sm rounded-full transition-colors ${filter === 'completa'
+              ? 'bg-success text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Completadas
           </button>
           <button
-            onClick={() => setFilter('pending')}
-            className={`px-4 py-2 text-sm rounded-full transition-colors ${
-              filter === 'pending' 
-                ? 'bg-warning text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onClick={() => setFilter('pendente')}
+            className={`px-4 py-2 text-sm rounded-full transition-colors ${filter === 'pendente'
+              ? 'bg-warning text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Pendentes
           </button>
           <button
-            onClick={() => setFilter('declined')}
-            className={`px-4 py-2 text-sm rounded-full transition-colors ${
-              filter === 'declined' 
-                ? 'bg-error text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onClick={() => setFilter('rejeitada')}
+            className={`px-4 py-2 text-sm rounded-full transition-colors ${filter === 'rejeitada'
+              ? 'bg-error text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Recusadas
           </button>
@@ -131,16 +127,16 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
               filteredTransactions.map((transaction) => (
                 <tr key={transaction.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(new Date(transaction.createdAt))}
+                    {formatDate(new Date(transaction?.data_criacao))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(transaction.amount)}
+                    {formatCurrency(transaction?.valor)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getPaymentMethodName(transaction.paymentMethod)}
+                    {getPaymentMethodName(transaction?.metodo_pagamento)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {transaction.customerName || 'Anônimo'}
+                    {transaction?.cliente_nome || 'Anônimo'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <StatusBadge status={transaction.status} />

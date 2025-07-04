@@ -18,6 +18,8 @@ import MarketplaceList from './pages/admin/MarketplaceList';
 import SellerList from './pages/admin/SellerList';
 import MarketplaceSellers from './pages/sellers/MarketplaceSellers';
 import NotFound from './pages/NotFound';
+import PlanList from './pages/plans/PlanList';
+import AssinaturaList from './pages/assinaturas/AssinaturaList';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -37,7 +39,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   if (!user) return <>{children}</>;
-  
+
   // Redirect to appropriate dashboard based on user type
   switch (user.cargo) {
     case 'admin':
@@ -57,34 +59,34 @@ function App() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route 
-        path="/login" 
+      <Route
+        path="/login"
         element={
           <PublicRoute>
             <Login />
           </PublicRoute>
-        } 
+        }
       />
-      <Route 
-        path="/signup" 
+      <Route
+        path="/signup"
         element={
           <PublicRoute>
             <Signup />
           </PublicRoute>
-        } 
+        }
       />
       <Route path="/pay/:linkId" element={<PaymentPage />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-declined" element={<PaymentDeclined />} />
-      
+
       {/* Dashboard Route - Conditional based on user type */}
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <PrivateRoute>
             {user?.cargo === 'admin' ? <AdminDashboard /> : <Dashboard />}
           </PrivateRoute>
-        } 
+        }
       />
 
       {/* Admin Routes */}
@@ -104,41 +106,57 @@ function App() {
           </AdminRoute>
         }
       />
-      
+
       {/* Private Routes */}
-      <Route 
-        path="/history" 
+      <Route
+        path="/history"
         element={
           <PrivateRoute>
             <PaymentHistory />
           </PrivateRoute>
-        } 
+        }
       />
-      <Route 
-        path="/payments" 
+      <Route
+        path="/payments"
         element={
           <PrivateRoute>
             <PaymentList />
           </PrivateRoute>
-        } 
+        }
       />
-      <Route 
-        path="/create-payment-link" 
+      <Route
+        path="/planos"
+        element={
+          <PrivateRoute>
+            <PlanList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/assinaturas"
+        element={
+          <PrivateRoute>
+            <AssinaturaList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/create-payment-link"
         element={
           <PrivateRoute>
             <CreatePaymentLink />
           </PrivateRoute>
-        } 
+        }
       />
-      <Route 
-        path="/settings" 
+      <Route
+        path="/settings"
         element={
           <PrivateRoute>
             <Settings />
           </PrivateRoute>
-        } 
+        }
       />
-      
+
       {/* Marketplace Routes */}
       <Route
         path="/marketplace-sellers"
@@ -164,7 +182,7 @@ function App() {
           </MarketplaceRoute>
         }
       />
-      
+
       {/* Redirects */}
       <Route path="/" element={<Navigate to="/dashboard" />} />
       <Route path="*" element={<NotFound />} />

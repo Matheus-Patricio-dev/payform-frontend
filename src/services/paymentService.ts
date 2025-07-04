@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { PaymentLink, Transaction, PaymentMethod, TransactionStatus } from '../types';
+import api from '../api/api';
 
 let paymentLinks: PaymentLink[] = [];
 let transactions: Transaction[] = [];
@@ -83,8 +84,9 @@ export const getPaymentLinks = (userId: string): PaymentLink[] => {
   return paymentLinks.filter(link => link.userId === userId);
 };
 
-export const getPaymentLink = (linkId: string): PaymentLink | undefined => {
-  return paymentLinks.find(link => link.id === linkId);
+export const getPaymentLink  = async (linkId: string) => {
+  const response = await api.get(`/payment-ver/${linkId}`)
+  return response?.data?.payments
 };
 
 export const processPayment = (

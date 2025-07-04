@@ -31,12 +31,14 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Sidebar from '../../components/layout/Sidebar';
 import { TransactionStatus, PaymentMethod } from '../../types';
+import api from '../../api/api';
 
 const PaymentHistory: React.FC = () => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [transactions, setTransactions] = useState([]);
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -44,21 +46,33 @@ const PaymentHistory: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [sellerFilter, setSellerFilter] = useState<string>('all');
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
-  // Simulate loading
+
+
+  const fetchPayments = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+
+      const response = await api.get(`/transactions/${userData?.id}`);
+      setTransactions(response?.data?.transactions);
+      setIsLoading(false)
+    } catch (error) {
+      console.error("Erro ao buscar sellers:", error);
+    }
+  };
+
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    fetchPayments();
+  }, [user])
+  // Simulate loading
+  // React.useEffect(() => {
+  //   const timer = setTimeout(() => setIsLoading(false), 1200);
+  //   return () => clearTimeout(timer);
+  // }, []);
   // Get data based on user type
   const isAdmin = user?.cargo === 'admin';
-  const transactions = user ? [] : [];
-  const stats = user ? {
-    totalTransactions: 0,
-    completed: 0,
-    pending: 0,
-    declined: 0,
-    totalAmount: 0
-  } : {
+
+  // Inicializa o objeto stats
+  const stats = {
     totalTransactions: 0,
     completed: 0,
     pending: 0,
@@ -66,6 +80,20 @@ const PaymentHistory: React.FC = () => {
     totalAmount: 0
   };
 
+  // Calcula as estatísticas
+  transactions.forEach(transaction => {
+    stats.totalTransactions += 1; // Incrementa o total de transações
+    stats.totalAmount += parseFloat(transaction.valor) // Soma o valor da transação
+
+    // Conta o status da transação
+    if (transaction.status === 'completa') {
+      stats.completed += 1;
+    } else if (transaction.status === 'pendente') {
+      stats.pending += 1;
+    } else if (transaction.status === 'rejeitada') {
+      stats.declined += 1;
+    }
+  });
 
   // Get sellers and marketplaces for admin filters
   const sellers = isAdmin ? [] : [];
@@ -73,7 +101,7 @@ const PaymentHistory: React.FC = () => {
 
 
   const filteredTransactions = useMemo(() => {
-    let filtered = transactions.filter(transaction => {
+    let filtered = transactions?.filter(transaction => {
       const matchesSearch =
         transaction.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         transaction.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,7 +112,7 @@ const PaymentHistory: React.FC = () => {
 
       let matchesDate = true;
       if (dateFilter !== 'all') {
-        const transactionDate = new Date(transaction.createdAt);
+        const transactionDate = new Date(transaction.data_criacao);
         const now = new Date();
 
         switch (dateFilter) {
@@ -121,21 +149,21 @@ const PaymentHistory: React.FC = () => {
 
   const getStatusConfig = (status: TransactionStatus) => {
     switch (status) {
-      case 'completed':
+      case 'completa':
         return {
           label: 'Completada',
           color: 'text-green-700 bg-green-50 border-green-200',
           icon: <CheckCircle className="h-4 w-4" />,
           dotColor: 'bg-green-500'
         };
-      case 'pending':
+      case 'pendente':
         return {
           label: 'Pendente',
           color: 'text-yellow-700 bg-yellow-50 border-yellow-200',
           icon: <Clock className="h-4 w-4" />,
           dotColor: 'bg-yellow-500'
         };
-      case 'declined':
+      case 'rejeitada':
         return {
           label: 'Recusada',
           color: 'text-red-700 bg-red-50 border-red-200',
@@ -152,45 +180,43 @@ const PaymentHistory: React.FC = () => {
     }
   };
 
-  const getPaymentMethodConfig = (method: PaymentMethod) => {
-    switch (method) {
-      case 'credit_card':
-        return {
-          label: 'Cartão de Crédito',
-          icon: <CreditCard className="h-4 w-4" />,
-          color: 'text-blue-600 bg-blue-50'
-        };
-      // case 'debit_card':
-      //   return {
-      //     label: 'Cartão de Débito',
-      //     icon: <CreditCard className="h-4 w-4" />,
-      //     color: 'text-purple-600 bg-purple-50'
-      //   };
-      case 'pix':
-        return {
-          label: 'PIX',
-          icon: <Smartphone className="h-4 w-4" />,
-          color: 'text-green-600 bg-green-50'
-        };
-      case 'bank_transfer':
-        return {
-          label: 'Transferência',
-          icon: <ArrowUpRight className="h-4 w-4" />,
-          color: 'text-indigo-600 bg-indigo-50'
-        };
-      default:
-        return {
-          label: method,
-          icon: <CreditCard className="h-4 w-4" />,
-          color: 'text-gray-600 bg-gray-50'
-        };
-    }
+  const getPaymentMethodConfig = (methods: PaymentMethod[]) => {
+    return methods.map(method => {
+      switch (method) {
+        case 'credit_card':
+          return {
+            label: 'Cartão de Crédito',
+            icon: <CreditCard className="h-4 w-4" />,
+            color: 'text-blue-600 bg-blue-50'
+          };
+        case 'pix':
+          return {
+            label: 'PIX',
+            icon: <Smartphone className="h-4 w-4" />,
+            color: 'text-green-600 bg-green-50'
+          };
+        case 'bank_transfer':
+          return {
+            label: 'Transferência',
+            icon: <ArrowUpRight className="h-4 w-4" />,
+            color: 'text-indigo-600 bg-indigo-50'
+          };
+        default:
+          return {
+            label: method,
+            icon: <CreditCard className="h-4 w-4" />,
+            color: 'text-gray-600 bg-gray-50'
+          };
+      }
+    });
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
+    await fetchPayments()
     setTimeout(() => setIsLoading(false), 800);
   };
+
   const getSellerInfo = (sellerId: string) => {
     const seller = sellers.find(s => s.id === sellerId);
     const marketplace = seller ? marketplaces.find(m => m.id === seller.marketplaceId) : null;
@@ -304,7 +330,7 @@ const PaymentHistory: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-
+              {/* 
               <Card className="border-l-4 border-l-blue-500">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -317,8 +343,8 @@ const PaymentHistory: React.FC = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-
+              </Card> */}
+              {/* 
               <Card className="border-l-4 border-l-yellow-500">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -336,7 +362,7 @@ const PaymentHistory: React.FC = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
             </motion.div>
 
             {/* Filters */}
@@ -449,7 +475,7 @@ const PaymentHistory: React.FC = () => {
                       <AnimatePresence>
                         {filteredTransactions.map((transaction, index) => {
                           const statusConfig = getStatusConfig(transaction.status);
-                          const methodConfig = getPaymentMethodConfig(transaction.paymentMethod);
+                          const methodConfig = getPaymentMethodConfig(transaction?.pagamento?.paymentMethods || []);
                           const { seller, marketplace } = isAdmin ? getSellerInfo(transaction.sellerId) : { seller: null, marketplace: null };
                           return (
                             <motion.div
@@ -463,18 +489,22 @@ const PaymentHistory: React.FC = () => {
                               <div className="p-4 sm:p-6">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                   <div className="flex items-start space-x-4">
-                                    <div className={`p-2 rounded-lg ${methodConfig.color}`}>
-                                      {methodConfig.icon}
+                                    <div>
+                                      {methodConfig.map((config, index) => (
+                                        <div key={index} className={`p-2 rounded-lg ${config.color}`}>
+                                          {config.icon}
+                                        </div>
+                                      ))}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center space-x-2 mb-1">
                                         <h3 className="font-semibold text-gray-900 truncate">
-                                          {transaction.customerName || 'Cliente Anônimo'}
+                                          {transaction?.cliente?.nome || 'Cliente Anônimo'}
                                         </h3>
                                         <div className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}></div>
                                       </div>
                                       <p className="text-sm text-gray-600 truncate">
-                                        {transaction.customerEmail || 'Email não informado'}
+                                        {transaction?.cliente?.email || 'Email não informado'}
                                       </p>
                                       {isAdmin && seller && (
                                         <div className="flex items-center space-x-2 mt-1">
@@ -493,7 +523,7 @@ const PaymentHistory: React.FC = () => {
                                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                                         <span className="flex items-center space-x-1">
                                           <Calendar className="h-3 w-3" />
-                                          <span>{formatDateTime(new Date(transaction.createdAt))}</span>
+                                          <span>{formatDateTime(new Date(transaction.data_criacao))}</span>
                                         </span>
                                         <span>ID: {transaction.id.slice(0, 8)}...</span>
                                       </div>
@@ -503,7 +533,7 @@ const PaymentHistory: React.FC = () => {
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                                     <div className="text-right">
                                       <p className="text-lg font-bold text-gray-900">
-                                        {formatCurrency(transaction.amount)}
+                                        {formatCurrency(transaction.valor)}
                                       </p>
                                       <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
                                         {statusConfig.icon}
@@ -511,18 +541,22 @@ const PaymentHistory: React.FC = () => {
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center space-x-2">
-                                      <div className={`px-2 py-1 rounded-lg text-xs font-medium ${methodConfig.color}`}>
-                                        {methodConfig.label}
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        icon={<Eye className="h-4 w-4" />}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        Ver
-                                      </Button>
+                                    <div className="flex flex-col space-y-2">
+                                      {methodConfig.map((config, index) => (
+                                        <div key={index} className="flex items-center space-x-2 group">
+                                          <div className={`px-2 py-1 rounded-lg text-xs font-medium ${config.color}`}>
+                                            {config.label}
+                                          </div>
+                                          {/* <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={<Eye className="h-4 w-4" />}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                          >
+                                            Ver
+                                          </Button> */}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 </div>

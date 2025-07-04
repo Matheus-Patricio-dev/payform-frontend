@@ -5,8 +5,8 @@ import api from '../api/api';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (id: string, nome: string, email: string, password: string, confirmspassword:string) => Promise<void>;
-  signupSeller: (data: {id_seller:string, nome:string, email:string, password:string, confirmpassword:string}) => Promise<{ user: User; token: string }>
+  signup: (id: string, nome: string, email: string, password: string, confirmspassword: string) => Promise<void>;
+  signupSeller: (data: { id_seller: string, nome: string, email: string, password: string, confirmpassword: string }) => Promise<{ user: User; token: string }>
   getClientById: (id: string) => Promise<void>;
   getAllClients: () => Promise<User[]>;
   updateClient: (id: string, data: Partial<{ nome: string; email: string }>) => Promise<void>;
@@ -20,16 +20,16 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
-  signup: async () => {},
-  signupSeller: async () => ({user: {} as User, token:'' }),
-  getClientById: async () => {},
+  login: async () => { },
+  signup: async () => { },
+  signupSeller: async () => ({ user: {} as User, token: '' }),
+  getClientById: async () => { },
   getAllClients: async () => [],
-  deleteClient: async () => {},
+  deleteClient: async () => { },
   getAllSellers: async () => [],
-  getSellerById: async () => {},
-  updateClient: async () => {},
-  logout: () => {},
+  getSellerById: async () => { },
+  updateClient: async () => { },
+  logout: () => { },
   loading: false,
   error: null,
 });
@@ -62,12 +62,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.post('/login', { email, password });
 
-      const { user, token } = response.data;
+      const { user, token, painel } = response.data;
       console.log(user)
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (user?.cargo === "admin") {
+        localStorage.setItem('adminMarketplaces', JSON.stringify(painel?.marketplaces));
+        localStorage.setItem('adminSellers', JSON.stringify(painel?.sellers));
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       setError(error?.response?.data?.message || 'Login falhou!');
       throw error;
@@ -77,13 +81,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   //REGISTRO - MARKETPLACE
-  const signup = async (id: string, nome: string, email: string, password: string, confirmpassword:string, status: string) => {
+  const signup = async (id: string, nome: string, email: string, password: string, confirmpassword: string, status: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      
-      const response = await api.post('/register', {nome, email, password, confirmpassword, cargo:'marketplace', marketplaceId:id, status});
+
+      const response = await api.post('/register', { nome, email, password, confirmpassword, cargo: 'marketplace', marketplaceId: id, status });
       // console.log('Payload sendo enviado:', {
       //   id: formData.id,
       //   nome: formData.nome,
@@ -93,33 +97,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // });
       console.log(response)
       console.log('PASSOU PELO AUTH')
-      return {data: response.data, error: null}
+      return { data: response.data, error: null }
 
     } catch (err) {
-        console.error('Erro durante o registro:', err);
+      console.error('Erro durante o registro:', err);
 
-        if (err.response) {
-          // O servidor respondeu com um erro
-          const status = err.response.status;
-          const serverMessage = err.response.data?.message || 'Erro no servidor';
+      if (err.response) {
+        // O servidor respondeu com um erro
+        const status = err.response.status;
+        const serverMessage = err.response.data?.message || 'Erro no servidor';
 
-          if (status === 400) {
-            return { error: `Requisição inválida: ${serverMessage}` };
-          } else if (status === 401 || status === 403) {
-            return { error: 'Não autorizado. Verifique suas credenciais.' };
-          } else if (status === 500) {
-            return { error: 'Erro interno no servidor. Tente novamente mais tarde.' };
-          } else {
-            return { error: serverMessage };
-          }
-        } else if (err.request) {
-          // A requisição foi feita mas não houve resposta
-          return { error: 'Sem resposta do servidor. Verifique sua conexão.' };
+        if (status === 400) {
+          return { error: `Requisição inválida: ${serverMessage}` };
+        } else if (status === 401 || status === 403) {
+          return { error: 'Não autorizado. Verifique suas credenciais.' };
+        } else if (status === 500) {
+          return { error: 'Erro interno no servidor. Tente novamente mais tarde.' };
         } else {
-          // Outro erro qualquer (ex: erro de configuração ou código)
-          return { error: 'Erro desconhecido ao registrar. Tente novamente.' };
+          return { error: serverMessage };
         }
-      } finally {
+      } else if (err.request) {
+        // A requisição foi feita mas não houve resposta
+        return { error: 'Sem resposta do servidor. Verifique sua conexão.' };
+      } else {
+        // Outro erro qualquer (ex: erro de configuração ou código)
+        return { error: 'Erro desconhecido ao registrar. Tente novamente.' };
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -129,15 +133,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('adminSellers');
+    localStorage.removeItem('adminMarketplaces');
+    localStorage.removeItem('painel');
+    localStorage.removeItem('paymentLinks');
+    localStorage.removeItem('transactions');
   };
 
   //REGISTRAR SELLER
-  const signupSeller = async ( {
-      id_seller,
-      nome,
-      email,
-      password,
-      confirmpassword,
+  const signupSeller = async ({
+    id_seller,
+    nome,
+    email,
+    password,
+    confirmpassword,
 
   }: {
     id_seller: string;
@@ -151,19 +160,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user?.cargo === 'marketplace') {
       marketplaceId = user?.dataInfo.id;
     }
-    
+
     if (!marketplaceId) {
       throw new Error("ID do marketplace não encontrado. Faça login novamente.");
     }
     try {
-      const response = await api.post('register-seller',{id_seller, nome, email, password, confirmpassword, marketplaceId});
+      const response = await api.post('register-seller', { id_seller, nome, email, password, confirmpassword, marketplaceId });
       return response.data; // dados + token
-      
-    } catch(error: any) {
+
+    } catch (error: any) {
       throw new Error(error.response.data.message || "Erro ao registrar vendedor!")
     }
   }
-    // GET /cliente/:id
+  // GET /cliente/:id
   const getClientById = async (id: string) => {
     const response = await api.get(`/cliente/${id}`);
     return response.data;
@@ -198,19 +207,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return response.data;
   };
   return (
-    <AuthContext.Provider value={{     user,
-    login,
-    signup,
-    signupSeller,
-    logout,
-    loading,
-    error,
-    getClientById,
-    getAllClients,
-    updateClient,
-    deleteClient,
-    getSellerById,
-    getAllSellers }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      signup,
+      signupSeller,
+      logout,
+      loading,
+      error,
+      getClientById,
+      getAllClients,
+      updateClient,
+      deleteClient,
+      getSellerById,
+      getAllSellers
+    }}>
       {children}
     </AuthContext.Provider>
   );
