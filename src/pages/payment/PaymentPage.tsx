@@ -765,7 +765,7 @@ const PaymentPage: React.FC = () => {
                           </label>
 
                           <div className="text-sm text-gray-500 ml-8">
-                            Pague em até <span className="font-bold text-primary">{user?.habilitar_parcelas === true ? 21 : 12}</span> com juros de <span className="font-bold">{`${user?.taxa_juros ? user?.taxa_juros : 3}%`} a.m.</span>
+                            Pague em até <span className="font-bold text-primary">{user?.habilitar_parcelas === true ? 21 : 0.2}</span> com juros de <span className="font-bold">{`${user?.taxa_juros ? user?.taxa_juros : 3}%`} a.m.</span>
                           </div>
 
                           <select
