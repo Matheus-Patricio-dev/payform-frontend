@@ -63,7 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/login', { email, password });
 
       const { user, token, painel } = response.data;
-      console.log(user)
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
@@ -95,8 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       //   password: formData.password,
       //   confirmpassword: formData.confirmpassword,
       // });
-      console.log(response)
-      console.log('PASSOU PELO AUTH')
       return { data: response.data, error: null }
 
     } catch (err) {
@@ -147,13 +144,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email,
     password,
     confirmpassword,
-
+    habilitar_parcelas,
+    id_juros
   }: {
     id_seller: string;
     nome: string;
     email: string;
     password: string;
     confirmpassword: string;
+    habilitar_parcelas: boolean;
+    id_juros: string;
   }
   ) => {
     let marketplaceId = user?.marketplaceId
@@ -165,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("ID do marketplace não encontrado. Faça login novamente.");
     }
     try {
-      const response = await api.post('register-seller', { id_seller, nome, email, password, confirmpassword, marketplaceId });
+      const response = await api.post('register-seller', { id_seller, nome, email, password, confirmpassword, marketplaceId, habilitar_parcelas, id_juros});
       return response.data; // dados + token
 
     } catch (error: any) {

@@ -59,13 +59,15 @@ const PaymentPage: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
+  const [enableInstallments, setEnableInstallments] = useState(false);
+  const [installmentValue, setInstallmentValue] = useState([]);
 
   // PIX specific states
   const [pixTimeLeft, setPixTimeLeft] = useState<number>(15 * 60); // 15 minutes in seconds
   const [pixExpired, setPixExpired] = useState<boolean>(false);
   const [pixCode, setPixCode] = useState<string>('');
   const [paymentDetected, setPaymentDetected] = useState<boolean>(false);
-
+  const user = JSON?.parse(localStorage?.getItem("user"));
   // Card form state
   const [cardData, setCardData] = useState({
     number: '',
@@ -73,7 +75,8 @@ const PaymentPage: React.FC = () => {
     cvc: '',
     name: '',
     cpf: '',
-    email: ''
+    email: '',
+    installments: '' // novo campo
   });
   const [cardErrors, setCardErrors] = useState<any>({});
   const [cardBrand, setCardBrand] = useState<string>('');
@@ -94,8 +97,6 @@ const PaymentPage: React.FC = () => {
             setLoading(false);
             return;
           }
-
-          console.log(result)
 
           if (result === null) {
             setError('Link de pagamento não encontrado');
@@ -123,8 +124,6 @@ const PaymentPage: React.FC = () => {
             setLoading(false);
             return;
           }
-
-          console.log(result)
 
           if (result === null) {
             setError('Link de pagamento não encontrado');
@@ -192,7 +191,27 @@ const PaymentPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired, navigate]);
-
+  function calculateInstallments(amount, maxInstallments, interest) {
+    const installments = [];
+    for (let i = 1; i <= maxInstallments; i++) {
+      // Fórmula de preço parcelado: Valor * (1 + juros) ^ parcelas
+      const total = amount * Math.pow(1 + interest, i);
+      installments.push({
+        times: i,
+        value: total / i
+      });
+    }
+    return installments;
+  } user?.parcelas_habilitadas
+  useEffect(() => {
+    if (enableInstallments && link?.amount) {
+      const maxInstallments = user?.habilitar_parcelas === true ? 21 : 12;
+      const interest = parseFloat(user?.taxa_juros || 0.2);
+      setInstallmentValue(calculateInstallments(link.amount, maxInstallments, interest));
+    } else {
+      setInstallmentValue([]);
+    }
+  }, [enableInstallments, link?.amount, user?.habilitar_parcelas, user?.taxa_juros]);
   // useEffect(() => {
 
   // }, [link, linkId]);
@@ -731,6 +750,44 @@ const PaymentPage: React.FC = () => {
                           />
                           {cardErrors.cpf && (
                             <p className="mt-1 text-sm text-red-600">{cardErrors.cpf}</p>
+                          )}
+                        </div>
+                        <div className="mt-6 bg-white border rounded-xl shadow-sm p-4 space-y-4">
+                          <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              id="enableInstallments"
+                              checked={enableInstallments}
+                              onChange={(e) => setEnableInstallments(e.target.checked)}
+                              className="h-5 w-5 accent-primary border-gray-300 rounded transition"
+                            />
+                            <span className="text-base font-medium text-gray-800">Habilitar parcelamento</span>
+                          </label>
+
+                          <div className="text-sm text-gray-500 ml-8">
+                            Pague em até <span className="font-bold text-primary">{user?.habilitar_parcelas === true ? 21 : 12}</span> com juros de <span className="font-bold">{`${user?.taxa_juros ? user?.taxa_juros : 3}%`} a.m.</span>
+                          </div>
+
+                          <select
+                            className={`w-full mt-2 p-3 border rounded-xl focus:border-primary focus:ring-primary transition ${!enableInstallments ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                            value={cardData.installments}
+                            onChange={(e) => setCardData({ ...cardData, installments: e.target.value })}
+                            disabled={!enableInstallments}
+                            aria-label="Selecione a quantidade de parcelas"
+                          >
+                            <option value="">Selecione a quantidade de parcelas</option>
+                            {installmentValue.map((item) => (
+                              <option key={item.times} value={item.times}>
+                                {item.times}x de {formatCurrency(item.value)} (Total: {formatCurrency(item.value * item.times)})
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* Feedback: se habilitou, mas não selecionou */}
+                          {enableInstallments && !cardData.installments && (
+                            <div className="text-xs text-red-500 mt-1 ml-1">
+                              Selecione a quantidade de parcelas desejada.
+                            </div>
                           )}
                         </div>
 

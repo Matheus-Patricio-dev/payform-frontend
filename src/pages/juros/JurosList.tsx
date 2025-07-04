@@ -20,7 +20,7 @@ interface PaymentLinkFormData {
   paymentMethods: string[];
 }
 
-const PlanList: React.FC = () => {
+const JuroList: React.FC = () => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [paymentLinks, setPaymentLinks] = useState([]);
@@ -33,11 +33,9 @@ const PlanList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    frequency: 'diario',       // valor padrão
-    interval: '',              // defina se quiser um padrão
-    payment_methods: ['credit'],
     nome: '',                  // defina se quiser um padrão
     description: '',                  // defina se quiser um padrão
+    status: 'ativo',                  // defina se quiser um padrão
     amount: 0,                  // defina se quiser um padrão
   });
   // Get data based on user type
@@ -49,7 +47,7 @@ const PlanList: React.FC = () => {
     try {
       const userData = JSON.parse(localStorage.getItem("user"));
 
-      const response = await api.get(`/planos/cliente/${userData?.id}`);
+      const response = await api.get(`/juros/cliente/${userData?.id}`);
       setPaymentLinks(response?.data);
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
@@ -81,42 +79,25 @@ const PlanList: React.FC = () => {
   const handleAddPlan = async () => {
     try {
       if (!user) return;
-      console.log(formData, user)
-      const requiredFields = {
-        // frequency: 'Frequência',
-        interval: 'Intervalo',
-        // payment_methods: 'Método de pagamento',
-        nome: 'Nome'
-      };
-
-      for (const field in requiredFields) {
-        if (!formData[field]) {
-          toast.error(`${requiredFields[field]} é obrigatório`);
-          return;
-        }
-      }
 
       const newFormData = {
         ...formData,
         cliente_id: user.id,
-        marketplaceId: user.marketplaceId,
-        payment_methods: ['credit'],
-        frequency: 'diario',
         status: "ativo",
-        createdAt: Date.now()
+        marketplaceId: user.marketplaceId,
       }
 
-      const response = await api.post(`/planos`, { ...newFormData });
+      const response = await api.post(`/juros`, { ...newFormData });
 
       if (response?.data) {
         setFormData({});
-        toast.success('Plano adicionado com sucesso!');
+        toast.success('Juros adicionado com sucesso!');
         await fecthPlans()
         setIsAddModalOpen(false);
       }
 
     } catch (error) {
-      toast.error(error?.response?.data?.error || 'Erro ao adicionar Plano');
+      toast.error(error?.response?.data?.error || 'Erro ao adicionar Juros');
     }
   };
 
@@ -154,16 +135,13 @@ const PlanList: React.FC = () => {
   };
 
   const openEditModal = (payment: any) => {
-    if (payment.status !== 'pending') {
-      toast.error('Apenas links pendentes podem ser editados');
-      return;
-    }
+
     setSelectedPayment(payment);
     setIsEditModalOpen(true);
     setFormData({
       amount: payment.amount,
       description: payment.description,
-      paymentMethods: payment.paymentMethods,
+      nome: payment.nome,
     });
   };
 
@@ -183,12 +161,12 @@ const PlanList: React.FC = () => {
           <div className="max-w-[2000px] mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold">
-                {isAdmin ? 'Todos os Links de Pagamento' : 'Gerenciamento de Planos'}
+                {isAdmin ? 'Todos os Links de Pagamento' : 'Gerenciamento de Juros'}
               </h1>
               {!isAdmin && (
                 <button onClick={() => setIsAddModalOpen(true)}>
                   <Button icon={<Plus className="h-4 w-4" />}>
-                    Criar Plano
+                    Criar Juros
                   </Button>
                 </button>
               )}
@@ -196,7 +174,7 @@ const PlanList: React.FC = () => {
 
             <div className="mb-6">
               <Input
-                placeholder={isAdmin ? "Buscar por descrição, ID, email ou vendedor..." : "Buscar planos..."}
+                placeholder={isAdmin ? "Buscar por descrição, ID, email ou vendedor..." : "Buscar juros..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 icon={<Search className="h-4 w-4" />}
@@ -246,9 +224,9 @@ const PlanList: React.FC = () => {
                       <tr className="border-b">
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Data</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Data Criação</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Descrição</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Valor</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Taxa de Juros</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Status</th>
                         <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
                       </tr>
@@ -275,7 +253,7 @@ const PlanList: React.FC = () => {
                                 : 'bg-error/10 text-error'
                               }`}>
                               {payment.status === 'ativo' ? 'Ativo' :
-                                payment.status === 'pendente' ? 'Pendente' : 'Expirado'}
+                                payment.status === 'pendente' ? 'Pendente' : 'Inativo'}
                             </span>
                           </td>
                           <td className="py-4 px-6">
@@ -313,7 +291,7 @@ const PlanList: React.FC = () => {
                         icon={<Plus className="h-4 w-4" />}
                         className="mt-4"
                       >
-                        Criar Plano
+                        Criar Juros
                       </Button>
                     </button>
                   </div>
@@ -328,64 +306,38 @@ const PlanList: React.FC = () => {
       < Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Adicionar Plano"
+        title="Adicionar Juros"
       >
         <div className="space-y-4">
           <Input
-            label="Nome"
+            label="Nome do Juros"
             value={formData.nome}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
             fullWidth
           />
 
-          {/* Novo campo de Frequência */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Frequência</label>
-            <select
-              value={formData.frequency}
-              onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
-            >
-              <option value="diario">Diário</option>
-              <option value="mensal">Mensal</option>
-            </select>
-          </div>
-
           {/* Novo campo de Intervalo */}
           <Input
-            label="Intervalo entre Frequência de Cobrança (em dias)"
+            label="Taxa de Juros (%)"
             type="number"
-            value={formData.interval}
-            onChange={(e) => setFormData({ ...formData, interval: e.target.value })}
+            value={formData.amount}
+            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
             placeholder="ex: 30"
             fullWidth
           />
-
           {/* Novo campo de Métodos de Pagamento */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Método de Pagamento</label>
+            <label className="block text-sm font-medium text-gray-700">Status do Juros</label>
             <select
-              value={formData.payment_methods}
-              onChange={(e) => {
-                const selectedOptions = Array.from(e.target.selectedOptions).map(option => option.value);
-                setFormData({ ...formData, payment_methods: selectedOptions });
-              }}
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
             >
-              <option value="credit">Crédito</option>
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
               {/* Você pode adicionar mais opções de métodos de pagamento aqui */}
             </select>
           </div>
-
-          {/* Novo campo de Valor do Plano */}
-          <Input
-            label="Valor do Plano (em centavos)"
-            type="number"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-            placeholder="ex: 10000 (R$ 100,00)"
-            fullWidth
-          />
 
           {/* Novo campo de Descrição */}
           <Input
@@ -412,7 +364,7 @@ const PlanList: React.FC = () => {
       < Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Editar Plano"
+        title="Editar Juros"
       >
         <div className="space-y-4">
           <Input
@@ -421,56 +373,28 @@ const PlanList: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
             fullWidth
           />
-
-          {/* Novo campo de Frequência */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Frequência</label>
-            <select
-              value={formData.frequency}
-              onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
-            >
-              <option value="diario">Diário</option>
-              <option value="mensal">Mensal</option>
-            </select>
-          </div>
-
           {/* Novo campo de Intervalo */}
           <Input
-            label="Intervalo entre Frequência de Cobrança (em dias)"
-            type="number"
-            value={formData.interval}
-            onChange={(e) => setFormData({ ...formData, interval: e.target.value })}
-            placeholder="ex: 30"
-            fullWidth
-          />
-
-          {/* Novo campo de Métodos de Pagamento */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Método de Pagamento</label>
-            <select
-              value={formData.payment_methods}
-              onChange={(e) => {
-                const selectedOptions = Array.from(e.target.selectedOptions).map(option => option.value);
-                setFormData({ ...formData, payment_methods: selectedOptions });
-              }}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
-            >
-              <option value="credito">Crédito</option>
-              {/* Adicione mais opções de métodos de pagamento aqui, se necessário */}
-            </select>
-          </div>
-
-          {/* Novo campo de Valor do Plano */}
-          <Input
-            label="Valor do Plano (em centavos)"
+            label="Taxa de Juros (%)"
             type="number"
             value={formData.amount}
             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            placeholder="ex: 10000 (R$ 100,00)"
+            placeholder="ex: 30"
             fullWidth
           />
-
+          {/* Novo campo de Métodos de Pagamento */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Status do Juros</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
+            >
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+              {/* Você pode adicionar mais opções de métodos de pagamento aqui */}
+            </select>
+          </div>
           {/* Novo campo de Descrição */}
           <Input
             label="Descrição"
@@ -535,4 +459,4 @@ const PlanList: React.FC = () => {
   );
 };
 
-export default PlanList;
+export default JuroList;

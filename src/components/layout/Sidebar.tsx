@@ -78,11 +78,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           icon: <Store className="h-5 w-5" />,
           path: '/marketplace-sellers'
         },
-        // {
-        //   label: 'Pagamentos',
-        //   icon: <Wallet className="h-5 w-5" />,
-        //   path: '/payments'
-        // },
+        {
+          label: 'Juros',
+          icon: <Wallet className="h-5 w-5" />,
+          path: '/juros'
+        },
         {
           label: 'Transações',
           icon: <History className="h-5 w-5" />,
@@ -234,8 +234,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                         to={item.path}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${isActive(item.path)
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                          ? 'text-primary bg-primary/5'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                           }`}
                       >
                         <div className={`shrink-0 ${isActive(item.path) ? 'text-primary' : ''}`}>

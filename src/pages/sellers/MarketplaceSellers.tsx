@@ -18,6 +18,8 @@ interface SellerFormData {
   password: string;
   confirmpassword: string;
   marketplaceId: string;
+  habilitar_parcelas: boolean;
+  id_juros: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -43,6 +45,8 @@ const MarketplaceSellers: React.FC = () => {
     password: '',
     confirmpassword: '',
     marketplaceId: myMarketplaceId,
+    habilitar_parcelas: false, // novo campo
+    id_juros: ''              // novo campo
   });
 
   const fetchSellers = async () => {
@@ -104,7 +108,9 @@ const MarketplaceSellers: React.FC = () => {
         email: formData.email,
         password: formData.password,
         confirmpassword: formData.confirmpassword,
-        marketplaceId: formData.marketplaceId
+        marketplaceId: formData.marketplaceId,
+        habilitar_parcelas: formData.habilitar_parcelas,
+        id_juros: formData.id_juros,
       });
 
       setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
@@ -121,7 +127,6 @@ const MarketplaceSellers: React.FC = () => {
 
   const handleEditSeller = async (id_seller: string) => {
     try {
-      console.log(id_seller)
       if (!user || !selectedSeller) return;
 
       const response = await api.put(`/seller/${id_seller}`, {
@@ -130,7 +135,6 @@ const MarketplaceSellers: React.FC = () => {
         password: formData.password || null,
         marketplaceId: myMarketplaceId
       });
-      console.log(response)
 
       if (response.data) {
         toast.success('Vendedor atualizado com sucesso!');
@@ -265,7 +269,7 @@ const MarketplaceSellers: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 className="text-error"
-                                onClick={() => handleRemoveSeller(seller.id, seller.cliente)}
+                                onClick={() => handleRemoveSeller(seller.id, seller.cliente?.id)}
                                 icon={<Trash2 className="h-4 w-4" />}
                               >
                                 Excluir
@@ -348,6 +352,51 @@ const MarketplaceSellers: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
             fullWidth
           />
+
+          <div className="flex flex-col gap-2 p-4 bg-white border rounded-xl shadow-sm">
+            <div className="flex items-center justify-between">
+              <label htmlFor="habilitar_parcelas" className="text-base font-medium text-gray-800">
+                Parcelamento
+              </label>
+              {/* Switch estilizado */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.habilitar_parcelas}
+                id="habilitar_parcelas"
+                onClick={() => setFormData({ ...formData, habilitar_parcelas: !formData.habilitar_parcelas })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${formData.habilitar_parcelas ? 'bg-primary' : 'bg-gray-300'}`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${formData.habilitar_parcelas ? 'translate-x-5' : 'translate-x-1'}`}
+                />
+              </button>
+            </div>
+            <span className="text-sm text-gray-600 mt-1 ml-1">
+              {formData.habilitar_parcelas
+                ? (
+                  <>
+                    <span className="font-semibold text-primary">Habilitado:</span> até <span className="font-bold text-primary">21x</span> no cartão.
+                  </>
+                )
+                : (
+                  <>
+                    <span className="font-semibold text-gray-700">Padrão:</span> até <span className="font-bold">12x</span> no cartão.
+                  </>
+                )
+              }
+            </span>
+          </div>
+
+          {/* Novo campo: ID de Juros */}
+          <Input
+            label="ID de Juros (vínculo ao vendedor)"
+            value={formData.id_juros}
+            onChange={(e) => setFormData({ ...formData, id_juros: e.target.value })}
+            placeholder="ex: juros-001"
+            fullWidth
+          />
+
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancelar
