@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, Check, Clock, CreditCard, DollarSign, Wallet, XCircle } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
@@ -11,20 +11,30 @@ interface StatsCardsProps {
     pending: number;
     declined: number;
     totalAmount: number;
+    accountBalance: number;
+    currentBalance: number;
+    currentBlockedBalance: number; 
   };
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
+
   const items = [
     {
       title: 'Receita Total',
-      value: formatCurrency(stats.totalAmount),
+      value: formatCurrency(stats.accountBalance),
       icon: <DollarSign className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
     },
     {
       title: 'Saldo em conta',
-      value: formatCurrency(stats.totalAmount),
+      value: formatCurrency(Number(stats.currentBalance)),
+      icon: <Wallet className="h-5 w-5 text-primary" />,
+      color: 'bg-primary/10',
+    },
+    {
+      title: 'Saldo Futuro',
+      value: formatCurrency(stats.totalAmount + stats.currentBalance),
       icon: <Wallet className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
     },

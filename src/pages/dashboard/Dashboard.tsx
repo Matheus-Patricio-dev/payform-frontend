@@ -3,11 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PlusCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import {
-  getUserTransactions,
-  getTransactionStats,
-  seedDemoData,
-} from '../../services/paymentService';
+import { seedDemoData } from '../../services/paymentService';
 import Sidebar from '../../components/layout/Sidebar';
 import StatsCards from '../../components/dashboard/StatsCards';
 import TransactionsTable from '../../components/dashboard/TransactionsTable';
@@ -17,7 +13,19 @@ import api from '../../api/api';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState([]);
+
+  const [stats, setStats] = useState({
+    totalTransactions: 0,
+    completed: 0,
+    pending: 0,
+    declined: 0,
+    totalAmount: 0,
+    accountBalance: 0,
+    currentBalance: 0,
+    currentBlockedBalance: 0
+  });
+
+  const [transactions, setTransactions] = useState<any>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
@@ -26,59 +34,53 @@ const Dashboard: React.FC = () => {
     }
   }, [user]);
 
-  const fetchPayments = async () => {
+  const fetchSellerData = async () => {
     try {
-      const userData = JSON.parse(localStorage.getItem("user"));
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
 
       const response = await api.get(`/seller-dash/${userData?.id}`);
-      setTransactions(response?.data?.dados);
-      // setIsLoading(false)
+      const data = response.data.dados;
+
+      setTransactions(data);
+
+      const transacoes = data.transacoes || [];
+
+      const totalAmount = transacoes.reduce((total: number, transacao: any) => {
+        return total + parseFloat(transacao?.valor || "0");
+      }, 0);
+
+      const completed = transacoes.filter((t: any) => t.status === "completa").length;
+      const pending = transacoes.filter((t: any) => t.status === "pendente").length;
+      const declined = transacoes.filter((t: any) => t.status === "recusada").length;
+
+      setStats({
+        totalTransactions: transacoes.length,
+        completed,
+        pending,
+        declined,
+        totalAmount,
+        accountBalance: parseFloat(data.cliente.account_balance),
+        currentBalance: parseFloat(data.cliente.current_balance),
+        currentBlockedBalance: parseFloat(data.cliente.current_blocked_balance),
+      });
+
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
+    } 
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchSellerData();
     }
-  };
-
-  React.useEffect(() => {
-    fetchPayments();
-  }, [user])
-
-  console.log(transactions)
-  // Inicializa as estatísticas
-  const stats = {
-    totalTransactions: 0,
-    completed: 0,
-    pending: 0,
-    declined: 0,
-    totalAmount: 0,
-  };
-
-  //Processa os pagamentos e transações
-  if (transactions?.pagamentos && transactions?.pagamentos.length > 0) {
-    stats.totalTransactions = transactions?.transacoes.length; // Total de transações
-    stats.totalAmount = transactions?.transacoes.reduce((total, transacao) => {
-      return total + parseFloat(transacao?.valor); // Soma dos valores das transações
-    }, 0);
-
-    // Conta os status das transações
-    transactions?.transacoes.forEach(transacao => {
-      if (transacao.status === "completa") {
-        stats.completed++;
-      } else if (transacao.status === "pendente") {
-        stats.pending++;
-      } else if (transacao.status === "recusada") {
-        stats.declined++;
-      }
-    });
-  }
-
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
       <main
-        className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-          }`}
+        className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}
       >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
@@ -111,7 +113,7 @@ const Dashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
-                  <TransactionsTable transactions={(transactions?.transacoes || [])?.slice(0, 5)} />
+                  <TransactionsTable transactions={(transactions?.transacoes || []).slice(0, 5)} />
                 </div>
 
                 <div className="w-full">

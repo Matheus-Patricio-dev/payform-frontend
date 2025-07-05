@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal';
 import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import Select from '../../components/ui/Select';
+import api from '../../api/api';
 
 const AssinaturaList: React.FC = () => {
   const { user } = useAuth();
@@ -121,7 +122,7 @@ const AssinaturaList: React.FC = () => {
   };
 
   const openEditModal = (payment: any) => {
-    if (payment.status !== 'pending') {
+    if (payment.status !== '  ') {
       toast.error('Apenas links pendentes podem ser editados');
       return;
     }
@@ -139,6 +140,16 @@ const AssinaturaList: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const fetchData = async () => {
+    try{
+      const data = await api.get('/assinaturas')
+      console.log(data.data)
+
+    } catch {
+      console.log('erro na api')
+    }
+  }
+  fetchData()
 
   return (
     <div className="min-h-screen bg-background flex">
