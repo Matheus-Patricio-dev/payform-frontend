@@ -143,8 +143,6 @@ const AssinaturaList: React.FC = () => {
   const fetchData = async () => {
     try{
       const data = await api.get('/assinaturas')
-      console.log(data.data)
-
     } catch {
       console.log('erro na api')
     }

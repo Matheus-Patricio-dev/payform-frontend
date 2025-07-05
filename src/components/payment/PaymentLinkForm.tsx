@@ -140,8 +140,6 @@ const PaymentLinkForm: React.FC = () => {
       }
 
       const response = await api.post('/register-payment', formDataNew);
-      console.log(response)
-
 
       if (response?.data) {
         const baseUrl = window.location.origin;

@@ -316,12 +316,9 @@ const SellerList: React.FC = () => {
       };
       setIsCreateSeller(true)
       setLoading(true);
-      console.log(payload)
-
 
       const response = await api.post('/register-seller-to-marketplace', payload);
       console.log('enviando payload:', payload)
-      console.log(response)
 
       if (response.status === 201) {
         toast.success('Vendedor adicionado com sucesso!');
@@ -393,7 +390,6 @@ const SellerList: React.FC = () => {
       }
 
       const response = await api.put(`/seller/${id}`, { ...formData, password: formData?.password ? formData?.password : null, marketplaceId: formData.id });
-      console.log(response)
       updateSeller(selectedSeller.id, formData);
       setIsEditModalOpen(false);
       setSelectedSeller(null);

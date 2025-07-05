@@ -179,18 +179,19 @@ const PaymentPage: React.FC = () => {
       // Simulate payment detection after random time (5-10 seconds)
       const detectionTime = Math.random() * 5000 + 5000;
       const timer = setTimeout(() => {
-        setPaymentDetected(true);
-        setIsProcessing(true);
+        // setPaymentDetected(true);
+        // setIsProcessing(true);
 
-        // Process payment after detection
-        setTimeout(() => {
-          navigate('/payment-success');
-        }, 2000);
+        // // Process payment after detection
+        // setTimeout(() => {
+        //   navigate('/payment-success');
+        // }, 2000);
       }, detectionTime);
 
       return () => clearTimeout(timer);
     }
   }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired, navigate]);
+  
   function calculateInstallments(amount, maxInstallments, interest) {
     const installments = [];
     for (let i = 1; i <= maxInstallments; i++) {
@@ -202,7 +203,8 @@ const PaymentPage: React.FC = () => {
       });
     }
     return installments;
-  } user?.parcelas_habilitadas
+  }
+
   useEffect(() => {
     if (enableInstallments && link?.amount) {
       const maxInstallments = user?.habilitar_parcelas === true ? 21 : 12;
@@ -765,7 +767,7 @@ const PaymentPage: React.FC = () => {
                           </label>
 
                           <div className="text-sm text-gray-500 ml-8">
-                            Pague em até <span className="font-bold text-primary">{user?.habilitar_parcelas === true ? 21 : 0.2}</span> com juros de <span className="font-bold">{`${user?.taxa_juros ? user?.taxa_juros : 3}%`} a.m.</span>
+                            Pague em até <span className="font-bold text-primary">{user?.habilitar_parcelas === true ? 21 : 12}</span> com juros de <span className="font-bold">{`${user?.taxa_juros ? user?.taxa_juros : 0.2}%`} a.m.</span>
                           </div>
 
                           <select

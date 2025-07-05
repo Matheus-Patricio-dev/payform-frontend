@@ -125,7 +125,7 @@ const AdminDashboard: React.FC = () => {
                 <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mr-2" />
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
               </div>
-              <Link to="/create-payment-link">
+              {/* <Link to="/create-payment-link">
                 <Button 
                   icon={<PlusCircle className="h-4 w-4" />}
                   className="w-full sm:w-auto text-sm"
@@ -133,7 +133,7 @@ const AdminDashboard: React.FC = () => {
                   <span className="hidden sm:inline">Criar Link de Pagamento</span>
                   <span className="sm:hidden">Criar Link</span>
                 </Button>
-              </Link>
+              </Link> */}
             </div>
 
             {/* Stats Cards */}

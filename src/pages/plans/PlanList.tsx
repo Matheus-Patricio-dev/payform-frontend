@@ -51,7 +51,7 @@ const PlanList: React.FC = () => {
       const userData = JSON.parse(localStorage.getItem("user"));
 
       const response = await api.get(`/planos/cliente/${userData?.id}`);
-      console.log(response)
+
       setPaymentLinks(response?.data);
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
@@ -88,7 +88,6 @@ const PlanList: React.FC = () => {
   const handleAddPlan = async () => {
     try {
       if (!user) return;
-      console.log(formData, user)
       const requiredFields = {
         // frequency: 'Frequência',
         interval: 'Intervalo',
@@ -163,7 +162,6 @@ const PlanList: React.FC = () => {
   const openEditModal = (payment: any) => {
     
     setSelectedPayment(payment);
-    console.log(payment)
     setIsEditModalOpen(true);
     setFormData({
       nome: payment.nome,
@@ -282,7 +280,7 @@ const PlanList: React.FC = () => {
                                 : 'bg-error/10 text-error'
                               }`}>
                               {payment.status === 'ativo' ? 'Ativo' :
-                                payment.status === 'pendente' ? 'Pendente' : 'Expirado'}
+                                payment.status === 'pendente' ? 'Pendente' : 'Inativo'}
                             </span>
                           </td>
                           <td className="py-4 px-6">
@@ -397,11 +395,11 @@ const PlanList: React.FC = () => {
           <Select
             label="Status *"
             options={[
-              { value: 'active', label: 'Ativo' },
-              { value: 'inactive', label: 'Inativo' },
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' },
             ]}
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ativo' | 'inativo' })}
             fullWidth
           />
 
@@ -491,11 +489,11 @@ const PlanList: React.FC = () => {
           <Select
             label="Status *"
             options={[
-              { value: 'active', label: 'Ativo' },
-              { value: 'inactive', label: 'Inativo' },
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' },
             ]}
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ativo' | 'inativo' })}
             fullWidth
           />
           {/* Novo campo de Descrição */}

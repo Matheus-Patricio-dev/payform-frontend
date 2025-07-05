@@ -1,10 +1,18 @@
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  let value = amount;
+
+  // Se for um valor muito grande, assume que está em centavos
+  if (amount > 9999) {
+    value = amount / 100;
+  }
+
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
-  }).format(amount);
+  }).format(value);
 };
+
 
 export const formatDate = (date: Date): string => {
   return new Intl.DateTimeFormat('en-US', {
