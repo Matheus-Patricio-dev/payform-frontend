@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Building2, Store, TrendingUp, CreditCard, Users, PlusCircle } from 'lucide-react';
+import { Building2, Store, TrendingUp, CreditCard, Users, PlusCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
@@ -288,6 +288,16 @@ const AdminDashboard: React.FC = () => {
                 <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 mr-2" />
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
               </div>
+              <Button
+                loading={isRefresh}
+                disabled={isRefresh}
+                variant="outline"
+                onClick={() => fetchSellerData({ refreshData: false })}
+                icon={<RefreshCw className="h-4 w-4" />}
+                className="hover:bg-gray-50"
+              >
+                {isRefresh ? "Atualizando" : "Recarregar Dados"}
+              </Button>
               {/* <Link to="/create-payment-link">
                 <Button 
                   icon={<PlusCircle className="h-4 w-4" />}
