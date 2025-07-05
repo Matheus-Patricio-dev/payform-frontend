@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 // import { seedDemoData } from '../../services/paymentService';
 import Sidebar from '../../components/layout/Sidebar';
@@ -27,19 +27,20 @@ const Dashboard: React.FC = () => {
 
   const [transactions, setTransactions] = useState<any>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-
+  const [isRefresh, setIsRefresh] = useState(false)
   // useEffect(() => {
   //   if (user) {
   //     seedDemoData(user.id);
   //   }
   // }, [user]);
 
-  const fetchSellerData = async () => {
+  const fetchSellerData = async ({ refreshData = true }) => {
+    setIsRefresh(true)
     try {
       // Tenta pegar os dados de transações do localStorage
       const cachedTransactions = localStorage.getItem("transactions");
 
-      if (cachedTransactions) {
+      if (cachedTransactions && refreshData) {
         // Se existir, usa os dados do cache
         const data = JSON.parse(cachedTransactions);
 
@@ -65,6 +66,7 @@ const Dashboard: React.FC = () => {
           currentBalance: parseFloat(data?.dados?.cliente.current_balance || 0),
           currentBlockedBalance: parseFloat(data?.dados?.cliente.current_blocked_balance || 0),
         });
+        setIsRefresh(false)
 
         return; // Sai da função, não chama o backend
       }
@@ -94,19 +96,21 @@ const Dashboard: React.FC = () => {
         pending,
         declined,
         totalAmount,
-        accountBalance: parseFloat(data?.cliente?.account_balance || 0),
-        currentBalance: parseFloat(data?.cliente?.current_balance || 0),
-        currentBlockedBalance: parseFloat(data?.cliente?.current_blocked_balance || 0),
+        accountBalance: parseFloat(data?.dados?.cliente?.account_balance),
+        currentBalance: parseFloat(data?.dados?.cliente?.current_balance || 0),
+        currentBlockedBalance: parseFloat(data?.dados?.cliente?.current_blocked_balance || 0),
       });
+      setIsRefresh(false)
 
     } catch (error) {
+      setIsRefresh(false)
       console.error("Erro ao buscar sellers:", error);
     }
   };
 
   useEffect(() => {
     if (user) {
-      fetchSellerData();
+      fetchSellerData({});
     }
   }, [user]);
 
@@ -129,24 +133,37 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm sm:text-base text-gray-600">Bem-vindo, {user?.nome}.</p>
               </motion.div>
 
-              {user?.cargo === "seller" && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
+              {/* Botões agrupados à direita */}
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  loading={isRefresh}
+                  disabled={isRefresh}
+                  variant="outline"
+                  onClick={() => fetchSellerData({ refreshData: false })}
+                  icon={<RefreshCw className="h-4 w-4" />}
+                  className="hover:bg-gray-50"
                 >
-                  <Link to="/create-payment-link">
-                    <Button icon={<PlusCircle className="h-4 w-4" />}>
-                      <span className="hidden sm:inline">Criar Link de Pagamento</span>
-                      <span className="sm:hidden">Novo Link</span>
-                    </Button>
-                  </Link>
-                </motion.div>
-              )}
+                  {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                </Button>
+                {user?.cargo === "seller" && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <Link to="/create-payment-link">
+                      <Button icon={<PlusCircle className="h-4 w-4" />}>
+                        <span className="hidden sm:inline">Criar Link de Pagamento</span>
+                        <span className="sm:hidden">Novo Link</span>
+                      </Button>
+                    </Link>
+                  </motion.div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-6 lg:space-y-8">
-              <StatsCards stats={stats} />
+              <StatsCards stats={stats} userData={user} />
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">

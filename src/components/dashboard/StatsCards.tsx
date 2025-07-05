@@ -13,11 +13,11 @@ interface StatsCardsProps {
     totalAmount: number;
     accountBalance: number;
     currentBalance: number;
-    currentBlockedBalance: number; 
+    currentBlockedBalance: number;
   };
 }
 
-const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ stats, userData }) => {
 
   const items = [
     {
@@ -31,42 +31,58 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
       value: formatCurrency(Number(stats.accountBalance)),
       icon: <Wallet className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
+      cargo: "seller"
     },
     {
       title: 'Saldo Futuro',
       value: formatCurrency(stats.currentBlockedBalance + stats.currentBalance),
       icon: <Wallet className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
+      cargo: "seller"
     },
     {
       title: 'Total de Transações',
       value: stats.totalTransactions,
       icon: <CreditCard className="h-5 w-5 text-secondary" />,
       color: 'bg-secondary/10',
+      cargo: "marketplace"
+
     },
     {
       title: 'Completadas',
       value: stats.completed,
       icon: <Check className="h-5 w-5 text-success" />,
       color: 'bg-success/10',
+      cargo: "marketplace"
+
     },
     {
       title: 'Pendentes',
       value: stats.pending,
       icon: <Clock className="h-5 w-5 text-warning" />,
       color: 'bg-warning/10',
+      cargo: "marketplace"
+
     },
     {
       title: 'Recusadas',
       value: stats.declined,
       icon: <XCircle className="h-5 w-5 text-error" />,
       color: 'bg-error/10',
+      cargo: "marketplace"
     },
   ];
 
+  const filteredItems = items.filter(item => {
+    if ((item.title === 'Saldo Disponível' || item.title === 'Saldo Futuro') && userData.cargo === 'marketplace') {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-      {items.map((item, index) => (
+      {filteredItems.map((item, index) => (
         <motion.div
           key={item.title}
           initial={{ opacity: 0, y: 20 }}

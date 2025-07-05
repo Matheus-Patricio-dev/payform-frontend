@@ -47,14 +47,17 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
     ? transactions
     : transactions.filter(tx => tx.status === filter);
 
-  const getPaymentMethodName = (method: string) => {
-    switch (method) {
-      case 'credit_card': return 'Cartão de Crédito';
-      case 'bank_slip': return 'Cartão de Débito';
-      case 'pix': return 'PIX';
-      case 'bank_transfer': return 'Transferência Bancária';
-      default: return method;
-    }
+  const getPaymentMethodName = (methods: string[] = []) => {
+    return methods.map(method => {
+      switch (method) {
+        case 'credit_card': return 'Cartão de Crédito';
+        case 'debit_card': return 'Cartão de Débito';
+        case 'bank_slip': return 'Boleto Bancário';
+        case 'pix': return 'PIX';
+        case 'bank_transfer': return 'Transferência Bancária';
+        default: return method;
+      }
+    }).join(', ');
   };
 
   return (
@@ -133,10 +136,10 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
                     {formatCurrency(transaction?.valor)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getPaymentMethodName(transaction?.metodo_pagamento)}
+                    {getPaymentMethodName(transaction?.pagamento?.paymentMethods)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {transaction?.cliente_nome || 'Anônimo'}
+                    {transaction?.cliente?.nome || 'Anônimo'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <StatusBadge status={transaction.status} />

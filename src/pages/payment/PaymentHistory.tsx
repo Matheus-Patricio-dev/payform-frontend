@@ -53,7 +53,7 @@ const PaymentHistory: React.FC = () => {
       const userData = JSON.parse(localStorage.getItem("user"));
 
       const response = await api.get(`/transactions/${userData?.id}`);
-      setTransactions(response?.data?.transactions);
+      setTransactions(response?.data?.transactions?.transacoes);
       setIsLoading(false)
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
@@ -63,6 +63,7 @@ const PaymentHistory: React.FC = () => {
   React.useEffect(() => {
     fetchPayments();
   }, [user])
+
   // Simulate loading
   // React.useEffect(() => {
   //   const timer = setTimeout(() => setIsLoading(false), 1200);
