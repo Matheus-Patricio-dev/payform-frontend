@@ -34,8 +34,8 @@ const JuroList: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',                  // defina se quiser um padrão
-    description: '',                  // defina se quiser um padrão
-    status: 'ativo',                  // defina se quiser um padrão
+    description: '',
+    statuis: 'ativo',                  // defina se quiser um padrão                 // defina se quiser um padrão
     amount: 0,                  // defina se quiser um padrão
   });
   // Get data based on user type
@@ -43,7 +43,7 @@ const JuroList: React.FC = () => {
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
 
-  const fecthPlans = async () => {
+  const fetchInterest = async () => {
     try {
       const userData = JSON.parse(localStorage.getItem("user"));
 
@@ -55,35 +55,43 @@ const JuroList: React.FC = () => {
   };
 
   useEffect(() => {
-    fecthPlans();
+    fetchInterest();
   }, [user])
 
-  const filteredPayments = paymentLinks?.filter(link =>
-    link?.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    link?.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+const filteredPayments = paymentLinks?.filter(link => {
+  const desc = link?.description ?? '';
+  const id = link?.id ?? '';
+  const matchesSearch = desc.toLowerCase().includes(searchTerm.toLowerCase()) || id.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const handleDeletePayment = () => {
+  const matchesStatus =
+    statusFilter === 'all' ||
+    link.status === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
+
+  const handleDeleteInterest = async () => {
     try {
       if (!selectedPayment) return;
 
-      // Delete payment link logic here
-      toast.success('Plano removido com sucesso!');
+      const data = await api.delete(`/juros/${selectedPayment.id}`)
+      console.log('Retirado:', data)
+      toast.success('Juros removido com sucesso!');
       setIsDeleteModalOpen(false);
       setSelectedPayment(null);
+      fetchInterest ()
     } catch (error) {
-      toast.error('Erro ao remover plano');
+      toast.error('Erro ao remover Juros');
     }
   };
 
-  const handleAddPlan = async () => {
+  const handleAddInterest = async () => {
     try {
       if (!user) return;
 
       const newFormData = {
         ...formData,
         cliente_id: user.id,
-        status: "ativo",
         marketplaceId: user.marketplaceId,
       }
 
@@ -92,7 +100,7 @@ const JuroList: React.FC = () => {
       if (response?.data) {
         setFormData({});
         toast.success('Juros adicionado com sucesso!');
-        await fecthPlans()
+        await fetchInterest()
         setIsAddModalOpen(false);
       }
 
@@ -101,29 +109,29 @@ const JuroList: React.FC = () => {
     }
   };
 
-  const handleEditSeller = async (id_seller: string) => {
+  const handleEditInterest = async () => {
     try {
-      // console.log(id_seller)
-      // if (!user || !selectedSeller) return;
+      if(!selectedPayment){
+        toast.error('Não foi possível selecionar o juros')
+        return
+      }
+    
+        const newFormData = {
+        ...formData,
+        cliente_id: user.id,
+        marketplaceId: user.marketplaceId,
+      }
 
-      // const response = await api.put(`/seller/${id_seller}`, {
-      //   nome: formData.nome,
-      //   email: formData.email,
-      //   password: formData.password || null,
-      //   marketplaceId: myMarketplaceId
-      // });
-      // console.log(response)
+      const response = await api.put(`/juros/${selectedPayment.id}`, {...newFormData})
 
-      // if (response.data) {
-      //   toast.success('Vendedor atualizado com sucesso!');
-      //   setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
-      //   setIsEditModalOpen(false);
-      //   // setSelectedSeller(null);
-      //   // await fetchSellers();
-      // }
-
+      if (response?.data) {
+            toast.success('Juros editado com sucesso!');
+            await fetchInterest(); // ✅ Aguarde a atualização
+            setIsEditModalOpen(false);
+            setSelectedPayment(null);
+      }
     } catch (error) {
-      toast.error('Erro ao atualizar vendedor');
+      toast.error('Erro ao atualizar Juros');
       console.error(error);
     }
   };
@@ -142,6 +150,7 @@ const JuroList: React.FC = () => {
       amount: payment.amount,
       description: payment.description,
       nome: payment.nome,
+      status: payment.status,
     });
   };
 
@@ -185,9 +194,8 @@ const JuroList: React.FC = () => {
                 <Select
                   options={[
                     { value: 'all', label: 'Todos os Status' },
-                    { value: 'active', label: 'Ativos' },
-                    { value: 'pending', label: 'Pendentes' },
-                    { value: 'expired', label: 'Expirados' }
+                    { value: 'ativo', label: 'Ativos' },
+                    { value: 'inativo', label: 'Inativos ' },
                   ]}
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -352,7 +360,7 @@ const JuroList: React.FC = () => {
             <Button variant="outline" onClick={() => { setIsAddModalOpen(false); setFormData({}) }}>
               Cancelar
             </Button>
-            <Button onClick={handleAddPlan}>
+            <Button onClick={handleAddInterest}>
               Adicionar
             </Button>
           </div>
@@ -408,7 +416,7 @@ const JuroList: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => handleEditSeller(selectedPayment?.id)}>
+            <Button onClick={() => handleEditInterest(selectedPayment?.id)}>
               Salvar
             </Button>
           </div>
@@ -431,7 +439,7 @@ const JuroList: React.FC = () => {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Excluir Plano
+                Excluir Juros
               </h3>
               <p className="text-gray-600">
                 Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.
@@ -447,10 +455,10 @@ const JuroList: React.FC = () => {
               Cancelar
             </Button>
             <Button
-              onClick={handleDeletePayment}
+              onClick={handleDeleteInterest}
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
             >
-              Excluir Plano
+              Excluir Juros
             </Button>
           </div>
         </div>
