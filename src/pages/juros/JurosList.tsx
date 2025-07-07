@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -32,6 +32,7 @@ const JuroList: React.FC = () => {
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isRefresh, setIsRefresh] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',                  // defina se quiser um padrão
     description: '',
@@ -45,7 +46,17 @@ const JuroList: React.FC = () => {
 
   const fetchInterest = async () => {
     try {
+      localStorage.setItem('interest')
       const userData = JSON.parse(localStorage.getItem("user"));
+
+
+      //pega o cache priemeiro
+      const cacheKey = `juros_${userData.id}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        setPaymentLinks(JSON.parse(cached))
+        return
+      }
 
       const response = await api.get(`/juros/cliente/${userData?.id}`);
       setPaymentLinks(response?.data);
@@ -173,12 +184,24 @@ const filteredPayments = paymentLinks?.filter(link => {
                 {isAdmin ? 'Todos os Links de Pagamento' : 'Gerenciamento de Juros'}
               </h1>
               {!isAdmin && (
-                <button onClick={() => setIsAddModalOpen(true)}>
-                  <Button icon={<Plus className="h-4 w-4" />}>
-                    Criar Juros
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    loading={isRefresh}
+                    disabled={isRefresh}
+                    variant="outline"
+                    onClick={() => fetchInterest()}
+                    icon={<RefreshCw className="h-4 w-4" />}
+                    className="hover:bg-gray-50"
+                  >
+                    {isRefresh ? "Atualizando" : "Recarregar Dados"}
                   </Button>
-                </button>
-              )}
+                  <button onClick={() => setIsAddModalOpen(true)}>
+                    <Button icon={<Plus className="h-4 w-4" />}>
+                      Criar Juros
+                    </Button>
+                  </button>
+                </div>
+                   )}
             </div>
 
             <div className="mb-6">

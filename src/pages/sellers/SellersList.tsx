@@ -48,6 +48,13 @@ const MarketplaceSellers: React.FC = () => {
     try {
       setLoading(true);
       if (!myMarketplaceId) return;
+      
+      const cacheKey = `sellers_${userData.id}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        setSellersData(JSON.parse(cached))
+        return
+      }
       const response = await api.get(`/marketplace-list-seller/${myMarketplaceId}`);
       const sellers = response.data?.dados || [];
       setSellersData(sellers);

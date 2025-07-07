@@ -50,6 +50,14 @@ const PlanList: React.FC = () => {
     try {
       const userData = JSON.parse(localStorage.getItem("user"));
 
+        
+      const cacheKey = `planos_${userData.id}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        setPaymentLinks(JSON.parse(cached))
+        return
+      }
+
       const response = await api.get(`/planos/cliente/${userData?.id}`);
 
       setPaymentLinks(response?.data);

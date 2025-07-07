@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Store, Users, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Store, Users, Plus, Pencil, Trash2, Search, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getMarketplaceSellers } from '../../services/marketplaceService';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -35,6 +35,7 @@ const MarketplaceSellers: React.FC = () => {
   const [sellersData, setSellersData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRefresh, setIsRefresh] = useState(false);
 
   const myMarketplaceId = user?.dataInfo?.id
 
@@ -205,13 +206,26 @@ const MarketplaceSellers: React.FC = () => {
                 <Users className="h-6 w-6 text-gray-600 mr-2" />
                 <h1 className="text-2xl font-bold">Meus Vendedores</h1>
               </div>
-              <Button
-                loading={isCreateSeller}
-                onClick={() => setIsAddModalOpen(true)}
-                icon={<Plus className="h-4 w-4" />}
-              >
-                Adicionar
-              </Button>
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  loading={isRefresh}
+                  disabled={isRefresh}
+                  variant="outline"
+                  onClick={() => fetchSellers()}
+                  icon={<RefreshCw className="h-4 w-4" />}
+                  className="hover:bg-gray-50"
+                >
+                  {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                </Button>
+                <Button
+                  loading={isCreateSeller}
+                  onClick={() => setIsAddModalOpen(true)}
+                  icon={<Plus className="h-4 w-4" />}
+                >
+                  Adicionar
+                </Button>
+
+              </div>
             </div>
 
             <div className="mb-6">

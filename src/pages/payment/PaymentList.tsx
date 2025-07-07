@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -13,6 +13,7 @@ import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import Select from '../../components/ui/Select';
 import api from '../../api/api';
+import { div } from 'framer-motion/client';
 
 interface PaymentLinkFormData {
   amount: number;
@@ -31,6 +32,7 @@ const PaymentList: React.FC = () => {
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentLinks, setPaymentLinks] = useState([]);
+  const [isRefresh, setIsRefresh] = useState(false)
   const [formData, setFormData] = useState<PaymentLinkFormData>({
     amount: 0,
     description: '',
@@ -41,8 +43,10 @@ const PaymentList: React.FC = () => {
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
 
-  const fetchPayments = async () => {
+  const fetchPayments = async ({ refreshData = true}) => {
+    setIsRefresh(true)
     try {
+
       const userData = JSON.parse(localStorage.getItem("user"));
 
       const response = await api.get(`/payment/${userData?.id}`);
@@ -155,11 +159,25 @@ const PaymentList: React.FC = () => {
                 {isAdmin ? 'Todos os Links de Pagamento' : 'Links de Pagamento'}
               </h1>
               {!isAdmin && (
-                <Link to="/create-payment-link">
-                  <Button icon={<Plus className="h-4 w-4" />}>
-                    Criar Link
+                <div className="flex">
+                  <Button
+                    loading={isRefresh}
+                    disabled={isRefresh}
+                    variant="outline"
+                    onClick={() => fetchPayments({ refreshData: false })}
+                    icon={<RefreshCw className="h-4 w-4" />}
+                    className="hover:bg-gray-50"
+                  >
+                    {isRefresh ? "Atualizando" : "Recarregar Dados"}
                   </Button>
-                </Link>
+                    
+                  <Link to="/create-payment-link">
+                    <Button icon={<Plus className="h-4 w-4" />}>
+                      Criar Link
+                    </Button>
+                  </Link>
+                  
+                </div>
               )}
             </div>
 

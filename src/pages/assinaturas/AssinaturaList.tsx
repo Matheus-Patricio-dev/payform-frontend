@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -13,7 +13,8 @@ import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import Select from '../../components/ui/Select';
 import api from '../../api/api';
-import { form } from 'framer-motion/client';
+import { div, form } from 'framer-motion/client';
+
 
 const AssinaturaList: React.FC = () => {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ const AssinaturaList: React.FC = () => {
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [ isRefresh, setIsRefresh] = useState(false);
   const [formData, setFormData] = useState({
   plano_id: '',
   seller_id: '',
@@ -140,6 +142,16 @@ const AssinaturaList: React.FC = () => {
 // ✅ Corrigir a função fetchData
 const fetchData = async () => {
   try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+
+
+      const cacheKey = `assinaturas_${userData.id}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        setPaymentLinks(JSON.parse(cached))
+        return
+      }
+
     const response = await api.get('/assinaturas');
     setPaymentLinks(response.data); // 👈 aqui salva os dados corretamente
   } catch (error) {
@@ -167,11 +179,24 @@ useEffect(() => {
                 {isAdmin ? 'Todos os Links de Pagamento' : 'Gerenciamento de Assinaturas'}
               </h1>
               {!isAdmin && (
+
+                <div className="flex gap-2 ml-auto">
+                      <Button
+                  loading={isRefresh}
+                  disabled={isRefresh}
+                  variant="outline"
+                  onClick={() => fetchData({ refreshData: false })}
+                  icon={<RefreshCw className="h-4 w-4" />}
+                  className="hover:bg-gray-50"
+                >
+                  {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                </Button>
                 <button onClick={() => setIsAddModalOpen(true)}>
                   <Button icon={<Plus className="h-4 w-4" />}>
                     Criar Assinatura
                   </Button>
                 </button>
+                </div>
               )}
             </div>
 
