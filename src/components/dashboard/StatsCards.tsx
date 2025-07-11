@@ -49,7 +49,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, userData }) => {
 
     },
     {
-      title: 'Completadas',
+      title: 'Aprovadas',
       value: stats.completed,
       icon: <Check className="h-5 w-5 text-success" />,
       color: 'bg-success/10',

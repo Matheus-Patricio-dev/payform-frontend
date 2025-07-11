@@ -20,6 +20,8 @@ interface SellerFormData {
   marketplaceId: string;
   habilitar_parcelas: boolean;
   id_juros: string;
+  taxa_padrao: string;
+  taxa_repasse_juros: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -47,7 +49,9 @@ const MarketplaceSellers: React.FC = () => {
     confirmpassword: '',
     marketplaceId: myMarketplaceId,
     habilitar_parcelas: false, // novo campo
-    id_juros: ''              // novo campo
+    id_juros: '',
+    taxa_padrao: '',
+    taxa_repasse_juros:'',             // novo campo
   });
 
   const fetchSellers = async () => {
@@ -112,9 +116,11 @@ const MarketplaceSellers: React.FC = () => {
         marketplaceId: formData.marketplaceId,
         habilitar_parcelas: formData.habilitar_parcelas,
         id_juros: formData.id_juros,
+        taxa_padrao: formData.taxa_padrao,
+        taxa_repasse_juros: formData.taxa_repasse_juros
       });
 
-      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
+      setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: ''});
       toast.success('Vendedor adicionado com sucesso!');
       setIsAddModalOpen(false);
       await fetchSellers();
@@ -134,7 +140,10 @@ const MarketplaceSellers: React.FC = () => {
         nome: formData.nome,
         email: formData.email,
         password: formData.password || null,
-        marketplaceId: myMarketplaceId
+        marketplaceId: myMarketplaceId,
+        id_juros: formData.id_juros,
+        taxa_padrao: formData.taxa_padrao,
+        taxa_repasse_juros: formData.taxa_repasse_juros
       });
 
       if (response.data) {
@@ -325,102 +334,117 @@ const MarketplaceSellers: React.FC = () => {
         </div>
       </main>
 
-      {/* Add Seller Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Adicionar Vendedor"
-      >
-        <div className="space-y-4">
-          <Input
-            label="ID do Vendedor"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            placeholder="ex: seller-123"
-            fullWidth
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Senha"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Confirme a senha"
-            type="password"
-            value={formData.confirmpassword}
-            onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
-            fullWidth
-          />
+<Modal
+  isOpen={isAddModalOpen}
+  onClose={() => setIsAddModalOpen(false)}
+  title="Adicionar Vendedor"
+  className="max-w-2xl" // Define largura maior (você pode ajustar para `max-w-3xl` se quiser mais larga)
+>
+  <div className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2">
+    <Input
+      label="ID do Vendedor"
+      value={formData.id}
+      onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+      placeholder="ex: seller-123"
+      fullWidth
+    />
+    <Input
+      label="Nome"
+      value={formData.nome}
+      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+      fullWidth
+    />
+    <Input
+      label="Email"
+      type="email"
+      value={formData.email}
+      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+      fullWidth
+    />
+    <Input
+      label="Senha"
+      type="password"
+      value={formData.password}
+      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+      fullWidth
+    />
+    <Input
+      label="Confirme a senha"
+      type="password"
+      value={formData.confirmpassword}
+      onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
+      fullWidth
+    />
 
-          <div className="flex flex-col gap-2 p-4 bg-white border rounded-xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <label htmlFor="habilitar_parcelas" className="text-base font-medium text-gray-800">
-                Parcelamento
-              </label>
-              {/* Switch estilizado */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={formData.habilitar_parcelas}
-                id="habilitar_parcelas"
-                onClick={() => setFormData({ ...formData, habilitar_parcelas: !formData.habilitar_parcelas })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${formData.habilitar_parcelas ? 'bg-primary' : 'bg-gray-300'}`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${formData.habilitar_parcelas ? 'translate-x-5' : 'translate-x-1'}`}
-                />
-              </button>
-            </div>
-            <span className="text-sm text-gray-600 mt-1 ml-1">
-              {formData.habilitar_parcelas
-                ? (
-                  <>
-                    <span className="font-semibold text-primary">Habilitado:</span> até <span className="font-bold text-primary">21x</span> no cartão.
-                  </>
-                )
-                : (
-                  <>
-                    <span className="font-semibold text-gray-700">Padrão:</span> até <span className="font-bold">12x</span> no cartão.
-                  </>
-                )
-              }
-            </span>
-          </div>
-
-          {/* Novo campo: ID de Juros */}
-          <Input
-            label="ID de Juros (vínculo ao vendedor)"
-            value={formData.id_juros}
-            onChange={(e) => setFormData({ ...formData, id_juros: e.target.value })}
-            placeholder="ex: juros-001"
-            fullWidth
+    {/* Switch Parcelamento */}
+    <div className="flex flex-col gap-2 p-4 bg-white border rounded-xl shadow-sm">
+      <div className="flex items-center justify-between">
+        <label htmlFor="habilitar_parcelas" className="text-base font-medium text-gray-800">
+          Parcelamento
+        </label>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={formData.habilitar_parcelas}
+          id="habilitar_parcelas"
+          onClick={() => setFormData({ ...formData, habilitar_parcelas: !formData.habilitar_parcelas })}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${formData.habilitar_parcelas ? 'bg-primary' : 'bg-gray-300'}`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${formData.habilitar_parcelas ? 'translate-x-5' : 'translate-x-1'}`}
           />
+        </button>
+      </div>
+      <span className="text-sm text-gray-600 mt-1 ml-1">
+        {formData.habilitar_parcelas
+          ? (
+            <>
+              <span className="font-semibold text-primary">Habilitado:</span> até <span className="font-bold text-primary">21x</span> no cartão.
+            </>
+          )
+          : (
+            <>
+              <span className="font-semibold text-gray-700">Padrão:</span> até <span className="font-bold">12x</span> no cartão.
+            </>
+          )
+        }
+      </span>
+    </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddSeller}>
-              Adicionar
-            </Button>
-          </div>
-        </div>
-      </Modal>
+    {/* ID Juros (só um campo correto) */}
+    <Input
+      label="ID de Juros (vínculo ao vendedor)"
+      value={formData.id_juros}
+      onChange={(e) => setFormData({ ...formData, id_juros: e.target.value })}
+      placeholder="ex: juros-001"
+      fullWidth
+    />
+    <Input
+      label="Taxa padrão"
+      value={formData.taxa_padrao}
+      onChange={(e) => setFormData({ ...formData, taxa_padrao: e.target.value })}
+      placeholder="Inserir o ID do plano na zoop"
+      fullWidth
+    />
+    <Input
+      label="Taxa repassando os juros"
+      value={formData.taxa_repasse_juros}
+      onChange={(e) => setFormData({ ...formData, taxa_repasse_juros: e.target.value })}
+      placeholder="Inserir o id do plano no sistema"
+      fullWidth
+    />
+
+    {/* Ações */}
+    <div className="flex justify-end gap-2 pt-2">
+      <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+        Cancelar
+      </Button>
+      <Button onClick={handleAddSeller}>
+        Adicionar
+      </Button>
+    </div>
+  </div>
+</Modal>
 
       {/* Edit Seller Modal */}
       <Modal
@@ -449,6 +473,29 @@ const MarketplaceSellers: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             fullWidth
           />
+              {/* ID Juros (só um campo correto) */}
+          <Input
+            label="ID de Juros (vínculo ao vendedor)"
+            value={formData.id_juros}
+            onChange={(e) => setFormData({ ...formData, id_juros: e.target.value })}
+            placeholder="ex: juros-001"
+            fullWidth
+          />
+          <Input
+            label="Taxa padrão"
+            value={formData.taxa_padrao}
+            onChange={(e) => setFormData({ ...formData, taxa_padrao: e.target.value })}
+            placeholder="Inserir ID do plano na Zoop"
+            fullWidth
+          />
+          <Input
+            label="Taxa repassando os juros"
+            value={formData.taxa_repasse_juros}
+            onChange={(e) => setFormData({ ...formData, taxa_repasse_juros: e.target.value })}
+            placeholder="Inserir ID do plano no sistema"
+            fullWidth
+          />
+
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar

@@ -81,7 +81,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
           >
-            Completadas
+            Aprovadas
           </button>
           <button
             onClick={() => setFilter('pendente')}

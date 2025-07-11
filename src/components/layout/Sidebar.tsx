@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           path: '/marketplace-sellers'
         },
         {
-          label: 'Juros',
+          label: 'Planos de Juros',
           icon: <Wallet className="h-5 w-5" />,
           path: '/juros'
         },

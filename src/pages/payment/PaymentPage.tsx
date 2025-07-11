@@ -755,16 +755,6 @@ const PaymentPage: React.FC = () => {
                           )}
                         </div>
                         <div className="mt-6 bg-white border rounded-xl shadow-sm p-4 space-y-4">
-                          <label className="flex items-center space-x-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              id="enableInstallments"
-                              checked={enableInstallments}
-                              onChange={(e) => setEnableInstallments(e.target.checked)}
-                              className="h-5 w-5 accent-primary border-gray-300 rounded transition"
-                            />
-                            <span className="text-base font-medium text-gray-800">Habilitar parcelamento</span>
-                          </label>
 
                           <div className="text-sm text-gray-500 ml-8">
                             Pague em até <span className="font-bold text-primary">{user?.habilitar_parcelas === true ? 21 : 12}</span> com juros de <span className="font-bold">{`${user?.taxa_juros ? user?.taxa_juros : 0.2}%`} a.m.</span>

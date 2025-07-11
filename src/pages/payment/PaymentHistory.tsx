@@ -389,7 +389,7 @@ const PaymentHistory: React.FC = () => {
                       <Select
                         options={[
                           { value: 'all', label: 'Todos os Status' },
-                          { value: 'completed', label: 'Completadas' },
+                          { value: 'aproved', label: 'Aprovadas' },
                           { value: 'pending', label: 'Pendentes' },
                           { value: 'declined', label: 'Recusadas' }
                         ]}

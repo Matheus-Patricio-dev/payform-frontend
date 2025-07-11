@@ -37,7 +37,8 @@ const JuroList: React.FC = () => {
     nome: '',                  // defina se quiser um padrão
     description: '',
     statuis: 'ativo',                  // defina se quiser um padrão                 // defina se quiser um padrão
-    amount: 0,                  // defina se quiser um padrão
+    planoIdZoop: '',
+    parcelas: []                 // defina se quiser um padrão
   });
   // Get data based on user type
   const isAdmin = user?.cargo === 'admin';
@@ -46,18 +47,19 @@ const JuroList: React.FC = () => {
 
   const fetchInterest = async () => {
     try {
-      localStorage.setItem('interest')
+      // localStorage.setItem('interest')
       const userData = JSON.parse(localStorage.getItem("user"));
 
 
-      //pega o cache priemeiro
-      const cacheKey = `juros_${userData.id}`
-      const cached = localStorage.getItem(cacheKey)
-      if (cached) {
-        setPaymentLinks(JSON.parse(cached))
-        return
-      }
+      // //pega o cache priemeiro
+      // const cacheKey = `juros_${userData.id}`
+      // const cached = localStorage.getItem(cacheKey)
+      // if (cached) {
+      //   setPaymentLinks(JSON.parse(cached))
+      //   return
+      // }
 
+      
       const response = await api.get(`/juros/cliente/${userData?.id}`);
       setPaymentLinks(response?.data);
     } catch (error) {
@@ -99,6 +101,31 @@ const filteredPayments = paymentLinks?.filter(link => {
   const handleAddInterest = async () => {
     try {
       if (!user) return;
+
+   console.log("FormData bruto:", formData); // <-- Intercepta aqui
+
+    // Exemplo: construir um array de juros por parcela de 1x até 21x
+    const jurosPorParcela = Array.from({ length: 21 }, (_, i) => {
+      const key = `parcela_${i + 1}`;
+      return {
+        parcela: `${i + 1}x`,
+        taxa: parseFloat(formData[key]) || 0
+      };
+    });
+
+    console.log("Juros por parcela:", jurosPorParcela);
+    const objeto = {
+      id_zoop: formData.planoIdZoop || '',
+      nome: formData.nome || '',
+      description: formData.description || '',
+      status: formData.status || 'ativo',
+      parcelas: jurosPorParcela, // ← Aqui vai o array final no campo correto
+      cliente_id: user.id,
+      marketplaceId: user.marketplaceId
+    }; // <-- Intercepta aqui também
+
+    console.log("formdata passado para o backend =>", objeto)
+    return
 
       const newFormData = {
         ...formData,
@@ -181,7 +208,7 @@ const filteredPayments = paymentLinks?.filter(link => {
           <div className="max-w-[2000px] mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold">
-                {isAdmin ? 'Todos os Links de Pagamento' : 'Gerenciamento de Juros'}
+                {isAdmin ? 'Todos os Links de Pagamento' : 'Planos de taxas'}
               </h1>
               {!isAdmin && (
                 <div className="flex gap-2 ml-auto">
@@ -275,7 +302,7 @@ const filteredPayments = paymentLinks?.filter(link => {
                             {formatDate(payment?.createdAt)}
                           </td>
                           <td className="py-4 px-6">{payment.description}</td>
-                          <td className="py-4 px-6">{formatCurrency(payment.amount)}</td>
+                          <td className="py-4 px-6">{payment.amount}%</td>
                           <td className="py-4 px-6">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${payment.status === 'ativo'
                               ? 'bg-success/10 text-success'
@@ -333,62 +360,94 @@ const filteredPayments = paymentLinks?.filter(link => {
         </div>
       </main >
 
-      {/* Add Plan Modal */}
-      < Modal
+      {/* Add Juros Modal */}
+      <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Adicionar Juros"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
+          {/* ID do plano na Zoop */}
+          <Input
+            label="ID do Plano na Zoop"
+            value={formData.planoIdZoop || ''}
+            onChange={(e) => setFormData({ ...formData, planoIdZoop: e.target.value })}
+            placeholder="ID do plano na Zoop"
+            fullWidth
+          />
+
+          {/* Nome do juros */}
           <Input
             label="Nome do Juros"
-            value={formData.nome}
+            value={formData.nome || ''}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
             fullWidth
           />
 
-          {/* Novo campo de Intervalo */}
-          <Input
-            label="Taxa de Juros (%)"
-            type="number"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            placeholder="ex: 30"
-            fullWidth
-          />
-          {/* Novo campo de Métodos de Pagamento */}
+          {/* Juros por parcela em 2 colunas */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Juros por parcela <span className="text-sm text-gray-500">(1x até 21x)</span>
+            </h3>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {[...Array(21)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <label className="w-8 text-sm text-gray-600 font-medium">{i + 1}x</label>
+                  <input
+                    type="number"
+                    placeholder="%"
+                    value={formData[`parcela_${i + 1}`] || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [`parcela_${i + 1}`]: e.target.value,
+                      })
+                    }
+                    className="w-full max-w-[80px] px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring focus:ring-primary-200 focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Status do Juros</label>
             <select
-              value={formData.status}
+              value={formData.status || 'ativo'}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50 text-sm"
             >
               <option value="ativo">Ativo</option>
               <option value="inativo">Inativo</option>
-              {/* Você pode adicionar mais opções de métodos de pagamento aqui */}
             </select>
           </div>
 
-          {/* Novo campo de Descrição */}
+          {/* Descrição */}
           <Input
             label="Descrição"
-            value={formData.description}
+            value={formData.description || ''}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="Descrição do plano"
             fullWidth
           />
 
+          {/* Ações */}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setIsAddModalOpen(false); setFormData({}) }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddModalOpen(false);
+                setFormData({});
+              }}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleAddInterest}>
-              Adicionar
-            </Button>
+            <Button onClick={handleAddInterest}>Adicionar</Button>
           </div>
         </div>
-      </Modal >
+      </Modal>
 
 
       {/* Edit Plan Modal */}
@@ -404,7 +463,7 @@ const filteredPayments = paymentLinks?.filter(link => {
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
             fullWidth
           />
-          {/* Novo campo de Intervalo */}
+          Novo campo de Intervalo
           <Input
             label="Taxa de Juros (%)"
             type="number"

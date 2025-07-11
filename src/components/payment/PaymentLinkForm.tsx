@@ -37,6 +37,7 @@ interface FormData {
   description: string;
   customerEmail: string;
   paymentMethods: PaymentMethod[];
+  parcelasSemJuros: string;
 }
 
 interface FormErrors {
@@ -418,6 +419,33 @@ const PaymentLinkForm: React.FC = () => {
                       )}
                     </div>
                   </motion.div>
+                  {formData.paymentMethods.includes('credit_card') && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-4"
+                  >
+                    <label className="block text-sm sm:text-base font-semibold text-gray-900 mb-2">
+                      Parcelas isentas de juros (opcional)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={21}
+                      value={formData.parcelasSemJuros || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, parcelasSemJuros: e.target.value }))
+                      }
+                      placeholder="Ex: 3"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Quantidade de parcelas no cartão sem cobrança de juros
+                    </p>
+                  </motion.div>
+                )}
+
 
                   {/* Submit Button */}
                   <motion.div

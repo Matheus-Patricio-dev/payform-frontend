@@ -23,7 +23,7 @@ const TransactionChart: React.FC<TransactionChartProps> = ({
   declined,
 }) => {
   const data = {
-    labels: ['Completadas', 'Pendentes', 'Recusadas'],
+    labels: ['Aprovadas', 'Pendentes', 'Recusadas'],
     datasets: [
       {
         data: [completed, pending, declined],
