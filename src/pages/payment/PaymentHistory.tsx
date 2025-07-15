@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   History,
@@ -37,6 +37,7 @@ const PaymentHistory: React.FC = () => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isrefresh, setIsRefresh] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [transactions, setTransactions] = useState([]);
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
@@ -48,21 +49,43 @@ const PaymentHistory: React.FC = () => {
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
 
 
-  const fetchPayments = async () => {
-    try {
-      const userData = JSON.parse(localStorage.getItem("user"));
 
-      const response = await api.get(`/transactions/${userData?.id}`);
-      setTransactions(response?.data?.transactions?.transacoes);
-      setIsLoading(false)
+  
+  const fetchPayments = async ({ refreshData = true }) => {
+    setIsRefresh(true);
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const cache = localStorage.getItem('paymentHistory');
+
+      if (!userData?.id) {
+        console.warn('ID do usuário não encontrado no localStorage');
+        return;
+      }
+
+      if (!refreshData && cache) {
+        const cachedData = JSON.parse(cache);
+          setTransactions(cachedData);
+          return;
+      }
+
+      const response = await api.get(`/transactions/${userData.id}`);
+      const data = response.data;
+
+        localStorage.setItem('paymentHistory', JSON.stringify(data));
+        setTransactions(data);
+ 
     } catch (error) {
-      console.error("Erro ao buscar sellers:", error);
+      console.error('Erro ao buscar transações:', error);
+      setTransactions([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefresh(false);
     }
   };
 
-  React.useEffect(() => {
-    fetchPayments();
-  }, [user])
+  useEffect(() => {
+    fetchPayments({ refreshData: true });
+  }, [user]);
 
   // Simulate loading
   // React.useEffect(() => {
@@ -82,11 +105,11 @@ const PaymentHistory: React.FC = () => {
   };
 
   // Calcula as estatísticas
+if (Array.isArray(transactions)) {
   transactions.forEach(transaction => {
-    stats.totalTransactions += 1; // Incrementa o total de transações
-    stats.totalAmount += parseFloat(transaction.valor) // Soma o valor da transação
+    stats.totalTransactions += 1;
+    stats.totalAmount += parseFloat(transaction.valor);
 
-    // Conta o status da transação
     if (transaction.status === 'completa') {
       stats.completed += 1;
     } else if (transaction.status === 'pendente') {
@@ -95,6 +118,9 @@ const PaymentHistory: React.FC = () => {
       stats.declined += 1;
     }
   });
+} else {
+  console.warn("Transações não estão em formato de array:", transactions);
+}
 
   // Get sellers and marketplaces for admin filters
   const sellers = isAdmin ? [] : [];
@@ -214,7 +240,7 @@ const PaymentHistory: React.FC = () => {
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    await fetchPayments()
+    await fetchPayments({refreshData: true})
     setTimeout(() => setIsLoading(false), 800);
   };
 

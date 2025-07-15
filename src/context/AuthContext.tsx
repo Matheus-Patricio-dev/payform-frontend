@@ -134,7 +134,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('adminMarketplaces');
     localStorage.removeItem('painel');
     localStorage.removeItem('paymentLinks');
-    localStorage.removeItem('transactions');
+    localStorage.removeItem('interest');
+    localStorage.removeItem('payments');
+    localStorage.removeItem('paymentHistory');
+    localStorage.removeItem('assinaturas');
+    localStorage.removeItem('sellers');
   };
 
   //REGISTRAR SELLER

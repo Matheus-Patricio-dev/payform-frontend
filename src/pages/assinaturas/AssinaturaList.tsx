@@ -66,7 +66,7 @@ const AssinaturaList: React.FC = () => {
       toast.success('Assinatura removida com sucesso!');
       setIsDeleteModalOpen(false);
       setSelectedPayment(null);
-      fetchData()
+      fetchData({})
     } catch (error) {
       toast.error('Erro ao remover assinatura');
     }
@@ -87,7 +87,7 @@ const AssinaturaList: React.FC = () => {
     toast.success('Assinatura criada com sucesso!');
     setFormData({});
     setIsAddModalOpen(false);
-    await fetchData(); // Atualiza a lista
+    await fetchData({}); // Atualiza a lista
   } catch (error) {
     console.error(error);
     toast.error('Erro ao criar assinatura');
@@ -106,7 +106,7 @@ const AssinaturaList: React.FC = () => {
       
       toast.success('Assinatura atualizada com sucesso!');
       setIsAddModalOpen(false);
-      fetchData()
+      fetchData({})
     } catch (error) {
       toast.error('Erro ao criar assinatura');
       console.error(error);
@@ -140,29 +140,36 @@ const AssinaturaList: React.FC = () => {
   };
 
 // ✅ Corrigir a função fetchData
-const fetchData = async () => {
+const fetchData = async ({refreshData = true}) => {
+  setIsRefresh(true)
   try {
-      const userData = JSON.parse(localStorage.getItem("user"));
 
+      const cache = localStorage.getItem('assinatura')
 
-      const cacheKey = `assinaturas_${userData.id}`
-      const cached = localStorage.getItem(cacheKey)
-      if (cached) {
-        setPaymentLinks(JSON.parse(cached))
+      if (cache && refreshData) {
+        const data = JSON.parse(cache)
+        setPaymentLinks(data)
+        setIsRefresh(false)
         return
       }
+    
 
     const response = await api.get('/assinaturas');
-    setPaymentLinks(response.data); // 👈 aqui salva os dados corretamente
+    const data = response.data
+    setPaymentLinks(data); // 👈 aqui salva os dados corretamente
+    localStorage.setItem("assinaturas", JSON.stringify(data))
   } catch (error) {
     console.log('erro na api');
     toast.error('Erro ao buscar assinaturas');
+  } finally{
+    setIsRefresh(false)
   }
+  
 };
 
 // ✅ Executar somente uma vez ao montar
 useEffect(() => {
-  fetchData();
+  fetchData({});
 }, []
 )
 

@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Store, Users, Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getMarketplaceSellers } from '../../services/marketplaceService';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Sidebar from '../../components/layout/Sidebar';
 import Button from '../../components/ui/Button';
@@ -32,6 +31,7 @@ const MarketplaceSellers: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sellersData, setSellersData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isRefresh, setIsRefresh] = useState(false);
 
   const myMarketplaceId = user?.id;
 
@@ -44,30 +44,37 @@ const MarketplaceSellers: React.FC = () => {
     marketplaceId: myMarketplaceId || ''
   });
 
-  const fetchSellers = async () => {
+  const fetchSellers = async ({ refreshData = true }) => {
+    setIsRefresh(true);
     try {
-      setLoading(true);
       if (!myMarketplaceId) return;
-      
-      const cacheKey = `sellers_${userData.id}`
-      const cached = localStorage.getItem(cacheKey)
-      if (cached) {
-        setSellersData(JSON.parse(cached))
-        return
+
+      const cache = localStorage.getItem('sellers');
+      console.log('AQUIIIIIIIIIIIIIIIII')
+      if (cache && refreshData) {
+        const data = JSON.parse(cache);
+        setSellersData(data);
+        console.log('Usando dados do localStorage');
+        setIsRefresh(false)
+        return;
+
       }
+
       const response = await api.get(`/marketplace-list-seller/${myMarketplaceId}`);
-      const sellers = response.data?.dados || [];
-      setSellersData(sellers);
+      const data = response.data;
+      localStorage.setItem('sellers', JSON.stringify(data));
+      setSellersData(data);
+      console.log('Dados buscados do backend');
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
     } finally {
-      setLoading(false);
+      setIsRefresh(false)   
     }
   };
 
-  useEffect(() => {
-    fetchSellers();
-  }, [user]);
+useEffect(() => {
+  fetchSellers({ refreshData: false }); // false = tenta usar cache primeiro
+}, []);
 
   const filteredSellers = useMemo(() => {
     return sellersData.filter(seller =>
@@ -83,56 +90,62 @@ const MarketplaceSellers: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-const handleAddSeller = async () => {
-  if (!user) return;
+  const handleAddSeller = async () => {
+    if (!user) return;
 
-  // Validação básica de ID
-  if (!formData.id.trim()) {
-    toast.error('ID do vendedor é obrigatório');
-    return;
-  }
-
-  // Verifica se o ID já está em uso
-  if (sellersData.some(seller => seller.cliente.id === formData.id)) {
-    toast.error('Este ID já está em uso');
-    return;
-  }
-
-  try {
-    const response = await signupSeller({
-      id_seller: formData.id,
-      nome: formData.nome,
-      email: formData.email,
-      password: formData.password,
-      confirmpassword: formData.confirmpassword,
-      marketplaceId: myMarketplaceId
-    });
-
-    // Verificação de resposta, se aplicável
-    if (response?.success === false || response?.error) {
-      toast.error(response?.message || 'Erro ao adicionar vendedor');
+    if (!formData.id.trim()) {
+      toast.error('ID do vendedor é obrigatório');
       return;
     }
 
-    // Resetar o formulário e atualizar a lista
-    setFormData({
-      id: '',
-      nome: '',
-      email: '',
-      password: '',
-      confirmpassword: '',
-      marketplaceId: myMarketplaceId || ''
-    });
+    if (sellersData.some(seller => seller.cliente.id === formData.id)) {
+      toast.error('Este ID já está em uso');
+      return;
+    }
 
-    toast.success('Vendedor adicionado com sucesso!');
-    setIsAddModalOpen(false);
-    await fetchSellers();
-  } catch (error: any) {
-    console.error('Erro ao adicionar vendedor:', error);
-    const mensagem = error?.response?.data?.message || 'Erro inesperado ao adicionar vendedor';
-    toast.error(mensagem);
-  }
-};
+    try {
+      const response = await signupSeller({
+        id_seller: formData.id,
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password,
+        confirmpassword: formData.confirmpassword,
+        marketplaceId: myMarketplaceId
+      });
+
+      if (response?.success === false || response?.error) {
+        toast.error(response?.message || 'Erro ao adicionar vendedor');
+        return;
+      }
+
+      const novoSeller = {
+        cliente: {
+          id: formData.id,
+          nome: formData.nome,
+          email: formData.email
+        }
+      };
+
+      const novosSellers = [...sellersData, novoSeller];
+      setSellersData(novosSellers);
+      localStorage.setItem('sellers', JSON.stringify(novosSellers));
+
+      setFormData({
+        id: '',
+        nome: '',
+        email: '',
+        password: '',
+        confirmpassword: '',
+        marketplaceId: myMarketplaceId || ''
+      });
+
+      toast.success('Vendedor adicionado com sucesso!');
+      setIsAddModalOpen(false);
+    } catch (error: any) {
+      const mensagem = error?.response?.data?.message || 'Erro inesperado ao adicionar vendedor';
+      toast.error(mensagem);
+    }
+  };
 
   const handleEditSeller = async () => {
     try {
@@ -148,7 +161,7 @@ const handleAddSeller = async () => {
       setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: myMarketplaceId || '' });
       setIsEditModalOpen(false);
       setSelectedSeller(null);
-      await fetchSellers();
+      await fetchSellers({});
     } catch (error) {
       toast.error('Erro ao atualizar vendedor');
       console.error(error);
@@ -161,7 +174,7 @@ const handleAddSeller = async () => {
       if (window.confirm('Tem certeza que deseja remover este vendedor?')) {
         await api.delete(`/marketplace-seller/${sellerId}/${marketplaceId}`);
         toast.success('Vendedor removido com sucesso!');
-        await fetchSellers();
+        await fetchSellers({});
       }
     } catch (error) {
       toast.error('Erro ao remover vendedor');
@@ -172,7 +185,6 @@ const handleAddSeller = async () => {
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
-
       <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
@@ -295,7 +307,7 @@ const handleAddSeller = async () => {
         </div>
       </main>
 
-      {/* Modais */}
+      {/* Modal de adicionar */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Adicionar Vendedor">
         <div className="space-y-4">
           <Input label="ID do Vendedor" value={formData.id} onChange={(e) => setFormData({ ...formData, id: e.target.value })} fullWidth />
@@ -310,6 +322,7 @@ const handleAddSeller = async () => {
         </div>
       </Modal>
 
+      {/* Modal de edição */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Editar Vendedor">
         <div className="space-y-4">
           <Input label="ID do Vendedor" value={formData.id} disabled fullWidth />

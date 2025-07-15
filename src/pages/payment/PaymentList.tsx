@@ -33,6 +33,7 @@ const PaymentList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentLinks, setPaymentLinks] = useState([]);
   const [isRefresh, setIsRefresh] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<PaymentLinkFormData>({
     amount: 0,
     description: '',
@@ -44,21 +45,41 @@ const PaymentList: React.FC = () => {
   const marketplaces = isAdmin ? [] : [];
 
   const fetchPayments = async ({ refreshData = true}) => {
-    setIsRefresh(true)
+    setIsRefresh(true);
     try {
+      const userData = localStorage.getItem('user');
+      if(!userData) {
+        return
+      }
+      const cache = localStorage.getItem("payments")
 
-      const userData = JSON.parse(localStorage.getItem("user"));
+      if (cache && refreshData) {
+        const data = JSON.parse(cache)
+        setPaymentLinks(data)
+      }
+      
 
-      const response = await api.get(`/payment/${userData?.id}`);
-      setPaymentLinks(response?.data?.payments);
+      const response = await api.get(`/marketplace-list-seller/${userData.id}`);
+      const data = response.data;
+      localStorage.setItem('payments', JSON.stringify(data));
+      setPaymentLinks(data);
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
+    } finally {
+      setIsRefresh(false);
     }
   };
 
   useEffect(() => {
-    fetchPayments();
-  }, [user])
+    const cache = localStorage.getItem('sellers');
+    if (cache) {
+      setPaymentLinks(JSON.parse(cache));
+      console.log('Usando dados do localStorage');
+    } else {
+      fetchPayments({});
+      console.log('Buscando do backend, cache não encontrado');
+    }
+  }, []);
 
   const filteredPayments = paymentLinks.filter(link =>
     link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,7 +126,7 @@ const PaymentList: React.FC = () => {
       const response = await api.delete(`/payment-remove/${selectedPayment?.id}`);
       if (response?.data) {
         toast.success('Link de pagamento removido com sucesso!');
-        await fetchPayments();
+        await fetchPayments({});
         setIsDeleteModalOpen(false);
         setSelectedPayment(null);
       }
