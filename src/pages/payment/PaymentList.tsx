@@ -75,7 +75,6 @@ const PaymentList: React.FC = () => {
 
       const response = await api.get(`/payment/${user.id}`);
       const data = response.data.payments;
-      console.log(data)
 
       if (data) {
         localStorage.setItem('payments', JSON.stringify(data));
@@ -132,7 +131,7 @@ const PaymentList: React.FC = () => {
   };
 
   const handleViewPaymentLink = (paymentId: string) => {
-    const url = `${window.location.origin}/payment/${paymentId}`;
+    const url = `${window.location.origin}/pay/${paymentId}`;
     window.open(url, '_blank');
   };
 

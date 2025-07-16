@@ -54,6 +54,7 @@ const PaymentLinkForm: React.FC = () => {
     amount: '',
     description: '',
     customerEmail: '',
+    parcelasSemJuros: '',
     paymentMethods: ['pix']
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -167,6 +168,7 @@ const PaymentLinkForm: React.FC = () => {
       amount: '',
       description: '',
       customerEmail: '',
+      parcelasSemJuros: '',
       paymentMethods: ['pix']
     });
     setErrors({});

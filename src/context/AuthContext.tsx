@@ -139,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('paymentHistory');
     localStorage.removeItem('assinaturas');
     localStorage.removeItem('sellers');
+    localStorage.clear()
   };
 
   //REGISTRAR SELLER

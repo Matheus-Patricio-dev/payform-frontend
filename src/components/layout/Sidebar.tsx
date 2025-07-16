@@ -104,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           label: 'Assinaturas',
           icon: <Crown className="h-5 w-5" />,
           path: '/assinaturas',
-          disabled: false
+          disabled: true
         },
         {
           label: 'Pagamentos',

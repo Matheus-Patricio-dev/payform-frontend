@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   History,
   Search,
@@ -20,86 +20,97 @@ import {
   Eye,
   RefreshCw,
   Store,
-  Building2
-} from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { getUserTransactions, getTransactionStats } from '../../services/paymentService';
-import { formatCurrency, formatDateTime, formatDate } from '../../utils/formatters';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Select from '../../components/ui/Select';
-import Sidebar from '../../components/layout/Sidebar';
-import { TransactionStatus, PaymentMethod } from '../../types';
-import api from '../../api/api';
+  Building2,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import {
+  getUserTransactions,
+  getTransactionStats,
+} from "../../services/paymentService";
+import {
+  formatCurrency,
+  formatDateTime,
+  formatDate,
+} from "../../utils/formatters";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
+import Sidebar from "../../components/layout/Sidebar";
+import { TransactionStatus, PaymentMethod } from "../../types";
+import api from "../../api/api";
 
 const PaymentHistory: React.FC = () => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isrefresh, setIsRefresh] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [transactions, setTransactions] = useState([]);
-  const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
-  const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'all'>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [sellerFilter, setSellerFilter] = useState<string>('all');
-  const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<TransactionStatus | "all">(
+    "all"
+  );
+  const [methodFilter, setMethodFilter] = useState<PaymentMethod | "all">(
+    "all"
+  );
+  const [dateFilter, setDateFilter] = useState<
+    "all" | "today" | "week" | "month"
+  >("all");
+  const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sellerFilter, setSellerFilter] = useState<string>("all");
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
 
+  const fetchPayments = async ({ refreshData = true }) => {
+    setIsLoading(true);
+    setIsRefresh(true);
 
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      const cache = localStorage.getItem("transactions");
 
-  
-const fetchPayments = async ({ refreshData = true }) => {
-  setIsLoading(true);
-  setIsRefresh(true);
+      if (!userData.id) {
+        console.warn("Usuário não identificado.");
+        setTransactions([]);
+        return;
+      }
 
-  try {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    const cache = localStorage.getItem('transactions')
+      if (cache && refreshData) {
+        const data = JSON.parse(cache);
+        setTransactions(data?.dados?.transacoes);
+      }
 
+      const response = await api.get(`/transactions/${userData.id}`);
+      const data = response.data;
+      setTransactions(data);
+      localStorage.setItem("transactions", JSON.stringify(data));
 
-    if (!userData.id) {
-      console.warn('Usuário não identificado.');
+      if (Array.isArray(data?.transactions?.transacoes)) {
+        setTransactions(data.transactions.transacoes);
+      } else {
+        console.warn("Resposta da API não está no formato esperado:", data);
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar transações:", error);
       setTransactions([]);
-      return;
+    } finally {
+      setIsLoading(false);
+      setIsRefresh(false);
     }
-
-    if (cache && refreshData) {
-      const data = JSON.parse(cache)
-      setTransactions(data.transactions.transacoes)
-    }
-
-    const response = await api.get(`/transactions/${userData.id}`);
-    const data = response.data;
-    setTransactions(data)
-    localStorage.setItem('transactions', JSON.stringify(data))
-
-    if (Array.isArray(data?.transactions?.transacoes)) {
-      setTransactions(data.transactions.transacoes);
-    } else {
-      console.warn('Resposta da API não está no formato esperado:', data);
-      setTransactions([]);
-    }
-
-
-
-  } catch (error) {
-    console.error('Erro ao buscar transações:', error);
-    setTransactions([]);
-  } finally {
-    setIsLoading(false);
-    setIsRefresh(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchPayments({ refreshData: true });
   }, [user]);
 
   // Get data based on user type
-  const isAdmin = user?.cargo === 'admin';
+  const isAdmin = user?.cargo === "admin";
 
   // Inicializa o objeto stats
   const stats = {
@@ -107,56 +118,64 @@ const fetchPayments = async ({ refreshData = true }) => {
     completed: 0,
     pending: 0,
     declined: 0,
-    totalAmount: 0
+    totalAmount: 0,
   };
 
   // Calcula as estatísticas
-if (Array.isArray(transactions)) {
-  transactions.forEach(transaction => {
-    stats.totalTransactions += 1;
-    stats.totalAmount += parseFloat(transaction.valor);
+  if (Array.isArray(transactions)) {
+    transactions.forEach((transaction) => {
+      stats.totalTransactions += 1;
+      // Soma o valor da transação apenas se o status for "pago"
+      if (transaction.status === "pago") {
+        stats.totalAmount += parseFloat(transaction.valor) || 0; // Soma o valor da transação
+      }
 
-    if (transaction.status === 'completa') {
-      stats.completed += 1;
-    } else if (transaction.status === 'pendente') {
-      stats.pending += 1;
-    } else if (transaction.status === 'rejeitada') {
-      stats.declined += 1;
-    }
-  });
-} else {
-  console.warn("Transações não estão em formato de array:", transactions);
-}
+      if (transaction.status === "completa") {
+        stats.completed += 1;
+      } else if (transaction.status === "pendente") {
+        stats.pending += 1;
+      } else if (transaction.status === "rejeitada") {
+        stats.declined += 1;
+      }
+    });
+  } else {
+    console.warn("Transações não estão em formato de array:", transactions);
+  }
 
   // Get sellers and marketplaces for admin filters
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
 
-
   const filteredTransactions = useMemo(() => {
-    let filtered = transactions?.filter(transaction => {
+    let filtered = transactions?.filter((transaction) => {
       const matchesSearch =
-        transaction.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.customerName
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        transaction.customerEmail
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         transaction.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus = statusFilter === 'all' || transaction.status === statusFilter;
-      const matchesMethod = methodFilter === 'all' || transaction.paymentMethod === methodFilter;
+      const matchesStatus =
+        statusFilter === "all" || transaction.status === statusFilter;
+      const matchesMethod =
+        methodFilter === "all" || transaction.paymentMethod === methodFilter;
 
       let matchesDate = true;
-      if (dateFilter !== 'all') {
+      if (dateFilter !== "all") {
         const transactionDate = new Date(transaction.data_criacao);
         const now = new Date();
 
         switch (dateFilter) {
-          case 'today':
+          case "today":
             matchesDate = transactionDate.toDateString() === now.toDateString();
             break;
-          case 'week':
+          case "week":
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             matchesDate = transactionDate >= weekAgo;
             break;
-          case 'month':
+          case "month":
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             matchesDate = transactionDate >= monthAgo;
             break;
@@ -167,78 +186,87 @@ if (Array.isArray(transactions)) {
     });
 
     // Sort transactions
-    filtered.sort((a, b) => {
+    filtered?.sort((a, b) => {
       let comparison = 0;
-      if (sortBy === 'date') {
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "date") {
+        comparison =
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else {
         comparison = a.amount - b.amount;
       }
-      return sortOrder === 'asc' ? comparison : -comparison;
+      return sortOrder === "asc" ? comparison : -comparison;
     });
 
     return filtered;
-  }, [transactions, searchTerm, statusFilter, methodFilter, dateFilter, sortBy, sortOrder]);
+  }, [
+    transactions,
+    searchTerm,
+    statusFilter,
+    methodFilter,
+    dateFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const getStatusConfig = (status: TransactionStatus) => {
     switch (status) {
-      case 'completa':
+      case "completa":
         return {
-          label: 'Completada',
-          color: 'text-green-700 bg-green-50 border-green-200',
+          label: "Completada",
+          color: "text-green-700 bg-green-50 border-green-200",
           icon: <CheckCircle className="h-4 w-4" />,
-          dotColor: 'bg-green-500'
+          dotColor: "bg-green-500",
         };
-      case 'pendente':
+      case "pendente":
         return {
-          label: 'Pendente',
-          color: 'text-yellow-700 bg-yellow-50 border-yellow-200',
+          label: "Pendente",
+          color: "text-yellow-700 bg-yellow-50 border-yellow-200",
           icon: <Clock className="h-4 w-4" />,
-          dotColor: 'bg-yellow-500'
+          dotColor: "bg-yellow-500",
         };
-      case 'rejeitada':
+      case "rejeitada":
         return {
-          label: 'Recusada',
-          color: 'text-red-700 bg-red-50 border-red-200',
+          label: "Recusada",
+          color: "text-red-700 bg-red-50 border-red-200",
           icon: <XCircle className="h-4 w-4" />,
-          dotColor: 'bg-red-500'
+          dotColor: "bg-red-500",
         };
       default:
         return {
           label: status,
-          color: 'text-gray-700 bg-gray-50 border-gray-200',
+          color: "text-gray-700 bg-gray-50 border-gray-200",
           icon: <Clock className="h-4 w-4" />,
-          dotColor: 'bg-gray-500'
+          dotColor: "bg-gray-500",
         };
     }
   };
 
   const getPaymentMethodConfig = (methods: PaymentMethod[]) => {
-    return methods.map(method => {
+    return methods.map((method) => {
       switch (method) {
-        case 'credit_card':
+        case "credit_card":
           return {
-            label: 'Cartão de Crédito',
+            label: "Cartão de Crédito",
             icon: <CreditCard className="h-4 w-4" />,
-            color: 'text-blue-600 bg-blue-50'
+            color: "text-blue-600 bg-blue-50",
           };
-        case 'pix':
+        case "pix":
           return {
-            label: 'PIX',
+            label: "PIX",
             icon: <Smartphone className="h-4 w-4" />,
-            color: 'text-green-600 bg-green-50'
+            color: "text-green-600 bg-green-50",
           };
-        case 'bank_transfer':
+        case "bank_transfer":
           return {
-            label: 'Transferência',
+            label: "Transferência",
             icon: <ArrowUpRight className="h-4 w-4" />,
-            color: 'text-indigo-600 bg-indigo-50'
+            color: "text-indigo-600 bg-indigo-50",
           };
         default:
           return {
             label: method,
             icon: <CreditCard className="h-4 w-4" />,
-            color: 'text-gray-600 bg-gray-50'
+            color: "text-gray-600 bg-gray-50",
           };
       }
     });
@@ -246,13 +274,15 @@ if (Array.isArray(transactions)) {
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    await fetchPayments({refreshData: true})
+    await fetchPayments({ refreshData: true });
     setTimeout(() => setIsLoading(false), 800);
   };
 
   const getSellerInfo = (sellerId: string) => {
-    const seller = sellers.find(s => s.id === sellerId);
-    const marketplace = seller ? marketplaces.find(m => m.id === seller.marketplaceId) : null;
+    const seller = sellers.find((s) => s.id === sellerId);
+    const marketplace = seller
+      ? marketplaces.find((m) => m.id === seller.marketplaceId)
+      : null;
     return { seller, marketplace };
   };
 
@@ -261,15 +291,22 @@ if (Array.isArray(transactions)) {
       <div className="min-h-screen bg-background flex">
         <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-        <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-          }`}>
+        <main
+          className={`flex-1 transition-all duration-300 ${
+            isCollapsed ? "lg:ml-20" : "lg:ml-64"
+          }`}
+        >
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-[2000px] mx-auto">
               <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                   <div className="loader w-12 h-12 mx-auto mb-4"></div>
-                  <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando Transações</h2>
-                  <p className="text-gray-500">Aguarde enquanto carregamos seu histórico...</p>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                    Carregando Transações
+                  </h2>
+                  <p className="text-gray-500">
+                    Aguarde enquanto carregamos seu histórico...
+                  </p>
                 </div>
               </div>
             </div>
@@ -283,8 +320,11 @@ if (Array.isArray(transactions)) {
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-        }`}>
+      <main
+        className={`flex-1 transition-all duration-300 ${
+          isCollapsed ? "lg:ml-20" : "lg:ml-64"
+        }`}
+      >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto space-y-6">
             {/* Header */}
@@ -300,13 +340,14 @@ if (Array.isArray(transactions)) {
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    {isAdmin ? 'Todas as Transações' : 'Histórico de Transações'}
+                    {isAdmin
+                      ? "Todas as Transações"
+                      : "Histórico de Transações"}
                   </h1>
                   <p className="text-gray-600 text-sm sm:text-base">
                     {isAdmin
-                      ? 'Visualize e gerencie todas as transações do sistema'
-                      : 'Acompanhe todas as suas transações em tempo real'
-                    }
+                      ? "Visualize e gerencie todas as transações do sistema"
+                      : "Acompanhe todas as suas transações em tempo real"}
                   </p>
                 </div>
               </div>
@@ -340,8 +381,12 @@ if (Array.isArray(transactions)) {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Total de Transações</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.totalTransactions}</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Total de Transações
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.totalTransactions}
+                      </p>
                     </div>
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <TrendingUp className="h-5 w-5 text-primary" />
@@ -354,8 +399,12 @@ if (Array.isArray(transactions)) {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Receita Total</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalAmount)}</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Receita Total
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {formatCurrency(stats.totalAmount)}
+                      </p>
                     </div>
                     <div className="p-2 bg-green-100 rounded-lg">
                       <DollarSign className="h-5 w-5 text-green-600" />
@@ -409,7 +458,11 @@ if (Array.isArray(transactions)) {
                   <div className="space-y-4">
                     <div className="flex-1">
                       <Input
-                        placeholder={isAdmin ? "Buscar por cliente, email, ID da transação ou vendedor..." : "Buscar por cliente, email ou ID..."}
+                        placeholder={
+                          isAdmin
+                            ? "Buscar por cliente, email, ID da transação ou vendedor..."
+                            : "Buscar por cliente, email ou ID..."
+                        }
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         icon={<Search className="h-4 w-4" />}
@@ -420,48 +473,68 @@ if (Array.isArray(transactions)) {
                     <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                       <Select
                         options={[
-                          { value: 'all', label: 'Todos os Status' },
-                          { value: 'aproved', label: 'Aprovadas' },
-                          { value: 'pending', label: 'Pendentes' },
-                          { value: 'declined', label: 'Recusadas' }
+                          { value: "all", label: "Todos os Status" },
+                          { value: "aproved", label: "Aprovadas" },
+                          { value: "pending", label: "Pendentes" },
+                          { value: "declined", label: "Recusadas" },
                         ]}
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as TransactionStatus | 'all')}
+                        onChange={(e) =>
+                          setStatusFilter(
+                            e.target.value as TransactionStatus | "all"
+                          )
+                        }
                       />
                       <Select
                         options={[
-                          { value: 'all', label: 'Todos os Métodos' },
-                          { value: 'pix', label: 'PIX' },
-                          { value: 'credit_card', label: 'Cartão de Crédito' },
-                          { value: 'bank_slip', label: 'Boleto bancário' }
+                          { value: "all", label: "Todos os Métodos" },
+                          { value: "pix", label: "PIX" },
+                          { value: "credit_card", label: "Cartão de Crédito" },
+                          { value: "bank_slip", label: "Boleto bancário" },
                         ]}
                         value={methodFilter}
-                        onChange={(e) => setMethodFilter(e.target.value as PaymentMethod | 'all')}
+                        onChange={(e) =>
+                          setMethodFilter(
+                            e.target.value as PaymentMethod | "all"
+                          )
+                        }
                       />
                       <Select
                         options={[
-                          { value: 'all', label: 'Todo o Período' },
-                          { value: 'today', label: 'Hoje' },
-                          { value: 'week', label: 'Última Semana' },
-                          { value: 'month', label: 'Último Mês' }
+                          { value: "all", label: "Todo o Período" },
+                          { value: "today", label: "Hoje" },
+                          { value: "week", label: "Última Semana" },
+                          { value: "month", label: "Último Mês" },
                         ]}
                         value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
+                        onChange={(e) =>
+                          setDateFilter(
+                            e.target.value as "all" | "today" | "week" | "month"
+                          )
+                        }
                       />
                       {isAdmin && (
                         <>
                           <Select
                             options={[
-                              { value: 'all', label: 'Todos os Marketplaces' },
-                              ...marketplaces.map(m => ({ value: m.id, label: m.name }))
+                              { value: "all", label: "Todos os Marketplaces" },
+                              ...marketplaces.map((m) => ({
+                                value: m.id,
+                                label: m.name,
+                              })),
                             ]}
                             value={marketplaceFilter}
-                            onChange={(e) => setMarketplaceFilter(e.target.value)}
+                            onChange={(e) =>
+                              setMarketplaceFilter(e.target.value)
+                            }
                           />
                           <Select
                             options={[
-                              { value: 'all', label: 'Todos os Vendedores' },
-                              ...sellers.map(s => ({ value: s.id, label: s.name }))
+                              { value: "all", label: "Todos os Vendedores" },
+                              ...sellers.map((s) => ({
+                                value: s.id,
+                                label: s.name,
+                              })),
                             ]}
                             value={sellerFilter}
                             onChange={(e) => setSellerFilter(e.target.value)}
@@ -472,11 +545,19 @@ if (Array.isArray(transactions)) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                          icon={sortOrder === 'asc' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                          onClick={() =>
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                          }
+                          icon={
+                            sortOrder === "asc" ? (
+                              <ArrowUpRight className="h-4 w-4" />
+                            ) : (
+                              <ArrowDownRight className="h-4 w-4" />
+                            )
+                          }
                           className="flex-1"
                         >
-                          {sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}
+                          {sortOrder === "asc" ? "Crescente" : "Decrescente"}
                         </Button>
                       </div>
                     </div>
@@ -497,7 +578,11 @@ if (Array.isArray(transactions)) {
                     <CardTitle className="flex items-center space-x-2">
                       <span>Transações</span>
                       <span className="text-sm font-normal text-gray-500">
-                        ({filteredTransactions.length} {filteredTransactions.length === 1 ? 'resultado' : 'resultados'})
+                        ({filteredTransactions.length}{" "}
+                        {filteredTransactions.length === 1
+                          ? "resultado"
+                          : "resultados"}
+                        )
                       </span>
                     </CardTitle>
                   </div>
@@ -507,16 +592,25 @@ if (Array.isArray(transactions)) {
                     <div className="space-y-0">
                       <AnimatePresence>
                         {filteredTransactions.map((transaction, index) => {
-                          const statusConfig = getStatusConfig(transaction.status);
-                          const methodConfig = getPaymentMethodConfig(transaction?.pagamento?.paymentMethods || []);
-                          const { seller, marketplace } = isAdmin ? getSellerInfo(transaction.sellerId) : { seller: null, marketplace: null };
+                          const statusConfig = getStatusConfig(
+                            transaction.status
+                          );
+                          const methodConfig = getPaymentMethodConfig(
+                            transaction?.pagamento?.paymentMethods || []
+                          );
+                          const { seller, marketplace } = isAdmin
+                            ? getSellerInfo(transaction.sellerId)
+                            : { seller: null, marketplace: null };
                           return (
                             <motion.div
                               key={transaction.id}
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.3, delay: index * 0.05 }}
+                              transition={{
+                                duration: 0.3,
+                                delay: index * 0.05,
+                              }}
                               className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors"
                             >
                               <div className="p-4 sm:p-6">
@@ -524,7 +618,10 @@ if (Array.isArray(transactions)) {
                                   <div className="flex items-start space-x-4">
                                     <div>
                                       {methodConfig.map((config, index) => (
-                                        <div key={index} className={`p-2 rounded-lg ${config.color}`}>
+                                        <div
+                                          key={index}
+                                          className={`p-2 rounded-lg ${config.color}`}
+                                        >
                                           {config.icon}
                                         </div>
                                       ))}
@@ -532,12 +629,16 @@ if (Array.isArray(transactions)) {
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center space-x-2 mb-1">
                                         <h3 className="font-semibold text-gray-900 truncate">
-                                          {transaction?.cliente?.nome || 'Cliente Anônimo'}
+                                          {transaction?.cliente?.nome ||
+                                            "Cliente Anônimo"}
                                         </h3>
-                                        <div className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}></div>
+                                        <div
+                                          className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}
+                                        ></div>
                                       </div>
                                       <p className="text-sm text-gray-600 truncate">
-                                        {transaction?.cliente?.email || 'Email não informado'}
+                                        {transaction?.cliente?.email ||
+                                          "Email não informado"}
                                       </p>
                                       {isAdmin && seller && (
                                         <div className="flex items-center space-x-2 mt-1">
@@ -556,9 +657,15 @@ if (Array.isArray(transactions)) {
                                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                                         <span className="flex items-center space-x-1">
                                           <Calendar className="h-3 w-3" />
-                                          <span>{formatDateTime(new Date(transaction.data_criacao))}</span>
+                                          <span>
+                                            {formatDateTime(
+                                              new Date(transaction.data_criacao)
+                                            )}
+                                          </span>
                                         </span>
-                                        <span>ID: {transaction.id.slice(0, 8)}...</span>
+                                        <span>
+                                          ID: {transaction.id.slice(0, 8)}...
+                                        </span>
                                       </div>
                                     </div>
                                   </div>
@@ -568,7 +675,9 @@ if (Array.isArray(transactions)) {
                                       <p className="text-lg font-bold text-gray-900">
                                         {formatCurrency(transaction.valor)}
                                       </p>
-                                      <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                                      <div
+                                        className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}
+                                      >
                                         {statusConfig.icon}
                                         <span>{statusConfig.label}</span>
                                       </div>
@@ -576,8 +685,13 @@ if (Array.isArray(transactions)) {
 
                                     <div className="flex flex-col space-y-2">
                                       {methodConfig.map((config, index) => (
-                                        <div key={index} className="flex items-center space-x-2 group">
-                                          <div className={`px-2 py-1 rounded-lg text-xs font-medium ${config.color}`}>
+                                        <div
+                                          key={index}
+                                          className="flex items-center space-x-2 group"
+                                        >
+                                          <div
+                                            className={`px-2 py-1 rounded-lg text-xs font-medium ${config.color}`}
+                                          >
                                             {config.label}
                                           </div>
                                           {/* <Button
@@ -608,19 +722,24 @@ if (Array.isArray(transactions)) {
                         Nenhuma transação encontrada
                       </h3>
                       <p className="text-gray-600 mb-4">
-                        {searchTerm || statusFilter !== 'all' || methodFilter !== 'all' || dateFilter !== 'all'
-                          ? 'Tente ajustar os filtros para encontrar suas transações.'
-                          : 'Você ainda não possui transações registradas.'
-                        }
+                        {searchTerm ||
+                        statusFilter !== "all" ||
+                        methodFilter !== "all" ||
+                        dateFilter !== "all"
+                          ? "Tente ajustar os filtros para encontrar suas transações."
+                          : "Você ainda não possui transações registradas."}
                       </p>
-                      {(searchTerm || statusFilter !== 'all' || methodFilter !== 'all' || dateFilter !== 'all') && (
+                      {(searchTerm ||
+                        statusFilter !== "all" ||
+                        methodFilter !== "all" ||
+                        dateFilter !== "all") && (
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setSearchTerm('');
-                            setStatusFilter('all');
-                            setMethodFilter('all');
-                            setDateFilter('all');
+                            setSearchTerm("");
+                            setStatusFilter("all");
+                            setMethodFilter("all");
+                            setDateFilter("all");
                           }}
                         >
                           Limpar Filtros

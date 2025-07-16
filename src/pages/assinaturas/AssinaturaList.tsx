@@ -73,7 +73,6 @@ const AssinaturaList: React.FC = () => {
   };
 
   const handleAddSignature = async () => {
-  console.log('enviando:', formData)
   const { plano_id, seller_id, customer_id, amount, payment_methods, status } = formData;
 
   if (!plano_id || !seller_id || !customer_id || !amount || !payment_methods || !status) {

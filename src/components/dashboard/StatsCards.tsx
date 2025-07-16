@@ -22,13 +22,13 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, userData }) => {
   const items = [
     {
       title: 'Receita Total',
-      value: formatCurrency(stats.totalAmount),
+      value: formatCurrency(stats.totalAmount || 0),
       icon: <DollarSign className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
     },
     {
       title: 'Saldo Disponível',
-      value: formatCurrency(Number(stats.accountBalance)),
+      value: formatCurrency(Number(stats.accountBalance || 0)),
       icon: <Wallet className="h-5 w-5 text-primary" />,
       color: 'bg-primary/10',
       cargo: "seller"
