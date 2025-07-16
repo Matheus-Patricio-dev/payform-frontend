@@ -50,7 +50,6 @@ const MarketplaceSellers: React.FC = () => {
       if (!myMarketplaceId) return;
 
       const cache = localStorage.getItem('sellers');
-      console.log('AQUIIIIIIIIIIIIIIIII')
       if (cache && refreshData) {
         const data = JSON.parse(cache);
         setSellersData(data);

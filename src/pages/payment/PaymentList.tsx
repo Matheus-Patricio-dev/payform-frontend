@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -13,7 +12,6 @@ import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import Select from '../../components/ui/Select';
 import api from '../../api/api';
-import { div } from 'framer-motion/client';
 
 interface PaymentLinkFormData {
   amount: number;
@@ -31,60 +29,13 @@ const PaymentList: React.FC = () => {
   const [sellerFilter, setSellerFilter] = useState<string>('all');
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [paymentLinks, setPaymentLinks] = useState([]);
-  const [isRefresh, setIsRefresh] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [paymentLinks, setPaymentLinks] = useState<any[]>([]);
+  const [isRefresh, setIsRefresh] = useState(false);
   const [formData, setFormData] = useState<PaymentLinkFormData>({
     amount: 0,
     description: '',
     paymentMethods: [],
   });
-  // Get data based on user type
-  const isAdmin = user?.cargo === 'admin';
-  const sellers = isAdmin ? [] : [];
-  const marketplaces = isAdmin ? [] : [];
-
-  const fetchPayments = async ({ refreshData = true}) => {
-    setIsRefresh(true);
-    try {
-      const userData = localStorage.getItem('user');
-      if(!userData) {
-        return
-      }
-      const cache = localStorage.getItem("payments")
-
-      if (cache && refreshData) {
-        const data = JSON.parse(cache)
-        setPaymentLinks(data)
-      }
-      
-
-      const response = await api.get(`/marketplace-list-seller/${userData.id}`);
-      const data = response.data;
-      localStorage.setItem('payments', JSON.stringify(data));
-      setPaymentLinks(data);
-    } catch (error) {
-      console.error("Erro ao buscar sellers:", error);
-    } finally {
-      setIsRefresh(false);
-    }
-  };
-
-  useEffect(() => {
-    const cache = localStorage.getItem('sellers');
-    if (cache) {
-      setPaymentLinks(JSON.parse(cache));
-      console.log('Usando dados do localStorage');
-    } else {
-      fetchPayments({});
-      console.log('Buscando do backend, cache não encontrado');
-    }
-  }, []);
-
-  const filteredPayments = paymentLinks.filter(link =>
-    link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    link.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const paymentMethodOptions = [
     {
@@ -100,9 +51,56 @@ const PaymentList: React.FC = () => {
       description: 'Visa, Mastercard, Elo',
       icon: <CreditCard className="h-4 w-4" />,
       color: 'from-blue-500 to-indigo-600'
-    },
-
+    }
   ];
+
+  const isAdmin = user?.cargo === 'admin';
+  const sellers = isAdmin ? [] : [];
+  const marketplaces = isAdmin ? [] : [];
+
+  const fetchPayments = async ({ refreshData = true }) => {
+    setIsRefresh(true);
+    try {
+      const userData = localStorage.getItem('user');
+      if (!userData) return;
+
+      const user = JSON.parse(userData);
+      const cache = localStorage.getItem('payments');
+
+      if (cache && refreshData) {
+        const cachedData = JSON.parse(cache);
+        setPaymentLinks(cachedData);
+        return;
+      }
+
+      const response = await api.get(`/payment/${user.id}`);
+      const data = response.data.payments;
+      console.log(data)
+
+      if (data) {
+        localStorage.setItem('payments', JSON.stringify(data));
+        setPaymentLinks(data);
+      } else {
+        console.warn('Resposta da API não é um array:', data);
+        setPaymentLinks([]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar sellers:', error);
+    } finally {
+      setIsRefresh(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments({})
+  }, []);
+
+  const filteredPayments = Array.isArray(paymentLinks)
+    ? paymentLinks.filter(link =>
+        link.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        link.id?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   const handleEditPayment = () => {
     try {
@@ -110,8 +108,6 @@ const PaymentList: React.FC = () => {
         toast.error('Apenas links pendentes podem ser editados');
         return;
       }
-
-      // Update payment link logic here
       toast.success('Link de pagamento atualizado com sucesso!');
       setIsEditModalOpen(false);
       setSelectedPayment(null);
@@ -120,45 +116,14 @@ const PaymentList: React.FC = () => {
     }
   };
 
-  const handleDeletePayment = async () => {
-    try {
-      if (!selectedPayment) return;
-      const response = await api.delete(`/payment-remove/${selectedPayment?.id}`);
-      if (response?.data) {
-        toast.success('Link de pagamento removido com sucesso!');
-        await fetchPayments({});
-        setIsDeleteModalOpen(false);
-        setSelectedPayment(null);
-      }
-      setIsDeleteModalOpen(false);
-    } catch (error) {
-      toast.error(error?.response?.data?.error);
-    }
-  };
-
-  const handleViewPaymentLink = (paymentId: string) => {
-    const baseUrl = window.location.origin;
-    const paymentUrl = `${baseUrl}/pay/${paymentId}`;
-    window.open(paymentUrl, '_blank');
-  };
-
-  const togglePaymentMethod = (method: string) => {
-    const newMethods = formData.paymentMethods.includes(method)
-      ? formData.paymentMethods.filter(m => m !== method)
-      : [...formData.paymentMethods, method];
-
-    setFormData(prev => ({ ...prev, paymentMethods: newMethods }));
-  };
-
-  const openEditModal = (payment: any) => {
-
+    const openEditModal = (payment: any) => {
     setSelectedPayment(payment);
-    setIsEditModalOpen(true);
     setFormData({
       amount: payment.amount,
       description: payment.description,
-      paymentMethods: payment.paymentMethods,
+      paymentMethods: payment.paymentMethods || [], // ajuste conforme seu modelo
     });
+    setIsEditModalOpen(true);
   };
 
   const openDeleteModal = (payment: any) => {
@@ -166,6 +131,24 @@ const PaymentList: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const handleViewPaymentLink = (paymentId: string) => {
+    const url = `${window.location.origin}/payment/${paymentId}`;
+    window.open(url, '_blank');
+  };
+
+  const handleDeletePayment = async () => {
+    if (!selectedPayment) return;
+
+    try {
+      await api.delete(`/payment-remove/${selectedPayment.id}`);
+      toast.success('Link de pagamento excluído com sucesso!');
+      setIsDeleteModalOpen(false);
+      fetchPayments({ refreshData: true });
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao excluir o link de pagamento');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">

@@ -51,47 +51,53 @@ const PaymentHistory: React.FC = () => {
 
 
   
-  const fetchPayments = async ({ refreshData = true }) => {
-    setIsRefresh(true);
-    try {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      const cache = localStorage.getItem('paymentHistory');
+const fetchPayments = async ({ refreshData = true }) => {
+  setIsLoading(true);
+  setIsRefresh(true);
 
-      if (!userData?.id) {
-        console.warn('ID do usuário não encontrado no localStorage');
-        return;
-      }
+  try {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const cache = localStorage.getItem('transactions')
 
-      if (!refreshData && cache) {
-        const cachedData = JSON.parse(cache);
-          setTransactions(cachedData);
-          return;
-      }
 
-      const response = await api.get(`/transactions/${userData.id}`);
-      const data = response.data;
-
-        localStorage.setItem('paymentHistory', JSON.stringify(data));
-        setTransactions(data);
- 
-    } catch (error) {
-      console.error('Erro ao buscar transações:', error);
+    if (!userData.id) {
+      console.warn('Usuário não identificado.');
       setTransactions([]);
-    } finally {
-      setIsLoading(false);
-      setIsRefresh(false);
+      return;
     }
-  };
+
+    if (cache && refreshData) {
+      const data = JSON.parse(cache)
+      setTransactions(data.transactions.transacoes)
+    }
+
+    const response = await api.get(`/transactions/${userData.id}`);
+    const data = response.data;
+    setTransactions(data)
+    localStorage.setItem('transactions', JSON.stringify(data))
+
+    if (Array.isArray(data?.transactions?.transacoes)) {
+      setTransactions(data.transactions.transacoes);
+    } else {
+      console.warn('Resposta da API não está no formato esperado:', data);
+      setTransactions([]);
+    }
+
+
+
+  } catch (error) {
+    console.error('Erro ao buscar transações:', error);
+    setTransactions([]);
+  } finally {
+    setIsLoading(false);
+    setIsRefresh(false);
+  }
+};
 
   useEffect(() => {
     fetchPayments({ refreshData: true });
   }, [user]);
 
-  // Simulate loading
-  // React.useEffect(() => {
-  //   const timer = setTimeout(() => setIsLoading(false), 1200);
-  //   return () => clearTimeout(timer);
-  // }, []);
   // Get data based on user type
   const isAdmin = user?.cargo === 'admin';
 
