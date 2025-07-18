@@ -7,6 +7,9 @@ import {
   Trash2,
   Search,
   RefreshCw,
+  User,
+  Phone,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { getMarketplaceSellers } from "../../services/marketplaceService";
@@ -23,6 +26,8 @@ import Modal from "../../components/ui/Modal";
 import Pagination from "../../components/ui/Pagination";
 import toast from "react-hot-toast";
 import api from "../../api/api";
+import { motion } from "framer-motion";
+import Select from "../../components/ui/Select";
 
 interface SellerFormData {
   id: string;
@@ -31,13 +36,28 @@ interface SellerFormData {
   password: string;
   confirmpassword: string;
   marketplaceId: string;
-  id_juros: string;
+  // Contact info
+  phone: string;
+  website: string;
+  contactPerson: string;
+  // Address info
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
   taxa_padrao: string;
   taxa_repasse_juros: string;
+  id_juros: string;
 }
 
 const ITEMS_PER_PAGE = 10;
-
+interface FormErrors {
+  [key: string]: string;
+}
 const MarketplaceSellers: React.FC = () => {
   const { user, signupSeller } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -50,6 +70,11 @@ const MarketplaceSellers: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefresh, setIsRefresh] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "personal" | "contact" | "taxas" | "address"
+  >("personal");
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [marketplaces, setMKT] = useState<[]>([]);
 
   const myMarketplaceId = user?.dataInfo?.id;
 
@@ -63,6 +88,17 @@ const MarketplaceSellers: React.FC = () => {
     id_juros: "",
     taxa_padrao: "",
     taxa_repasse_juros: "", // novo campo
+    website: "",
+    contactPerson: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "Brasil",
+    phone: "",
   });
 
   const fetchSellers = async () => {
@@ -87,6 +123,22 @@ const MarketplaceSellers: React.FC = () => {
   useEffect(() => {
     fetchSellers();
   }, [user]);
+  // Função para buscar marketplaces
+  const fetchMarketplaces = async () => {
+    // setIsViewSellersModalOpen(true);
+    try {
+      const response = await api.get(`/marketplaces`);
+      if (response?.data?.dados) {
+        setMKT(response.data.dados);
+      }
+    } catch (err: unknown) {
+      console.log(err);
+    }
+  };
+  // Chama ao montar o componente
+  useEffect(() => {
+    fetchMarketplaces();
+  }, []);
 
   const filteredSellers = useMemo(() => {
     return sellersData.filter(
@@ -121,31 +173,54 @@ const MarketplaceSellers: React.FC = () => {
         return;
       }
 
-      await signupSeller({
+      const payload = {
         id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
         password: formData.password,
         confirmpassword: formData.confirmpassword,
-        marketplaceId: formData.marketplaceId,
-        taxa_padrao: formData.taxa_padrao,
-        taxa_repasse_juros: formData.taxa_repasse_juros,
-      });
+        marketplaceId: myMarketplaceId || "",
+        contactPerson: formData.contactPerson || "",
+        phone: formData.phone || "",
+        website: formData.website || "",
+        taxa_padrao: formData.taxa_padrao || "",
+        taxa_repasse_juros: formData.taxa_repasse_juros || "",
+        address: {
+          street: formData.street || "",
+          number: formData.number || "",
+          complement: formData.complement || "",
+          neighborhood: formData.neighborhood || "",
+          city: formData.city || "",
+          state: formData.state || "",
+          zipCode: formData.zipCode || "",
+          country: formData.country || "",
+        },
+      };
+      setIsCreateSeller(true);
+      setLoading(true);
 
-      setFormData({
-        id: "",
-        nome: "",
-        email: "",
-        password: "",
-        confirmpassword: "",
-        marketplaceId: "",
-        taxa_padrao: "",
-        taxa_repasse_juros: "",
-        id_juros: "",
-      });
-      toast.success("Vendedor adicionado com sucesso!");
-      setIsAddModalOpen(false);
-      await fetchSellers();
+      const response = await api.post(
+        "/register-seller-to-marketplace",
+        payload
+      );
+      console.log("enviando payload:", payload);
+      if (response?.data) {
+        resetForm();
+
+        toast.success("Vendedor adicionado com sucesso!");
+        setIsAddModalOpen(false);
+        await fetchSellers();
+      }
+      // await signupSeller({
+      //   id_seller: formData.id,
+      //   nome: formData.nome,
+      //   email: formData.email,
+      //   password: formData.password,
+      //   confirmpassword: formData.confirmpassword,
+      //   marketplaceId: formData.marketplaceId,
+      //   taxa_padrao: formData.taxa_padrao,
+      //   taxa_repasse_juros: formData.taxa_repasse_juros,
+      // });
     } catch (error) {
       toast.error("Erro ao adicionar vendedor");
     } finally {
@@ -158,28 +233,35 @@ const MarketplaceSellers: React.FC = () => {
       if (!user || !selectedSeller) return;
 
       const response = await api.put(`/seller/${id_seller}`, {
-        id_seller: formData.id,
-        nome: formData.nome,
-        email: formData.email,
-        password: formData.password || null,
+        // id_seller: formData.id,
+        // nome: formData.nome,
+        // email: formData.email,
+        // password: formData.password || null,
         marketplaceId: myMarketplaceId,
         taxa_padrao: formData.taxa_padrao,
         taxa_repasse_juros: formData.taxa_repasse_juros,
+        id_seller: formData.id,
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password || undefined,
+        contactPerson: formData.contactPerson,
+        phone: formData.phone,
+        website: formData.website,
+        address: {
+          street: formData.street,
+          number: formData.number,
+          complement: formData.complement,
+          neighborhood: formData.neighborhood,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          country: formData.country,
+        },
       });
 
       if (response.data) {
         toast.success("Vendedor atualizado com sucesso!");
-        setFormData({
-          id: "",
-          nome: "",
-          email: "",
-          password: "",
-          confirmpassword: "",
-          marketplaceId: "",
-          taxa_padrao: "",
-          taxa_repasse_juros: "",
-          id_juros: "",
-        });
+        resetForm();
         setIsEditModalOpen(false);
         setSelectedSeller(null);
         await fetchSellers();
@@ -189,9 +271,86 @@ const MarketplaceSellers: React.FC = () => {
       console.error(error);
     }
   };
-
+  const resetForm = () => {
+    setFormData({
+      id: "",
+      nome: "",
+      email: "",
+      password: "",
+      confirmpassword: "",
+      marketplaceId: "",
+      phone: "",
+      website: "",
+      contactPerson: "",
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      taxa_padrao: "",
+      taxa_repasse_juros: "",
+      country: "Brasil",
+      id_juros: "",
+    });
+    setFormErrors({});
+    setActiveTab("personal");
+  };
+  const getFieldsForTab = (tab: string) => {
+    switch (tab) {
+      case "personal":
+        return [
+          "id",
+          "name",
+          "email",
+          "password",
+          "marketplaceId",
+          "contactPerson",
+        ];
+      case "contact":
+        return ["phone", "website"];
+      case "taxas":
+        return ["taxa_padrao", "taxa_repassando_juros"];
+      case "address":
+        return [
+          "street",
+          "number",
+          "complement",
+          "neighborhood",
+          "city",
+          "state",
+          "zipCode",
+          "country",
+        ];
+      default:
+        return [];
+    }
+  };
   console.log(selectedSeller, "seller");
 
+  const tabs = [
+    {
+      id: "personal" as const,
+      label: "Informações Pessoais",
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      id: "contact" as const,
+      label: "Contato",
+      icon: <Phone className="h-4 w-4" />,
+    },
+    {
+      id: "address" as const,
+      label: "Endereço",
+      icon: <MapPin className="h-4 w-4" />,
+    },
+    {
+      id: "taxas" as const,
+      label: "Taxas",
+      icon: <MapPin className="h-4 w-4" />,
+    },
+  ];
   const [isRemoveSeller, setIsRemoveSeller] = useState(false);
   const handleRemoveSeller = async (id: string, id_cliente: string) => {
     setIsRemoveSeller(true);
@@ -241,6 +400,307 @@ const MarketplaceSellers: React.FC = () => {
       </div>
     );
   }
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "personal":
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="ID do Vendedor *"
+                value={formData.id}
+                onChange={(e) =>
+                  setFormData({ ...formData, id: e.target.value })
+                }
+                placeholder="ex: seller-123"
+                fullWidth
+                disabled={isEditModalOpen}
+                error={formErrors.id}
+              />
+              <Input
+                label="Nome Completo *"
+                value={formData.nome}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
+                placeholder="Nome do vendedor"
+                fullWidth
+                error={formErrors.name}
+              />
+            </div>
+            <Input
+              label="Email *"
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              placeholder="vendedor@email.com"
+              fullWidth
+              error={formErrors.email}
+            />
+            <Input
+              label={isEditModalOpen ? "Nova Senha (opcional)" : "Senha *"}
+              type="password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              placeholder="••••••••"
+              fullWidth
+              error={formErrors.password}
+            />
+            <Input
+              label={
+                isEditModalOpen
+                  ? "Nova Senha (opcional)"
+                  : "Confirmação de senha *"
+              }
+              type="password"
+              value={formData.confirmpassword}
+              onChange={(e) =>
+                setFormData({ ...formData, confirmpassword: e.target.value })
+              }
+              placeholder="••••••••"
+              fullWidth
+              error={formErrors.password}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Marketplace *"
+                options={marketplaces?.map((m) => ({
+                  value: m.id,
+                  label: m.cliente.nome,
+                }))}
+                value={formData.marketplaceId}
+                onChange={(e) =>
+                  setFormData({ ...formData, marketplaceId: e.target.value })
+                }
+                fullWidth
+                error={formErrors.marketplaceId}
+              />
+              <Input
+                label="Pessoa de Contato"
+                value={formData.contactPerson}
+                onChange={(e) =>
+                  setFormData({ ...formData, contactPerson: e.target.value })
+                }
+                placeholder="Nome do responsável"
+                fullWidth
+                error={formErrors.contactPerson}
+              />
+            </div>
+          </motion.div>
+        );
+
+      case "contact":
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Telefone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                placeholder="(11) 99999-9999"
+                fullWidth
+                error={formErrors.phone}
+              />
+              <Input
+                label="Website"
+                value={formData.website}
+                onChange={(e) =>
+                  setFormData({ ...formData, website: e.target.value })
+                }
+                placeholder="https://www.loja.com"
+                fullWidth
+                error={formErrors.website}
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Phone className="h-3 w-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">
+                    Informações de Contato
+                  </h4>
+                  <p className="text-blue-700 text-xs mt-1">
+                    Essas informações serão usadas para comunicação e suporte
+                    técnico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      case "taxas":
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Taxa padrão ID Payform"
+                value={formData.taxa_padrao}
+                onChange={(e) =>
+                  setFormData({ ...formData, taxa_padrao: e.target.value })
+                }
+                placeholder="ID Juros Payform"
+                fullWidth
+                error={formErrors.taxa_padrao}
+              />
+              <Input
+                label="Taxa repasse ID Zoop"
+                value={formData.taxa_repasse_juros}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    taxa_repasse_juros: e.target.value,
+                  })
+                }
+                placeholder="Taxa Repasse ID Zoop"
+                fullWidth
+                error={formErrors.taxa_repasse_juros}
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Phone className="h-3 w-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">
+                    Informações de taxas
+                  </h4>
+                  <p className="text-blue-700 text-xs mt-1">
+                    Essas informações serão usadas para as vendas com taxas de
+                    juros.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+
+      case "address":
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  label="Logradouro"
+                  value={formData.street}
+                  onChange={(e) =>
+                    setFormData({ ...formData, street: e.target.value })
+                  }
+                  placeholder="Rua, Avenida, etc."
+                  fullWidth
+                  error={formErrors.street}
+                />
+              </div>
+              <Input
+                label="Número"
+                value={formData.number}
+                onChange={(e) =>
+                  setFormData({ ...formData, number: e.target.value })
+                }
+                placeholder="123"
+                fullWidth
+                error={formErrors.number}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Complemento"
+                value={formData.complement}
+                onChange={(e) =>
+                  setFormData({ ...formData, complement: e.target.value })
+                }
+                placeholder="Apto, Sala, etc."
+                fullWidth
+                error={formErrors.complement}
+              />
+              <Input
+                label="Bairro"
+                value={formData.neighborhood}
+                onChange={(e) =>
+                  setFormData({ ...formData, neighborhood: e.target.value })
+                }
+                placeholder="Nome do bairro"
+                fullWidth
+                error={formErrors.neighborhood}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                label="Cidade"
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
+                placeholder="São Paulo"
+                fullWidth
+                error={formErrors.city}
+              />
+              <Input
+                label="Estado"
+                value={formData.state}
+                onChange={(e) =>
+                  setFormData({ ...formData, state: e.target.value })
+                }
+                placeholder="SP"
+                fullWidth
+                error={formErrors.state}
+              />
+              <Input
+                label="CEP"
+                value={formData.zipCode}
+                onChange={(e) =>
+                  setFormData({ ...formData, zipCode: e.target.value })
+                }
+                placeholder="00000-000"
+                fullWidth
+                error={formErrors.zipCode}
+              />
+            </div>
+            <Input
+              label="País"
+              value={formData.country}
+              onChange={(e) =>
+                setFormData({ ...formData, country: e.target.value })
+              }
+              placeholder="Brasil"
+              fullWidth
+              error={formErrors.country}
+            />
+          </motion.div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -350,6 +810,7 @@ const MarketplaceSellers: React.FC = () => {
                                     taxa_padrao: seller?.cliente?.id_juros,
                                     taxa_repasse_juros:
                                       seller?.cliente?.taxa_repasse_juros,
+                                    phone: seller?.cliente?.phone,
                                   });
                                 }}
                                 icon={<Pencil className="h-4 w-4" />}
@@ -407,12 +868,59 @@ const MarketplaceSellers: React.FC = () => {
           </div>
         </div>
       </main>
-
       <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          // resetForm();
+        }}
+        title="Adicionar Vendedor"
+      >
+        <div className="space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`mr-2 transition-colors ${
+                      activeTab === tab.id
+                        ? "text-primary"
+                        : "text-gray-400 group-hover:text-gray-500"
+                    }`}
+                  >
+                    {tab.icon}
+                  </span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="min-h-[300px]">{renderTabContent()}</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddSeller} loading={isCreateSeller}>
+              Adicionar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      {/* <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Adicionar Vendedor"
-        // className="max-w-2xl" // Define largura maior (você pode ajustar para `max-w-3xl` se quiser mais larga)
       >
         <div className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2">
           <Input
@@ -455,7 +963,7 @@ const MarketplaceSellers: React.FC = () => {
             }
             fullWidth
           />
-          {/* ID Juros (só um campo correto) */}
+
           <Input
             label="ID de Juros PayLink (vínculo ao vendedor)"
             value={formData.taxa_padrao}
@@ -475,7 +983,7 @@ const MarketplaceSellers: React.FC = () => {
             fullWidth
           />
 
-          {/* Ações */}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancelar
@@ -483,10 +991,63 @@ const MarketplaceSellers: React.FC = () => {
             <Button onClick={handleAddSeller}>Adicionar</Button>
           </div>
         </div>
-      </Modal>
+      </Modal> */}
 
       {/* Edit Seller Modal */}
+      {/* Edit Seller Modal */}
       <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedSeller(null);
+          // resetForm();
+        }}
+        title="Editar Vendedor"
+      >
+        <div className="space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`mr-2 transition-colors ${
+                      activeTab === tab.id
+                        ? "text-primary"
+                        : "text-gray-400 group-hover:text-gray-500"
+                    }`}
+                  >
+                    {tab.icon}
+                  </span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="min-h-[300px]">{renderTabContent()}</div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleEditSeller(selectedSeller.id)}>
+              Salvar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         title="Editar Vendedor"
@@ -523,7 +1084,7 @@ const MarketplaceSellers: React.FC = () => {
             }
             fullWidth
           />
-          {/* ID Juros (só um campo correto) */}
+ 
           <Input
             label="ID de Juros PayLink (vínculo ao vendedor)"
             value={formData.taxa_padrao}
@@ -552,7 +1113,7 @@ const MarketplaceSellers: React.FC = () => {
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal> */}
     </div>
   );
 };
