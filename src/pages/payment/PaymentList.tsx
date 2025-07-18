@@ -1,22 +1,60 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, Eye, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { formatCurrency, formatDate } from '../../utils/formatters';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import { Card, CardContent } from '../../components/ui/Card';
-import Modal from '../../components/ui/Modal';
-import Sidebar from '../../components/layout/Sidebar';
-import toast from 'react-hot-toast';
-import Select from '../../components/ui/Select';
-import api from '../../api/api';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  Eye,
+  CreditCard,
+  Smartphone,
+  Check,
+  AlertTriangle,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { formatCurrency, formatDate } from "../../utils/formatters";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import { Card, CardContent } from "../../components/ui/Card";
+import Modal from "../../components/ui/Modal";
+import Sidebar from "../../components/layout/Sidebar";
+import toast from "react-hot-toast";
+import Select from "../../components/ui/Select";
+import api from "../../api/api";
+import * as yup from "yup";
+import { PaymentMethod } from "../../types";
 
 interface PaymentLinkFormData {
   amount: number;
   description: string;
   paymentMethods: string[];
+  parcelasSemJuros: string;
+}
+// Validation schema with Yup
+const validationSchema = yup.object().shape({
+  amount: yup
+    .number()
+    .required("O valor é obrigatório")
+    .positive("O valor deve ser maior que zero")
+    .min(0.01, "O valor mínimo é R$ 0,01")
+    .max(999999.99, "O valor máximo é R$ 999.999,99"),
+  description: yup
+    .string()
+    .max(100, "A descrição deve ter no máximo 100 caracteres"),
+  customerEmail: yup.string().email("Digite um email válido"),
+  paymentMethods: yup
+    .array()
+    .min(1, "Selecione pelo menos um método de pagamento")
+    .required("Selecione pelo menos um método de pagamento"),
+});
+interface FormErrors {
+  amount?: string;
+  description?: string;
+  customerEmail?: string;
+  paymentMethods?: string;
 }
 
 const PaymentList: React.FC = () => {
@@ -24,48 +62,50 @@ const PaymentList: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [sellerFilter, setSellerFilter] = useState<string>('all');
-  const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [sellerFilter, setSellerFilter] = useState<string>("all");
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [paymentLinks, setPaymentLinks] = useState<any[]>([]);
   const [isRefresh, setIsRefresh] = useState(false);
   const [formData, setFormData] = useState<PaymentLinkFormData>({
     amount: 0,
-    description: '',
+    description: "",
     paymentMethods: [],
+    parcelasSemJuros: "",
   });
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const paymentMethodOptions = [
     {
-      id: 'pix',
-      name: 'PIX',
-      description: 'Transferência instantânea',
+      id: "pix",
+      name: "PIX",
+      description: "Transferência instantânea",
       icon: <Smartphone className="h-4 w-4" />,
-      color: 'from-green-500 to-emerald-600'
+      color: "from-green-500 to-emerald-600",
     },
     {
-      id: 'credit_card',
-      name: 'Cartão de Crédito',
-      description: 'Visa, Mastercard, Elo',
+      id: "credit_card",
+      name: "Cartão de Crédito",
+      description: "Visa, Mastercard, Elo",
       icon: <CreditCard className="h-4 w-4" />,
-      color: 'from-blue-500 to-indigo-600'
-    }
+      color: "from-blue-500 to-indigo-600",
+    },
   ];
 
-  const isAdmin = user?.cargo === 'admin';
+  const isAdmin = user?.cargo === "admin";
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
 
   const fetchPayments = async ({ refreshData = true }) => {
     setIsRefresh(true);
     try {
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem("user");
       if (!userData) return;
 
       const user = JSON.parse(userData);
-      const cache = localStorage.getItem('payments');
+      const cache = localStorage.getItem("payments");
 
       if (cache && refreshData) {
         const cachedData = JSON.parse(cache);
@@ -77,49 +117,79 @@ const PaymentList: React.FC = () => {
       const data = response.data.payments;
 
       if (data) {
-        localStorage.setItem('payments', JSON.stringify(data));
+        localStorage.setItem("payments", JSON.stringify(data));
         setPaymentLinks(data);
       } else {
-        console.warn('Resposta da API não é um array:', data);
+        console.warn("Resposta da API não é um array:", data);
         setPaymentLinks([]);
       }
     } catch (error) {
-      console.error('Erro ao buscar sellers:', error);
+      console.error("Erro ao buscar sellers:", error);
     } finally {
       setIsRefresh(false);
     }
   };
 
   useEffect(() => {
-    fetchPayments({})
+    fetchPayments({});
   }, []);
 
   const filteredPayments = Array.isArray(paymentLinks)
-    ? paymentLinks.filter(link =>
-        link.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        link.id?.toLowerCase().includes(searchTerm.toLowerCase())
+    ? paymentLinks.filter(
+        (link) =>
+          link.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          link.id?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
 
-  const handleEditPayment = () => {
+  const handleEditPayment = async () => {
+    // if (!selectedPayment || selectedPayment.status !== 'pending') {
+    //   toast.error('Apenas links pendentes podem ser editados');
+    //   return;
+    // }
+
     try {
-      if (!selectedPayment || selectedPayment.status !== 'pending') {
-        toast.error('Apenas links pendentes podem ser editados');
-        return;
+      const response = await api.put(
+        `/payment-update/${selectedPayment.id}`,
+        formData
+      );
+
+      if (response?.data) {
+        toast.success("Link de pagamento atualizado com sucesso!");
+        fetchPayments({ refreshData: false });
+        setIsEditModalOpen(false);
+        setSelectedPayment(null);
       }
-      toast.success('Link de pagamento atualizado com sucesso!');
-      setIsEditModalOpen(false);
-      setSelectedPayment(null);
     } catch (error) {
-      toast.error('Erro ao atualizar link de pagamento');
+      console.log(
+        error?.response?.data?.error || "Não foi possível editar o pagamento."
+      );
     }
   };
+  const validateField = async (field: keyof FormData, value: any) => {
+    try {
+      await validationSchema.validateAt(field, { ...formData, [field]: value });
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        setErrors((prev) => ({ ...prev, [field]: error.message }));
+      }
+    }
+  };
+  const togglePaymentMethod = (method: PaymentMethod) => {
+    const newMethods = formData.paymentMethods.includes(method)
+      ? formData.paymentMethods.filter((m) => m !== method)
+      : [...formData.paymentMethods, method];
 
-    const openEditModal = (payment: any) => {
+    setFormData((prev) => ({ ...prev, paymentMethods: newMethods }));
+    validateField("paymentMethods", newMethods);
+  };
+  const openEditModal = (payment: any) => {
     setSelectedPayment(payment);
     setFormData({
       amount: payment.amount,
       description: payment.description,
+      parcelasSemJuros: payment.parcelasSemJuros || 0,
       paymentMethods: payment.paymentMethods || [], // ajuste conforme seu modelo
     });
     setIsEditModalOpen(true);
@@ -132,7 +202,7 @@ const PaymentList: React.FC = () => {
 
   const handleViewPaymentLink = (paymentId: string) => {
     const url = `${window.location.origin}/pay/${paymentId}`;
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   const handleDeletePayment = async () => {
@@ -140,12 +210,12 @@ const PaymentList: React.FC = () => {
 
     try {
       await api.delete(`/payment-remove/${selectedPayment.id}`);
-      toast.success('Link de pagamento excluído com sucesso!');
+      toast.success("Link de pagamento excluído com sucesso!");
       setIsDeleteModalOpen(false);
-      fetchPayments({ refreshData: true });
+      fetchPayments({ refreshData: false });
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao excluir o link de pagamento');
+      toast.error("Erro ao excluir o link de pagamento");
     }
   };
 
@@ -153,13 +223,16 @@ const PaymentList: React.FC = () => {
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-        }`}>
+      <main
+        className={`flex-1 transition-all duration-300 ${
+          isCollapsed ? "lg:ml-20" : "lg:ml-64"
+        }`}
+      >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold">
-                {isAdmin ? 'Todos os Links de Pagamento' : 'Links de Pagamento'}
+                {isAdmin ? "Todos os Links de Pagamento" : "Links de Pagamento"}
               </h1>
               {!isAdmin && (
                 <div className="flex">
@@ -173,13 +246,12 @@ const PaymentList: React.FC = () => {
                   >
                     {isRefresh ? "Atualizando" : "Recarregar Dados"}
                   </Button>
-                    
+
                   <Link to="/create-payment-link">
                     <Button icon={<Plus className="h-4 w-4" />}>
                       Criar Link
                     </Button>
                   </Link>
-                  
                 </div>
               )}
             </div>
@@ -209,16 +281,19 @@ const PaymentList: React.FC = () => {
                   <>
                     <Select
                       options={[
-                        { value: 'all', label: 'Todos os Marketplaces' },
-                        ...marketplaces.map(m => ({ value: m.id, label: m.name }))
+                        { value: "all", label: "Todos os Marketplaces" },
+                        ...marketplaces.map((m) => ({
+                          value: m.id,
+                          label: m.name,
+                        })),
                       ]}
                       value={marketplaceFilter}
                       onChange={(e) => setMarketplaceFilter(e.target.value)}
                     />
                     <Select
                       options={[
-                        { value: 'all', label: 'Todos os Vendedores' },
-                        ...sellers.map(s => ({ value: s.id, label: s.name }))
+                        { value: "all", label: "Todos os Vendedores" },
+                        ...sellers.map((s) => ({ value: s.id, label: s.name })),
                       ]}
                       value={sellerFilter}
                       onChange={(e) => setSellerFilter(e.target.value)}
@@ -234,27 +309,44 @@ const PaymentList: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Data</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Descrição</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Valor</th>
-                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                          Data
+                        </th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                          Descrição
+                        </th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                          Valor
+                        </th>
+                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">
+                          Ações
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredPayments.map((payment) => (
-                        <tr key={payment.id} className="border-b last:border-0 hover:bg-gray-50">
+                        <tr
+                          key={payment.id}
+                          className="border-b last:border-0 hover:bg-gray-50"
+                        >
                           <td className="py-4 px-6">
-                            {formatDate(new Date(payment.data_criacao_pagamento))}
+                            {formatDate(
+                              new Date(payment.data_criacao_pagamento)
+                            )}
                           </td>
                           <td className="py-4 px-6">{payment.description}</td>
-                          <td className="py-4 px-6">{formatCurrency(payment.amount)}</td>
+                          <td className="py-4 px-6">
+                            {formatCurrency(payment.amount)}
+                          </td>
 
                           <td className="py-4 px-6">
                             <div className="flex items-center justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewPaymentLink(payment.id)}
+                                onClick={() =>
+                                  handleViewPaymentLink(payment.id)
+                                }
                                 icon={<Eye className="h-4 w-4" />}
                                 title="Visualizar link de pagamento"
                               >
@@ -287,7 +379,9 @@ const PaymentList: React.FC = () => {
 
                 {filteredPayments.length === 0 && (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">Nenhum link de pagamento encontrado</p>
+                    <p className="text-gray-500">
+                      Nenhum link de pagamento encontrado
+                    </p>
                     <Link to="/create-payment-link">
                       <Button
                         icon={<Plus className="h-4 w-4" />}
@@ -324,7 +418,9 @@ const PaymentList: React.FC = () => {
                 step="0.01"
                 min="0.01"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: Number(e.target.value) })
+                }
                 className="w-full pl-10 pr-4 py-3 text-lg font-semibold border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               />
             </div>
@@ -336,7 +432,9 @@ const PaymentList: React.FC = () => {
             </label>
             <Input
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               placeholder="Descrição do produto ou serviço"
               fullWidth
               className="py-3"
@@ -351,20 +449,24 @@ const PaymentList: React.FC = () => {
               {paymentMethodOptions.map((option) => (
                 <motion.div
                   key={option.id}
-                  className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                    ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm hover:bg-gray-50/50'
-                    }`}
+                  className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${
+                    formData.paymentMethods.includes(option.id)
+                      ? "border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-md"
+                      : "border-gray-200 hover:border-gray-300 hover:shadow-sm hover:bg-gray-50/50"
+                  }`}
                   onClick={() => togglePaymentMethod(option.id)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                        ? `bg-gradient-to-r ${option.color} text-white shadow-md`
-                        : 'bg-gray-100 text-gray-600'
-                        }`}>
+                      <div
+                        className={`p-2 rounded-lg transition-all duration-300 ${
+                          formData.paymentMethods.includes(option.id)
+                            ? `bg-gradient-to-r ${option.color} text-white shadow-md`
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
                         {option.icon}
                       </div>
                       <div>
@@ -376,15 +478,22 @@ const PaymentList: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                      ? 'border-primary bg-primary shadow-md'
-                      : 'border-gray-300'
-                      }`}>
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                        formData.paymentMethods.includes(option.id)
+                          ? "border-primary bg-primary shadow-md"
+                          : "border-gray-300"
+                      }`}
+                    >
                       {formData.paymentMethods.includes(option.id) && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 30,
+                          }}
                         >
                           <Check className="h-3 w-3 text-white" />
                         </motion.div>
@@ -394,12 +503,46 @@ const PaymentList: React.FC = () => {
                 </motion.div>
               ))}
             </div>
-            {formData.paymentMethods.length === 0 && (
-              <p className="text-red-600 text-sm mt-2">
-                Selecione pelo menos um método de pagamento
-              </p>
+            {errors.paymentMethods && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center mt-3 text-red-600 text-sm"
+              >
+                <AlertCircle className="h-4 w-4 mr-1" />
+                {errors.paymentMethods}
+              </motion.div>
             )}
           </div>
+          {formData.paymentMethods.includes("credit_card") && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mt-4"
+            >
+              <label className="block text-sm sm:text-base font-semibold text-gray-900 mb-2">
+                Parcelas isentas de juros (opcional)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={21}
+                value={formData.parcelasSemJuros || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    parcelasSemJuros: e.target.value,
+                  }))
+                }
+                placeholder="Ex: 3"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Quantidade de parcelas no cartão sem cobrança de juros
+              </p>
+            </motion.div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
@@ -434,22 +577,29 @@ const PaymentList: React.FC = () => {
                 Excluir link de pagamento
               </h3>
               <p className="text-gray-600">
-                Tem certeza que deseja excluir este link de pagamento? Esta ação não pode ser desfeita.
+                Tem certeza que deseja excluir este link de pagamento? Esta ação
+                não pode ser desfeita.
               </p>
             </div>
           </div>
 
           {selectedPayment && (
             <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Detalhes do link:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">
+                Detalhes do link:
+              </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Descrição:</span>
-                  <span className="font-medium">{selectedPayment.description}</span>
+                  <span className="font-medium">
+                    {selectedPayment.description}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Valor:</span>
-                  <span className="font-medium">{formatCurrency(selectedPayment.amount)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(selectedPayment.amount)}
+                  </span>
                 </div>
                 {/* <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>

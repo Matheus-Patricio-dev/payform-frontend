@@ -31,7 +31,6 @@ interface SellerFormData {
   password: string;
   confirmpassword: string;
   marketplaceId: string;
-  habilitar_parcelas: boolean;
   id_juros: string;
   taxa_padrao: string;
   taxa_repasse_juros: string;
@@ -61,7 +60,6 @@ const MarketplaceSellers: React.FC = () => {
     password: "",
     confirmpassword: "",
     marketplaceId: myMarketplaceId,
-    habilitar_parcelas: false, // novo campo
     id_juros: "",
     taxa_padrao: "",
     taxa_repasse_juros: "", // novo campo
@@ -130,8 +128,6 @@ const MarketplaceSellers: React.FC = () => {
         password: formData.password,
         confirmpassword: formData.confirmpassword,
         marketplaceId: formData.marketplaceId,
-        habilitar_parcelas: formData.habilitar_parcelas,
-        id_juros: formData.id_juros,
         taxa_padrao: formData.taxa_padrao,
         taxa_repasse_juros: formData.taxa_repasse_juros,
       });
@@ -143,6 +139,9 @@ const MarketplaceSellers: React.FC = () => {
         password: "",
         confirmpassword: "",
         marketplaceId: "",
+        taxa_padrao: "",
+        taxa_repasse_juros: "",
+        id_juros: "",
       });
       toast.success("Vendedor adicionado com sucesso!");
       setIsAddModalOpen(false);
@@ -159,11 +158,11 @@ const MarketplaceSellers: React.FC = () => {
       if (!user || !selectedSeller) return;
 
       const response = await api.put(`/seller/${id_seller}`, {
+        id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
         password: formData.password || null,
         marketplaceId: myMarketplaceId,
-        id_juros: formData.id_juros,
         taxa_padrao: formData.taxa_padrao,
         taxa_repasse_juros: formData.taxa_repasse_juros,
       });
@@ -177,6 +176,9 @@ const MarketplaceSellers: React.FC = () => {
           password: "",
           confirmpassword: "",
           marketplaceId: "",
+          taxa_padrao: "",
+          taxa_repasse_juros: "",
+          id_juros: "",
         });
         setIsEditModalOpen(false);
         setSelectedSeller(null);
@@ -187,6 +189,8 @@ const MarketplaceSellers: React.FC = () => {
       console.error(error);
     }
   };
+
+  console.log(selectedSeller, "seller");
 
   const [isRemoveSeller, setIsRemoveSeller] = useState(false);
   const handleRemoveSeller = async (id: string, id_cliente: string) => {
@@ -338,6 +342,15 @@ const MarketplaceSellers: React.FC = () => {
                                 onClick={() => {
                                   setIsEditModalOpen(true),
                                     setSelectedSeller(seller);
+                                  setFormData({
+                                    nome: seller?.cliente?.nome,
+                                    email: seller?.cliente?.email,
+                                    senha: seller?.cliente?.senha,
+                                    id: seller?.id_seller,
+                                    taxa_padrao: seller?.cliente?.id_juros,
+                                    taxa_repasse_juros:
+                                      seller?.cliente?.taxa_repasse_juros,
+                                  });
                                 }}
                                 icon={<Pencil className="h-4 w-4" />}
                               >
@@ -399,7 +412,7 @@ const MarketplaceSellers: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Adicionar Vendedor"
-        className="max-w-2xl" // Define largura maior (você pode ajustar para `max-w-3xl` se quiser mais larga)
+        // className="max-w-2xl" // Define largura maior (você pode ajustar para `max-w-3xl` se quiser mais larga)
       >
         <div className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2">
           <Input
@@ -442,68 +455,25 @@ const MarketplaceSellers: React.FC = () => {
             }
             fullWidth
           />
-
-          {/* Switch Parcelamento */}
-          {/* <div className="flex flex-col gap-2 p-4 bg-white border rounded-xl shadow-sm">
-      <div className="flex items-center justify-between">
-        <label htmlFor="habilitar_parcelas" className="text-base font-medium text-gray-800">
-          Parcelamento
-        </label>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={formData.habilitar_parcelas}
-          id="habilitar_parcelas"
-          onClick={() => setFormData({ ...formData, habilitar_parcelas: !formData.habilitar_parcelas })}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${formData.habilitar_parcelas ? 'bg-primary' : 'bg-gray-300'}`}
-        >
-          <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${formData.habilitar_parcelas ? 'translate-x-5' : 'translate-x-1'}`}
-          />
-        </button>
-      </div>
-      <span className="text-sm text-gray-600 mt-1 ml-1">
-        {formData.habilitar_parcelas
-          ? (
-            <>
-              <span className="font-semibold text-primary">Habilitado:</span> até <span className="font-bold text-primary">21x</span> no cartão.
-            </>
-          )
-          : (
-            <>
-              <span className="font-semibold text-gray-700">Padrão:</span> até <span className="font-bold">12x</span> no cartão.
-            </>
-          )
-        }
-      </span>
-    </div> */}
-
           {/* ID Juros (só um campo correto) */}
           <Input
             label="ID de Juros PayLink (vínculo ao vendedor)"
-            value={formData.id_juros}
+            value={formData.taxa_padrao}
             onChange={(e) =>
-              setFormData({ ...formData, id_juros: e.target.value })
+              setFormData({ ...formData, taxa_padrao: e.target.value })
             }
             placeholder="ex: juros-001"
             fullWidth
           />
           <Input
             label="ID Plano Repasse Zoop"
-            value={formData.taxa_padrao}
+            value={formData.taxa_repasse_juros}
             onChange={(e) =>
-              setFormData({ ...formData, taxa_padrao: e.target.value })
+              setFormData({ ...formData, taxa_repasse_juros: e.target.value })
             }
             placeholder="Inserir o ID do plano repasse na zoop"
             fullWidth
           />
-          {/* <Input
-      label="Taxa repassando os juros"
-      value={formData.taxa_repasse_juros}
-      onChange={(e) => setFormData({ ...formData, taxa_repasse_juros: e.target.value })}
-      placeholder="Inserir o id do plano no sistema"
-      fullWidth
-    /> */}
 
           {/* Ações */}
           <div className="flex justify-end gap-2 pt-2">
@@ -522,6 +492,13 @@ const MarketplaceSellers: React.FC = () => {
         title="Editar Vendedor"
       >
         <div className="space-y-4">
+          <Input
+            label="ID do Vendedor"
+            value={formData.id}
+            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+            placeholder="ex: seller-123"
+            fullWidth
+          />
           <Input
             label="Nome"
             value={formData.nome}
@@ -549,18 +526,18 @@ const MarketplaceSellers: React.FC = () => {
           {/* ID Juros (só um campo correto) */}
           <Input
             label="ID de Juros PayLink (vínculo ao vendedor)"
-            value={formData.id_juros}
+            value={formData.taxa_padrao}
             onChange={(e) =>
-              setFormData({ ...formData, id_juros: e.target.value })
+              setFormData({ ...formData, taxa_padrao: e.target.value })
             }
             placeholder="ex: juros-001"
             fullWidth
           />
           <Input
             label="ID Plano Repasse Zoop"
-            value={formData.taxa_padrao}
+            value={formData.taxa_repasse_juros}
             onChange={(e) =>
-              setFormData({ ...formData, taxa_padrao: e.target.value })
+              setFormData({ ...formData, taxa_repasse_juros: e.target.value })
             }
             placeholder="Inserir o ID do plano repasse na zoop"
             fullWidth

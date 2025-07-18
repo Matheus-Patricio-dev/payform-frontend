@@ -149,16 +149,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email,
     password,
     confirmpassword,
-    habilitar_parcelas,
-    id_juros
+    taxa_padrao,
+    taxa_repasse_juros
   }: {
     id_seller: string;
     nome: string;
     email: string;
     password: string;
     confirmpassword: string;
-    habilitar_parcelas: boolean;
-    id_juros: string;
+    taxa_padrao: string;
+    taxa_repasse_juros: string;
   }
   ) => {
     let marketplaceId = user?.marketplaceId
@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("ID do marketplace não encontrado. Faça login novamente.");
     }
     try {
-      const response = await api.post('register-seller', { id_seller, nome, email, password, confirmpassword, marketplaceId, habilitar_parcelas, id_juros});
+      const response = await api.post('register-seller', { id_seller, nome, email, password, confirmpassword, marketplaceId, taxa_padrao, taxa_repasse_juros});
       return response.data; // dados + token
 
     } catch (error: any) {

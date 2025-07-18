@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CreditCard,
   LayoutDashboard,
@@ -16,10 +16,11 @@ import {
   Building2,
   Cog,
   Wallet,
-  Crown
-} from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import Button from '../../components/ui/Button';
+  Crown,
+  HistoryIcon,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import Button from "../../components/ui/Button";
 
 interface SidebarProps {
   onCollapse?: (collapsed: boolean) => void;
@@ -40,120 +41,131 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
 
   const menuItems = [
     {
-      title: 'Principal',
-      items: user?.cargo === 'admin' ? [
-        {
-          label: 'Dashboard',
-          icon: <LayoutDashboard className="h-5 w-5" />,
-          path: '/dashboard'
-        },
-        {
-          label: 'Marketplaces',
-          icon: <Building2 className="h-5 w-5" />,
-          path: '/admin/marketplaces'
-        },
-        {
-          label: 'Todos os Vendedores',
-          icon: <Store className="h-5 w-5" />,
-          path: '/admin/sellers'
-        },
-        // {
-        //   label: 'Pagamentos',
-        //   icon: <Wallet className="h-5 w-5" />,
-        //   path: '/payments'
-        // },
-        {
-          label: 'Transações',
-          icon: <History className="h-5 w-5" />,
-          path: '/history'
-        }
-      ] : user?.cargo === 'marketplace' ? [
-        {
-          label: 'Dashboard',
-          icon: <LayoutDashboard className="h-5 w-5" />,
-          path: '/dashboard'
-        },
-        {
-          label: 'Meus Vendedores',
-          icon: <Store className="h-5 w-5" />,
-          path: '/marketplace-sellers'
-        },
-        {
-          label: 'Planos de Juros',
-          icon: <Wallet className="h-5 w-5" />,
-          path: '/juros'
-        },
-        {
-          label: 'Transações',
-          icon: <History className="h-5 w-5" />,
-          path: '/history'
-        }
-      ] : [
-        {
-          label: 'Dashboard',
-          icon: <LayoutDashboard className="h-5 w-5" />,
-          path: '/dashboard'
-        },
-        {
-          label: 'Planos',
-          icon: <LayoutDashboard className="h-5 w-5" />,
-          path: '/planos',
-          disabled: true
-        },
-        {
-          label: 'Assinaturas',
-          icon: <Crown className="h-5 w-5" />,
-          path: '/assinaturas',
-          disabled: true
-        },
-        {
-          label: 'Pagamentos',
-          icon: <Wallet className="h-5 w-5" />,
-          path: '/payments'
-        },
-        {
-          label: 'Transações',
-          icon: <History className="h-5 w-5" />,
-          path: '/history'
-        }
-      ]
-    }
+      title: "Principal",
+      items:
+        user?.cargo === "admin"
+          ? [
+              {
+                label: "Dashboard",
+                icon: <LayoutDashboard className="h-5 w-5" />,
+                path: "/dashboard",
+              },
+              {
+                label: "Marketplaces",
+                icon: <Building2 className="h-5 w-5" />,
+                path: "/admin/marketplaces",
+              },
+              {
+                label: "Todos os Vendedores",
+                icon: <Store className="h-5 w-5" />,
+                path: "/admin/sellers",
+              },
+              // {
+              //   label: 'Pagamentos',
+              //   icon: <Wallet className="h-5 w-5" />,
+              //   path: '/payments'
+              // },
+              {
+                label: "Transações",
+                icon: <History className="h-5 w-5" />,
+                path: "/history",
+              },
+            ]
+          : user?.cargo === "marketplace"
+          ? [
+              {
+                label: "Dashboard",
+                icon: <LayoutDashboard className="h-5 w-5" />,
+                path: "/dashboard",
+              },
+              {
+                label: "Meus Vendedores",
+                icon: <Store className="h-5 w-5" />,
+                path: "/marketplace-sellers",
+              },
+              {
+                label: "Planos de Juros",
+                icon: <Wallet className="h-5 w-5" />,
+                path: "/juros",
+              },
+              {
+                label: "Transações",
+                icon: <History className="h-5 w-5" />,
+                path: "/history",
+              },
+            ]
+          : [
+              {
+                label: "Dashboard",
+                icon: <LayoutDashboard className="h-5 w-5" />,
+                path: "/dashboard",
+              },
+              {
+                label: "Planos",
+                icon: <LayoutDashboard className="h-5 w-5" />,
+                path: "/planos",
+                disabled: true,
+              },
+              {
+                label: "Assinaturas",
+                icon: <Crown className="h-5 w-5" />,
+                path: "/assinaturas",
+                disabled: true,
+              },
+              {
+                label: "Pagamentos",
+                icon: <Wallet className="h-5 w-5" />,
+                path: "/payments",
+              },
+              {
+                label: "Transações",
+                icon: <History className="h-5 w-5" />,
+                path: "/history",
+              },
+              {
+                label: "Extrato",
+                icon: <HistoryIcon className="h-5 w-5" />,
+                path: "/planos",
+                disabled: true,
+              },
+            ],
+    },
   ];
 
   // Add configuration section
-  if (user?.cargo === 'admin') {
+  if (user?.cargo === "admin") {
     menuItems.push({
-      title: 'Configurações',
+      title: "Configurações",
       items: [
         {
-          label: 'Configurações',
+          label: "Configurações",
           icon: <Cog className="h-5 w-5" />,
-          path: '/settings'
-        }
-      ]
+          path: "/settings",
+        },
+      ],
     });
-  } else if (user?.cargo === 'marketplace') {
+  } else if (user?.cargo === "marketplace") {
     menuItems.push({
-      title: 'Configurações',
+      title: "Configurações",
       items: [
         {
-          label: 'Configurações',
+          label: "Configurações",
           icon: <Settings className="h-5 w-5" />,
-          path: '/settings'
-        }
-      ]
+          path: "/settings",
+        },
+      ],
     });
-  } else if (user?.cargo === 'seller') {
+  } else if (user?.cargo === "seller") {
     menuItems.push({
-      title: 'Configurações',
+      title: "Configurações",
       items: [
         {
-          label: 'Configurações',
+          label: "Configurações",
           icon: <Settings className="h-5 w-5" />,
-          path: '/settings'
-        }
-      ]
-    })
+          path: "/settings",
+        },
+      ],
+    });
   }
 
   return (
@@ -190,11 +202,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
         initial={false}
         animate={{
           width: isCollapsed ? 80 : 256,
-          x: isMobileMenuOpen ? 0 : (window.innerWidth < 1024 ? -256 : 0)
+          x: isMobileMenuOpen ? 0 : window.innerWidth < 1024 ? -256 : 0,
         }}
         transition={{ duration: 0.3 }}
-        className={`fixed top-0 left-0 h-screen bg-white border-r border-border z-40 ${isMobileMenuOpen ? 'shadow-xl' : ''
-          }`}
+        className={`fixed top-0 left-0 h-screen bg-white border-r border-border z-40 ${
+          isMobileMenuOpen ? "shadow-xl" : ""
+        }`}
       >
         <div className="flex flex-col h-full">
           <div className="p-6">
@@ -291,7 +304,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                             </AnimatePresence>
                             {isCollapsed && (
                               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                                {item.label} <span className="ml-1 text-yellow-300">Em breve</span>
+                                {item.label}{" "}
+                                <span className="ml-1 text-yellow-300">
+                                  Em breve
+                                </span>
                               </div>
                             )}
                           </div>
@@ -304,12 +320,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                           key={itemIndex}
                           to={item.path}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${isActive(item.path)
-                            ? 'text-primary bg-primary/5'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
+                          className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${
+                            isActive(item.path)
+                              ? "text-primary bg-primary/5"
+                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
                         >
-                          <div className={`shrink-0 ${isActive(item.path) ? 'text-primary' : ''}`}>
+                          <div
+                            className={`shrink-0 ${
+                              isActive(item.path) ? "text-primary" : ""
+                            }`}
+                          >
                             {item.icon}
                           </div>
                           <AnimatePresence mode="wait">
@@ -332,7 +353,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                         </Link>
                       );
                     })}
-
                   </div>
                 </div>
               ))}
@@ -385,8 +405,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       {/* Toggle Button - Only visible on desktop */}
       <button
         onClick={() => handleCollapse(!isCollapsed)}
-        className={`fixed top-6 z-40 bg-white rounded-full shadow-lg p-1.5 transition-all duration-300 hidden lg:block ${isCollapsed ? 'left-[4.5rem]' : 'left-60'
-          }`}
+        className={`fixed top-6 z-40 bg-white rounded-full shadow-lg p-1.5 transition-all duration-300 hidden lg:block ${
+          isCollapsed ? "left-[4.5rem]" : "left-60"
+        }`}
       >
         {isCollapsed ? (
           <ChevronRight className="h-4 w-4" />
