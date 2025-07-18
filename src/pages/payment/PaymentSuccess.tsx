@@ -1,31 +1,43 @@
-import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CheckCircle, CreditCard, Download, Share2, ArrowRight, Home, Receipt } from 'lucide-react';
-import Button from '../../components/ui/Button';
+import React, { useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  CheckCircle,
+  CreditCard,
+  Download,
+  Share2,
+  ArrowRight,
+  Home,
+  Receipt,
+} from "lucide-react";
+import Button from "../../components/ui/Button";
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const { transactionId } = location.state || {}; // Pega o transactionId do estado, se existi
   useEffect(() => {
     // Update page title
-    document.title = 'Pagamento Realizado com Sucesso - PayLink';
+    document.title = "Pagamento Realizado com Sucesso - PayLink";
   }, []);
 
   const handleDownloadReceipt = () => {
     // Simulate receipt download
     const receiptData = {
-      transactionId: 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-      date: new Date().toLocaleDateString('pt-BR'),
-      time: new Date().toLocaleTimeString('pt-BR'),
-      amount: 'R$ 99,90',
-      method: 'PIX',
-      status: 'Aprovado'
+      transactionId:
+        "TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      date: new Date().toLocaleDateString("pt-BR"),
+      time: new Date().toLocaleTimeString("pt-BR"),
+      amount: transactionId?.amount,
+      method: transactionId?.paymentMethods,
+      status: "Aprovado",
     };
 
-    const blob = new Blob([JSON.stringify(receiptData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(receiptData, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `comprovante-${receiptData.transactionId}.json`;
     document.body.appendChild(a);
@@ -38,17 +50,17 @@ const PaymentSuccess: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Pagamento Realizado',
-          text: 'Meu pagamento foi processado com sucesso!',
+          title: "Pagamento Realizado",
+          text: "Meu pagamento foi processado com sucesso!",
           url: window.location.href,
         });
       } catch (error) {
-        console.log('Erro ao compartilhar:', error);
+        console.log("Erro ao compartilhar:", error);
       }
     } else {
       // Fallback for browsers that don't support Web Share API
       navigator.clipboard.writeText(window.location.href);
-      alert('Link copiado para a área de transferência!');
+      alert("Link copiado para a área de transferência!");
     }
   };
 
@@ -65,7 +77,9 @@ const PaymentSuccess: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2 text-sm text-green-600">
             <CheckCircle className="h-4 w-4" />
-            <span className="hidden sm:inline font-medium">Pagamento Aprovado</span>
+            <span className="hidden sm:inline font-medium">
+              Pagamento Aprovado
+            </span>
           </div>
         </div>
       </header>
@@ -81,7 +95,12 @@ const PaymentSuccess: React.FC = () => {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
+            transition={{
+              delay: 0.2,
+              type: "spring",
+              stiffness: 200,
+              damping: 20,
+            }}
             className="text-center mb-8"
           >
             <div className="relative">
@@ -134,21 +153,50 @@ const PaymentSuccess: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">ID da Transação:</span>
-                  <span className="font-mono font-medium">TXN-{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+                  <span className="font-mono font-medium">
+                    TXN-{Math.random().toString(36).substr(2, 9).toUpperCase()}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Data e Hora:</span>
                   <span className="font-medium">
-                    {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date().toLocaleDateString("pt-BR")} às{" "}
+                    {new Date().toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Método:</span>
-                  <span className="font-medium">PIX</span>
+                  <span className="font-medium">
+                    {transactionId?.paymentMethods?.map((method, index) => {
+                      // Mapeia os métodos de pagamento para seus nomes legíveis
+                      const paymentMethodName =
+                        method === "credit_card"
+                          ? "Cartão de Crédito"
+                          : method === "pix"
+                          ? "Pix"
+                          : method;
+                      return (
+                        <span key={index}>
+                          {paymentMethodName}
+                          {index < transactionId.paymentMethods.length - 1 &&
+                            ", "}
+                        </span>
+                      );
+                    })}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-green-200">
                   <span className="text-gray-600 font-medium">Valor Pago:</span>
-                  <span className="font-bold text-lg text-green-600">R$ 99,90</span>
+                  <span className="font-bold text-lg text-green-600">
+                    R$
+                    {(transactionId?.amount || 0).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
                 </div>
               </div>
             </motion.div>
@@ -182,7 +230,7 @@ const PaymentSuccess: React.FC = () => {
               </div>
 
               <Button
-                onClick={() => navigate('/')}
+                onClick={() => navigate("/")}
                 fullWidth
                 icon={<Home className="h-4 w-4" />}
                 className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary shadow-lg hover:shadow-xl transition-all"
@@ -219,12 +267,18 @@ const PaymentSuccess: React.FC = () => {
               Precisa de ajuda? Entre em contato conosco
             </p>
             <div className="flex justify-center space-x-4 text-sm">
-              <a href="#" className="text-primary hover:text-primary-dark transition-colors flex items-center">
+              <a
+                href="#"
+                className="text-primary hover:text-primary-dark transition-colors flex items-center"
+              >
                 Central de Ajuda
                 <ArrowRight className="h-3 w-3 ml-1" />
               </a>
               <span className="text-gray-300">|</span>
-              <a href="#" className="text-primary hover:text-primary-dark transition-colors flex items-center">
+              <a
+                href="#"
+                className="text-primary hover:text-primary-dark transition-colors flex items-center"
+              >
                 Suporte
                 <ArrowRight className="h-3 w-3 ml-1" />
               </a>

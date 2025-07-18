@@ -16,11 +16,17 @@ import {
   User,
   Mail,
   CreditCard as CardIcon,
+  Info,
+  ChevronDown,
+  Phone,
+  Home,
+  MapPin,
 } from "lucide-react";
 import { getPaymentLink, processPayment } from "../../services/paymentService";
 import { PaymentMethod } from "../../types";
 import { formatCurrency } from "../../utils/formatters";
 import toast from "react-hot-toast";
+import api from "../../api/api";
 
 // Card validation schema
 const cardValidationSchema = yup.object().shape({
@@ -45,6 +51,10 @@ const cardValidationSchema = yup.object().shape({
     .required("CPF é obrigatório")
     .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido"),
   email: yup.string().required("Email é obrigatório").email("Email inválido"),
+  postal_code: yup
+    .string()
+    .required("CEP é obrigatório")
+    .matches(/^\d{5}-\d{3}$/, "CEP inválido (formato: 00000-000)"),
 });
 
 const PaymentPage: React.FC = () => {
@@ -67,6 +77,7 @@ const PaymentPage: React.FC = () => {
   const [paymentDetected, setPaymentDetected] = useState<boolean>(false);
   const user = JSON?.parse(localStorage?.getItem("user"));
   // Card form state
+  const [isOpen, setIsOpen] = useState(false); // Controla o estado do acordeão
   const [cardData, setCardData] = useState({
     number: "",
     expiry: "",
@@ -76,7 +87,14 @@ const PaymentPage: React.FC = () => {
     email: "",
     installments: "", // novo campo
     installmentValue: "",
+    address: "",
+    city: "",
+    postal_code: "",
+    state: "",
+    country: "BR",
+    phone_number: "",
   });
+
   const [cardErrors, setCardErrors] = useState<any>({});
   const [cardBrand, setCardBrand] = useState<string>("");
   const [link, setLink] = useState(null);
@@ -231,11 +249,13 @@ const PaymentPage: React.FC = () => {
         const interest = parcel.taxa / 100; // Converte a taxa de percentual para decimal
         // Fórmula de preço parcelado: Valor * (1 + juros) ^ parcelas
         const total = amount * Math.pow(1 + interest, times);
+
         installments.push({
           times: times,
           value: total / times,
           taxa: parcel.taxa,
-          total: total
+          total: total || amount,
+          parcela: parcel.parcela
         });
       }
     });
@@ -359,26 +379,49 @@ const PaymentPage: React.FC = () => {
 
   const handleCardPayment = async () => {
     try {
-      console.log(cardData);
-      return;
-      await cardValidationSchema.validate(cardData);
+      // Validar todos os campos obrigatórios
+      await cardValidationSchema.validate(cardData, { abortEarly: false });
+
+      // Limpar erros se validação passou
+      setCardErrors({});
+      // Simulate processing time
+
+      const payload = {
+        ...cardData,
+        amount: link?.amount,
+        number_installments: user?.juros?.parcelas?.filter(
+          (item) => item.taxa > 0
+        )?.length,
+      };
+
       setIsProcessing(true);
 
-      // Simulate processing time
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const response = await api.post(`/payment/${link?.id}`, payload);
+      console.log(response.data.data)
+      if (response?.data) {
+        const transactionStatus = response.data.data.status_transacao;
 
-      const transaction = processPayment(
-        linkId!,
-        selectedMethod!,
-        cardData.name,
-        cardData.email
-      );
-
-      if (transaction.status === "completed") {
-        navigate("/payment-success");
-      } else {
-        navigate("/payment-declined");
+        if (transactionStatus === "pago") {
+          navigate("/payment-success", {
+            state: { transactionId: link },
+          });
+        } else if (transactionStatus === "pendente") {
+          navigate("/payment-pendente", {
+            state: { transactionId: link },
+          });
+        } else {
+          navigate("/payment-declined", {
+            state: { transactionId: link },
+          });
+        }
       }
+
+      // const transaction = processPayment(
+      //   linkId!,
+      //   selectedMethod!,
+      //   cardData.name,
+      //   cardData.email
+      // );
     } catch (error) {
       if (error instanceof yup.ValidationError) {
         const newErrors: any = {};
@@ -421,7 +464,7 @@ const PaymentPage: React.FC = () => {
         return <CardIcon className="h-5 w-5 text-gray-400" />;
     }
   };
-
+  console.log(cardErrors);
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
@@ -877,6 +920,267 @@ const PaymentPage: React.FC = () => {
                             </p>
                           )}
                         </div>
+
+                        {/* Accordion Header */}
+                        {/* Accordion Header - Melhorado */}
+                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                          <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="w-full flex justify-between items-center p-5 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 group"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                <MapPin className="h-5 w-5 text-gray-600 group-hover:text-primary transition-colors" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors">
+                                  Endereço de Cobrança
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-0.5">
+                                  {isOpen
+                                    ? "Clique para ocultar"
+                                    : "Clique para adicionar endereço"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {!isOpen && (
+                                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                                  Obrigatório
+                                </span>
+                              )}
+                              <ChevronDown
+                                className={`h-5 w-5 text-gray-500 group-hover:text-primary transition-all duration-200 ${
+                                  isOpen ? "rotate-180" : ""
+                                }`}
+                              />
+                            </div>
+                          </button>
+
+                          {/* Accordion Content - Melhorado */}
+                          <motion.div
+                            initial={false}
+                            animate={{
+                              height: isOpen ? "auto" : 0,
+                              opacity: isOpen ? 1 : 0,
+                            }}
+                            transition={{
+                              duration: 0.3,
+                              ease: "easeInOut",
+                            }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-6 bg-white border-t border-gray-100">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Address Field */}
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Endereço Completo *
+                                  </label>
+                                  <div className="relative">
+                                    <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <input
+                                      type="text"
+                                      value={cardData.address}
+                                      onChange={(e) =>
+                                        handleCardInputChange(
+                                          "address",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Rua, Avenida, Número e Complemento"
+                                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                        cardErrors.address
+                                          ? "border-red-300 bg-red-50"
+                                          : "border-gray-300 hover:border-gray-400"
+                                      }`}
+                                    />
+                                  </div>
+                                  {cardErrors.address && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {cardErrors.address}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* City and State */}
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Cidade *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={cardData.city}
+                                    onChange={(e) =>
+                                      handleCardInputChange(
+                                        "city",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Ex: São Paulo"
+                                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                      cardErrors.city
+                                        ? "border-red-300 bg-red-50"
+                                        : "border-gray-300 hover:border-gray-400"
+                                    }`}
+                                  />
+                                  {cardErrors.city && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {cardErrors.city}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Estado *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={cardData.state}
+                                    onChange={(e) =>
+                                      handleCardInputChange(
+                                        "state",
+                                        e.target.value.toUpperCase()
+                                      )
+                                    }
+                                    placeholder="Ex: SP"
+                                    maxLength={2}
+                                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all uppercase ${
+                                      cardErrors.state
+                                        ? "border-red-300 bg-red-50"
+                                        : "border-gray-300 hover:border-gray-400"
+                                    }`}
+                                  />
+                                  {cardErrors.state && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {cardErrors.state}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* CEP and Country */}
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    CEP *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={cardData.postal_code}
+                                    onChange={(e) =>
+                                      handleCardInputChange(
+                                        "postal_code",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="00000-000"
+                                    maxLength={9}
+                                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                      cardErrors.postal_code
+                                        ? "border-red-300 bg-red-50"
+                                        : "border-gray-300 hover:border-gray-400"
+                                    }`}
+                                  />
+                                  {cardErrors.postal_code && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {cardErrors.postal_code}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    País *
+                                  </label>
+                                  <div className="relative">
+                                    <select
+                                      value={cardData.country}
+                                      onChange={(e) =>
+                                        handleCardInputChange(
+                                          "country",
+                                          e.target.value
+                                        )
+                                      }
+                                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all appearance-none bg-white ${
+                                        cardErrors.country
+                                          ? "border-red-300 bg-red-50"
+                                          : "border-gray-300 hover:border-gray-400"
+                                      }`}
+                                    >
+                                      <option value="">Selecione</option>
+                                      <option value="BR">Brasil</option>
+                                      <option value="US">Estados Unidos</option>
+                                      <option value="AR">Argentina</option>
+                                      <option value="UY">Uruguai</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                                  </div>
+                                  {cardErrors.country && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {cardErrors.country}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Phone Number */}
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Telefone *
+                                  </label>
+                                  <div className="relative">
+                                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <input
+                                      type="text"
+                                      value={cardData.phone_number}
+                                      onChange={(e) =>
+                                        handleCardInputChange(
+                                          "phone_number",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="(11) 99999-9999"
+                                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                                        cardErrors.phone_number
+                                          ? "border-red-300 bg-red-50"
+                                          : "border-gray-300 hover:border-gray-400"
+                                      }`}
+                                    />
+                                  </div>
+                                  {cardErrors.phone_number && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {cardErrors.phone_number}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Helper Text */}
+                              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                <div className="flex items-start space-x-3">
+                                  <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <p className="text-sm text-blue-800 font-medium">
+                                      Informações de Segurança
+                                    </p>
+                                    <p className="text-sm text-blue-600 mt-1">
+                                      Seus dados são protegidos e utilizados
+                                      apenas para processamento do pagamento. O
+                                      endereço deve coincidir com o cadastrado
+                                      no seu cartão.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        </div>
+
                         <div className="mt-6 bg-white border rounded-xl shadow-sm p-4 space-y-4">
                           <div className="text-sm text-gray-500">
                             Pague em até{" "}
@@ -897,12 +1201,12 @@ const PaymentPage: React.FC = () => {
                               const selectedInstallment = installmentValue.find(
                                 (item) => item.times === parseInt(selectedTimes)
                               ); // Encontra o objeto correspondente
-                              // console.log(installmentValue);
                               setCardData({
                                 ...cardData,
                                 installments: selectedTimes,
                                 installmentValue: selectedInstallment
-                                  ? selectedInstallment.total
+                                  ? selectedInstallment.total ||
+                                    selectedInstallment.value
                                   : 0, // Armazena o valor da parcela
                               });
                             }}

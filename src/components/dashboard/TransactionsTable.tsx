@@ -9,11 +9,11 @@ interface TransactionsTableProps {
 const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
   const getStatusClasses = () => {
     switch (status) {
-      case 'completa':
+      case 'pago':
         return 'bg-success/10 text-success';
       case 'pendente':
         return 'bg-warning/10 text-warning';
-      case 'rejeitada':
+      case 'falha':
         return 'bg-error/10 text-error';
       default:
         return 'bg-gray-100 text-gray-700';
@@ -22,11 +22,11 @@ const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
 
   const getStatusText = () => {
     switch (status) {
-      case 'completa':
+      case 'pago':
         return 'Completada';
       case 'pendente':
         return 'Pendente';
-      case 'rejeitada':
+      case 'falha':
         return 'Recusada';
       default:
         return status;

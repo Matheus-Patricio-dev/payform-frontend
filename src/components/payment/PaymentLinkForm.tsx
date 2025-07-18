@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, CreditCard, Smartphone, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { PaymentMethod } from '../../types';
-import { createPaymentLink } from '../../services/paymentService';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';

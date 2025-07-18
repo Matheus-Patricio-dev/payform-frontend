@@ -210,9 +210,9 @@ const PaymentHistory: React.FC = () => {
 
   const getStatusConfig = (status: TransactionStatus) => {
     switch (status) {
-      case "completa":
+      case "pago":
         return {
-          label: "Completada",
+          label: "Paga",
           color: "text-green-700 bg-green-50 border-green-200",
           icon: <CheckCircle className="h-4 w-4" />,
           dotColor: "bg-green-500",
@@ -224,7 +224,7 @@ const PaymentHistory: React.FC = () => {
           icon: <Clock className="h-4 w-4" />,
           dotColor: "bg-yellow-500",
         };
-      case "rejeitada":
+      case "falha":
         return {
           label: "Recusada",
           color: "text-red-700 bg-red-50 border-red-200",

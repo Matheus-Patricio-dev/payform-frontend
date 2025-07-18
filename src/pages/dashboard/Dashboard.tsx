@@ -55,13 +55,13 @@ const Dashboard: React.FC = () => {
           }, 0);
 
         const completed = transacoes?.filter(
-          (t: any) => t.status === "completa"
+          (t: any) => t.status === "pago"
         ).length;
         const pending = transacoes?.filter(
           (t: any) => t.status === "pendente"
         ).length;
         const declined = transacoes?.filter(
-          (t: any) => t.status === "recusada"
+          (t: any) => t.status === "falha"
         ).length;
 
         setStats({
@@ -98,13 +98,13 @@ const Dashboard: React.FC = () => {
         }, 0);
 
       const completed = transacoes?.filter(
-        (t: any) => t.status === "completa"
+        (t: any) => t.status === "pago"
       ).length;
       const pending = transacoes?.filter(
         (t: any) => t.status === "pendente"
       ).length;
       const declined = transacoes?.filter(
-        (t: any) => t.status === "recusada"
+        (t: any) => t.status === "falha"
       ).length;
 
       setStats({
