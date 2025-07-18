@@ -367,10 +367,13 @@ const TransactionModal: React.FC<{
                   </label>
                   <div className="flex items-center space-x-2 mt-1">
                     <p className="text-sm text-gray-900 font-mono">
-                      {transaction?.transacao_id_zoop || "Sem ID de transação zoop"}
+                      {transaction?.transacao_id_zoop ||
+                        "Sem ID de transação zoop"}
                     </p>
                     <button
-                      onClick={() => copyToClipboard(transaction?.transacao_id_zoop, "id")}
+                      onClick={() =>
+                        copyToClipboard(transaction?.transacao_id_zoop, "id")
+                      }
                       className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
                     >
                       <Copy className="h-3 w-3" />
@@ -577,7 +580,8 @@ const PaymentHistory: React.FC = () => {
       const matchesStatus =
         statusFilter === "all" || transaction.status === statusFilter;
       const matchesMethod =
-        methodFilter === "all" || transaction.paymentMethods === methodFilter;
+        methodFilter === "all" ||
+        transaction.paymentMethods?.includes(methodFilter);
 
       let matchesDate = true;
       if (dateFilter !== "all") {
@@ -1125,7 +1129,9 @@ const PaymentHistory: React.FC = () => {
                                         variant="ghost"
                                         size="sm"
                                         icon={<Eye className="h-4 w-4" />}
-                                        onClick={() => openTransactionModal(transaction)}
+                                        onClick={() =>
+                                          openTransactionModal(transaction)
+                                        }
                                       >
                                         Ver Detalhes
                                       </Button>
