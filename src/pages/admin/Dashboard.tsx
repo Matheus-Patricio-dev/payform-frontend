@@ -215,9 +215,9 @@ const AdminDashboard: React.FC = () => {
       // Mapeia status para completed/pending/declined
       if (tx.status === "pendente") {
         acc[date].pending += amount;
-      } else if (tx.status === "completo" || tx.status === "completed") {
+      } else if (tx.status === "pago" || tx.status === "pago") {
         acc[date].completed += amount;
-      } else if (tx.status === "recusado" || tx.status === "declined") {
+      } else if (tx.status === "falha" || tx.status === "falha") {
         acc[date].declined += amount;
       }
       return acc;

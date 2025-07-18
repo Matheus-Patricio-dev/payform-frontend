@@ -21,6 +21,11 @@ import {
   RefreshCw,
   Store,
   Building2,
+  Hash,
+  Copy,
+  User,
+  FileText,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import {
@@ -44,6 +49,416 @@ import Select from "../../components/ui/Select";
 import Sidebar from "../../components/layout/Sidebar";
 import { TransactionStatus, PaymentMethod } from "../../types";
 import api from "../../api/api";
+// Modal Component
+const TransactionModal: React.FC<{
+  transaction: any;
+  isOpen: boolean;
+  onClose: () => void;
+  isAdmin: boolean;
+}> = ({ transaction, isOpen, onClose, isAdmin }) => {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const getStatusConfig = (status: TransactionStatus) => {
+    switch (status) {
+      case "pago":
+        return {
+          label: "Paga",
+          color: "text-green-700 bg-green-50 border-green-200",
+          icon: <CheckCircle className="h-4 w-4" />,
+          dotColor: "bg-green-500",
+        };
+      case "pendente":
+        return {
+          label: "Pendente",
+          color: "text-yellow-700 bg-yellow-50 border-yellow-200",
+          icon: <Clock className="h-4 w-4" />,
+          dotColor: "bg-yellow-500",
+        };
+      case "falha":
+        return {
+          label: "Recusada",
+          color: "text-red-700 bg-red-50 border-red-200",
+          icon: <XCircle className="h-4 w-4" />,
+          dotColor: "bg-red-500",
+        };
+      default:
+        return {
+          label: status,
+          color: "text-gray-700 bg-gray-50 border-gray-200",
+          icon: <Clock className="h-4 w-4" />,
+          dotColor: "bg-gray-500",
+        };
+    }
+  };
+
+  const getPaymentMethodConfig = (methods: PaymentMethod[]) => {
+    return methods.map((method) => {
+      switch (method) {
+        case "credit_card":
+          return {
+            label: "Cartão de Crédito",
+            icon: <CreditCard className="h-4 w-4" />,
+            color: "text-blue-600 bg-blue-50",
+          };
+        case "pix":
+          return {
+            label: "PIX",
+            icon: <Smartphone className="h-4 w-4" />,
+            color: "text-green-600 bg-green-50",
+          };
+        case "bank_transfer":
+          return {
+            label: "Transferência",
+            icon: <ArrowUpRight className="h-4 w-4" />,
+            color: "text-indigo-600 bg-indigo-50",
+          };
+        default:
+          return {
+            label: method,
+            icon: <CreditCard className="h-4 w-4" />,
+            color: "text-gray-600 bg-gray-50",
+          };
+      }
+    });
+  };
+
+  if (!isOpen || !transaction) return null;
+
+  const statusConfig = getStatusConfig(transaction.status);
+  const methodConfig = getPaymentMethodConfig(
+    transaction?.pagamento?.paymentMethods || []
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Detalhes da Transação
+              </h2>
+              <p className="text-sm text-gray-600">
+                ID: {transaction.id.slice(0, 8)}...
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Status e Valor */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Valor</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(transaction.valor)}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Status</p>
+                    <div
+                      className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium border ${statusConfig.color} mt-2`}
+                    >
+                      {statusConfig.icon}
+                      <span>{statusConfig.label}</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`w-3 h-3 rounded-full ${statusConfig.dotColor}`}
+                  ></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Informações do Cliente */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="h-5 w-5" />
+                <span>Informações do Cliente</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Nome
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900">
+                      {transaction?.cliente?.nome || "Cliente Anônimo"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(
+                          transaction?.cliente?.nome || "",
+                          "nome"
+                        )
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "nome" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Email
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900">
+                      {transaction?.cliente?.email || "Email não informado"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(
+                          transaction?.cliente?.email || "",
+                          "email"
+                        )
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "email" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+
+                {transaction?.cliente?.telefone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Telefone
+                    </label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <p className="text-sm text-gray-900">
+                        {transaction.cliente.telefone}
+                      </p>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            transaction.cliente.telefone,
+                            "telefone"
+                          )
+                        }
+                        className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                      {copiedField === "telefone" && (
+                        <span className="text-xs text-green-600">Copiado!</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {transaction?.cliente?.endereco && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Endereço
+                    </label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <p className="text-sm text-gray-900">
+                        {transaction.cliente.endereco}
+                      </p>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            transaction.cliente.endereco,
+                            "endereco"
+                          )
+                        }
+                        className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                      {copiedField === "endereco" && (
+                        <span className="text-xs text-green-600">Copiado!</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Métodos de Pagamento */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CreditCard className="h-5 w-5" />
+                <span>Métodos de Pagamento</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {methodConfig.map((config, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border ${config.color}`}
+                  >
+                    {config.icon}
+                    <span className="font-medium">{config.label}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Informações da Transação */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Hash className="h-5 w-5" />
+                <span>Detalhes da Transação</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    ID da Transação Zoop
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900 font-mono">
+                      {transaction?.transacao_id_zoop || "Sem ID de transação zoop"}
+                    </p>
+                    <button
+                      onClick={() => copyToClipboard(transaction?.transacao_id_zoop, "id")}
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "id" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Data de Criação
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <p className="text-sm text-gray-900">
+                      {formatDateTime(new Date(transaction.data_criacao))}
+                    </p>
+                  </div>
+                </div>
+
+                {transaction.descricao && (
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-600">
+                      Descrição
+                    </label>
+                    <p className="text-sm text-gray-900 mt-1 p-3 bg-gray-50 rounded-lg">
+                      {transaction.descricao}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Informações do Vendedor (apenas para admin) */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Store className="h-5 w-5" />
+                  <span>Informações do Vendedor</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Vendedor
+                    </label>
+                    <p className="text-sm text-gray-900 mt-1">
+                      {transaction?.vendedor?.nome || "Vendedor não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Marketplace
+                    </label>
+                    <p className="text-sm text-gray-900 mt-1">
+                      {transaction?.marketplace?.nome ||
+                        "Marketplace não informado"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+          <div className="flex justify-end space-x-3">
+            <Button variant="outline" onClick={onClose}>
+              Fechar
+            </Button>
+            <Button
+              onClick={() => window.print()}
+              icon={<Download className="h-4 w-4" />}
+            >
+              Imprimir
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const PaymentHistory: React.FC = () => {
   const { user } = useAuth();
@@ -65,7 +480,9 @@ const PaymentHistory: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sellerFilter, setSellerFilter] = useState<string>("all");
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
-
+  // Modal states
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const fetchPayments = async ({ refreshData = true }) => {
     setIsLoading(true);
     setIsRefresh(true);
@@ -277,7 +694,15 @@ const PaymentHistory: React.FC = () => {
     await fetchPayments({ refreshData: true });
     setTimeout(() => setIsLoading(false), 800);
   };
+  const openTransactionModal = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
+  };
 
+  const closeTransactionModal = () => {
+    setSelectedTransaction(null);
+    setIsModalOpen(false);
+  };
   const getSellerInfo = (sellerId: string) => {
     const seller = sellers.find((s) => s.id === sellerId);
     const marketplace = seller
@@ -694,16 +1119,16 @@ const PaymentHistory: React.FC = () => {
                                           >
                                             {config.label}
                                           </div>
-                                          {/* <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon={<Eye className="h-4 w-4" />}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                          >
-                                            Ver
-                                          </Button> */}
                                         </div>
                                       ))}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon={<Eye className="h-4 w-4" />}
+                                        onClick={() => openTransactionModal(transaction)}
+                                      >
+                                        Ver Detalhes
+                                      </Button>
                                     </div>
                                   </div>
                                 </div>
@@ -753,6 +1178,12 @@ const PaymentHistory: React.FC = () => {
           </div>
         </div>
       </main>
+      <TransactionModal
+        isOpen={isModalOpen}
+        transaction={selectedTransaction}
+        onClose={closeTransactionModal}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };
