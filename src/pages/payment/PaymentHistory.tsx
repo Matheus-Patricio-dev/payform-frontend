@@ -547,7 +547,7 @@ const PaymentHistory: React.FC = () => {
         stats.totalAmount += parseFloat(transaction.valor) || 0; // Soma o valor da transação
       }
 
-      if (transaction.status === "completa") {
+      if (transaction.status === "pago") {
         stats.completed += 1;
       } else if (transaction.status === "pendente") {
         stats.pending += 1;
@@ -577,7 +577,7 @@ const PaymentHistory: React.FC = () => {
       const matchesStatus =
         statusFilter === "all" || transaction.status === statusFilter;
       const matchesMethod =
-        methodFilter === "all" || transaction.paymentMethod === methodFilter;
+        methodFilter === "all" || transaction.paymentMethods === methodFilter;
 
       let matchesDate = true;
       if (dateFilter !== "all") {
@@ -899,9 +899,9 @@ const PaymentHistory: React.FC = () => {
                       <Select
                         options={[
                           { value: "all", label: "Todos os Status" },
-                          { value: "aproved", label: "Aprovadas" },
-                          { value: "pending", label: "Pendentes" },
-                          { value: "declined", label: "Recusadas" },
+                          { value: "pago", label: "Aprovadas" },
+                          { value: "pendente", label: "Pendentes" },
+                          { value: "falha", label: "Recusadas" },
                         ]}
                         value={statusFilter}
                         onChange={(e) =>
