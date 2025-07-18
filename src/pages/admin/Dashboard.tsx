@@ -199,27 +199,29 @@ const AdminDashboard: React.FC = () => {
   // Get all transactions for chart data
   const allTransactions = transactions?.dados?.transacoes || [];
   // Prepare data for transaction timeline
-  const transactionsByDate = (allTransactions || [])?.reduce((acc, tx) => {
-    // Ajusta a data
-    const date = new Date(tx.data_criacao).toLocaleDateString("pt-BR");
-    // Inicializa o agrupamento por data
-    if (!acc[date]) {
-      acc[date] = { total: 0, completed: 0, pending: 0, declined: 0 };
-    }
-    // Converte valor para número
-    const amount = Number(tx.valor);
+  const transactionsByDate = (allTransactions || [])
+    ?.filter((item: any) => item.status === "pago")
+    ?.reduce((acc, tx) => {
+      // Ajusta a data
+      const date = new Date(tx.data_criacao).toLocaleDateString("pt-BR");
+      // Inicializa o agrupamento por data
+      if (!acc[date]) {
+        acc[date] = { total: 0, completed: 0, pending: 0, declined: 0 };
+      }
+      // Converte valor para número
+      const amount = Number(tx.valor);
 
-    acc[date].total += amount;
-    // Mapeia status para completed/pending/declined
-    if (tx.status === "pendente") {
-      acc[date].pending += amount;
-    } else if (tx.status === "completo" || tx.status === "completed") {
-      acc[date].completed += amount;
-    } else if (tx.status === "recusado" || tx.status === "declined") {
-      acc[date].declined += amount;
-    }
-    return acc;
-  }, {});
+      acc[date].total += amount;
+      // Mapeia status para completed/pending/declined
+      if (tx.status === "pendente") {
+        acc[date].pending += amount;
+      } else if (tx.status === "completo" || tx.status === "completed") {
+        acc[date].completed += amount;
+      } else if (tx.status === "recusado" || tx.status === "declined") {
+        acc[date].declined += amount;
+      }
+      return acc;
+    }, {});
 
   const timelineData = {
     labels: Object.keys(transactionsByDate),

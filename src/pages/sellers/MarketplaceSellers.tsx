@@ -416,7 +416,7 @@ const MarketplaceSellers: React.FC = () => {
       >
         <div className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2">
           <Input
-            label="ID do Vendedor"
+            label="ID do Vendedor ( Zoop )"
             value={formData.id}
             onChange={(e) => setFormData({ ...formData, id: e.target.value })}
             placeholder="ex: seller-123"
@@ -493,7 +493,7 @@ const MarketplaceSellers: React.FC = () => {
       >
         <div className="space-y-4">
           <Input
-            label="ID do Vendedor"
+            label="ID do Vendedor ( Zoop )"
             value={formData.id}
             onChange={(e) => setFormData({ ...formData, id: e.target.value })}
             placeholder="ex: seller-123"
