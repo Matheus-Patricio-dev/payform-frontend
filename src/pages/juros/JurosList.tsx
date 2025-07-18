@@ -68,7 +68,6 @@ const JuroList: React.FC = () => {
       }
 
       const { data } = await api.get(`/juros/cliente/${userData.id}`);
-      console.log(data);
       localStorage.setItem("interest", JSON.stringify(data));
       setPaymentLinks(data);
     } catch (error) {
@@ -116,8 +115,6 @@ const JuroList: React.FC = () => {
     try {
       if (!user) return;
 
-      console.log("FormData bruto:", formData); // <-- Intercepta aqui
-
       // Exemplo: construir um array de juros por parcela de 1x até 21x
       const jurosPorParcela = Array.from({ length: 21 }, (_, i) => {
         const key = `parcela_${i + 1}`;
@@ -158,7 +155,6 @@ const JuroList: React.FC = () => {
       toast.error(error?.response?.data?.error || "Erro ao adicionar Juros");
     }
   };
-  console.log(formData);
   const handleEditInterest = async (id: string) => {
     const parcelas = Array.from({ length: 21 }, (_, i) => {
       const key = `parcela_${i + 1}`;
@@ -199,17 +195,14 @@ const JuroList: React.FC = () => {
 
   const openEditModal = (payment: any) => {
     setSelectedPayment(payment);
-    console.log(payment);
     const parcelas = payment.parcelas || [];
 
     const parcelasData = parcelas.map((item: any, index: number) => {
-      console.log(item);
       return {
         parcela: item.parcela,
         taxa: item.taxa,
       };
     });
-    console.log(parcelasData);
 
     setFormData({
       nome: payment.nome || "",
@@ -580,7 +573,6 @@ const JuroList: React.FC = () => {
                   onChange={(e) => {
                     const newParcelas = [...formData.parcelas];
                     const taxaValue = parseFloat(e.target.value);
-                    console.log(taxaValue);
                     // Update existing taxa
                     newParcelas[i].taxa = taxaValue;
 

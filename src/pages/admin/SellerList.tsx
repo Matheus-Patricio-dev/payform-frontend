@@ -16,9 +16,10 @@ import { motion } from 'framer-motion';
 
 interface SellerFormData {
   id: string;
-  name: string;
+  nome: string;
   email: string;
   password: string;
+  confirmpassword:string;
   marketplaceId: string;
   // Contact info
   phone: string;
@@ -33,6 +34,8 @@ interface SellerFormData {
   state: string;
   zipCode: string;
   country: string;
+  taxa_padrao: string;
+  taxa_repasse_juros :string;
 }
 
 interface FormErrors {
@@ -42,7 +45,7 @@ interface FormErrors {
 // Validation schemas
 const personalInfoSchema = yup.object().shape({
   id: yup.string().required('ID é obrigatório').min(3, 'ID deve ter pelo menos 3 caracteres'),
-  name: yup.string().required('Nome é obrigatório').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  nome: yup.string().required('Nome é obrigatório').min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: yup.string().required('Email é obrigatório').email('Email inválido'),
   password: yup.string().when('isEdit', {
     is: false,
@@ -76,9 +79,10 @@ const SellerList: React.FC = () => {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState<SellerFormData>({
     id: '',
-    name: '',
+    nome: '',
     email: '',
     password: '',
+    confirmpassword: '',
     marketplaceId: '',
     phone: '',
     website: '',
@@ -90,12 +94,14 @@ const SellerList: React.FC = () => {
     city: '',
     state: '',
     zipCode: '',
+    taxa_padrao: '',
+    taxa_repasse_juros: '',
     country: 'Brasil',
   });
   const [marketplaces, setSellerList] = useState<[]>([]);
   const [sellers, setSellers] = useState<[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'address'>('personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'taxas' | 'address'>('personal');
   // Função para buscar sellers
   const fetchSellers = async (onDelete: boolean) => {
     if (onDelete) {
@@ -159,9 +165,10 @@ const SellerList: React.FC = () => {
   const resetForm = () => {
     setFormData({
       id: '',
-      name: '',
+      nome: '',
       email: '',
       password: '',
+      confirmpassword: '',
       marketplaceId: '',
       phone: '',
       website: '',
@@ -173,6 +180,8 @@ const SellerList: React.FC = () => {
       city: '',
       state: '',
       zipCode: '',
+      taxa_padrao: '',
+      taxa_repasse_juros: '',
       country: 'Brasil',
     });
     setFormErrors({});
@@ -260,6 +269,8 @@ const SellerList: React.FC = () => {
         return ['id', 'name', 'email', 'password', 'marketplaceId', 'contactPerson'];
       case 'contact':
         return ['phone', 'website'];
+      case 'taxas':
+        return ['taxa_padrao', 'taxa_repassando_juros'];
       case 'address':
         return ['street', 'number', 'complement', 'neighborhood', 'city', 'state', 'zipCode', 'country'];
       default:
@@ -270,7 +281,6 @@ const SellerList: React.FC = () => {
   const [isCreateSeller, setIsCreateSeller] = useState(false)
   const handleAddSeller = async () => {
     setIsCreateSeller(true)
-    console.log(formData, selectedSeller)
     try {
       const isValid = await validateAllTabs(false);
       if (!isValid) {
@@ -287,16 +297,15 @@ const SellerList: React.FC = () => {
       if ([undefined, '', null].includes(formData.marketplaceId)) {
         toast.error("Selecione o Marketplace!")
         setIsCreateSeller(false)
-
         return
       }
 
-      if (!formData.nome || !formData.email || !formData.password || !formData.confirmpassword || !formData.marketplaceId) {
-        toast.error('Preencha todos os campos obrigatórios');
-        setIsCreateSeller(false)
+      // if (!formData.name || !formData.email || !formData.password || !formData.confirmpassword || !formData.marketplaceId) {
+      //   toast.error('Preencha todos os campos obrigatórios');
+      //   setIsCreateSeller(false)
 
-        return;
-      }
+      //   return;
+      // }
 
       if (formData.password !== formData.confirmpassword) {
         toast.error('As senhas não coincidem');
@@ -307,12 +316,27 @@ const SellerList: React.FC = () => {
 
 
       const payload = {
-        id_seller: formData.id,
-        nome: formData.nome,
-        email: formData.email,
-        password: formData.password,
-        confirmpassword: formData.confirmpassword,
-        marketplaceId: formData.marketplaceId
+      id_seller: formData.id,
+      nome: formData.nome,
+      email: formData.email,
+      password: formData.password,
+      confirmpassword: formData.confirmpassword,
+      marketplaceId: formData.marketplaceId || '',
+      contactPerson: formData.contactPerson || '',
+      phone: formData.phone || '',
+      website: formData.website || '',
+      taxa_padrao: formData.taxa_padrao || '',
+      taxa_repasse_juros : formData.taxa_repasse_juros || '', 
+      address: {
+        street: formData.street || '',
+        number: formData.number || '',
+        complement: formData.complement || '',
+        neighborhood: formData.neighborhood || '',
+        city: formData.city || '',
+        state: formData.state || '',
+        zipCode: formData.zipCode || '',
+        country: formData.country || '',
+      },
       };
       setIsCreateSeller(true)
       setLoading(true);
@@ -323,7 +347,7 @@ const SellerList: React.FC = () => {
       if (response.status === 201) {
         toast.success('Vendedor adicionado com sucesso!');
         setIsAddModalOpen(false);
-        setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
+        setFormData(formData);
         await fetchSellers(true); // Atualiza lista
       } else {
         setIsCreateSeller(false)
@@ -355,7 +379,6 @@ const SellerList: React.FC = () => {
       setIsRemoveSeller(true)
 
       setLoading(true);
-      console.log(`Tentando deletar o Seller com URL: /marketplace-seller/${id}/${id_cliente}`)
       const response = await api.delete(`/marketplace-seller/${id}/${id_cliente}`);
 
       if (response?.data.dados === true) {
@@ -380,60 +403,38 @@ const SellerList: React.FC = () => {
   };
 
   //OK FUNCIONANDO
-  const handleEditSeller = async (id: string) => {
+ const handleEditSeller = async () => {
     try {
       if (!selectedSeller) return;
-      const isValid = await validateAllTabs(true);
-      if (!isValid) {
-        toast.error('Por favor, corrija os erros no formulário');
-        return;
-      }
 
-      const response = await api.put(`/seller/${id}`, { ...formData, password: formData?.password ? formData?.password : null, marketplaceId: formData.id });
-      updateSeller(selectedSeller.id, formData);
+      await api.put(`/seller/${selectedSeller.cliente.id}`, {
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password || undefined,
+        contactPerson: formData.contactPerson,
+        phone: formData.phone,
+        website: formData.website,
+        address: {
+          street: formData.street,
+          number: formData.number,
+          complement: formData.complement,
+          neighborhood: formData.neighborhood,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          country: formData.country,
+        },
+      });
+
+      toast.success('Vendedor atualizado com sucesso!');
+      setFormData(formData);
       setIsEditModalOpen(false);
       setSelectedSeller(null);
-      setFormData({ id: '', nome: '', email: '', password: '', marketplaceId: '' });
-      toast.success('Vendedor atualizado com sucesso!');
-      const onCreate = false;
-      fetchSellers(onCreate);
-    } catch (error: any) {
-      console.error("Erro ao remover Seller:", error);
-      console.error("Detalhes do erro:", error?.response?.data);
-      toast.error(error?.response?.data?.message || error?.message || 'Erro inesperado');
+      await fetchSellers({});
+    } catch (error) {
+      toast.error('Erro ao atualizar vendedor');
+      console.error(error);
     }
-
-  };
-
-
-  const openEditModal = (seller: any) => {
-    setSelectedSeller(seller);
-    setFormData({
-      id: seller.id,
-      name: seller.name,
-      email: seller.email,
-      password: '',
-      marketplaceId: seller.marketplaceId || '',
-      phone: seller.phone || '',
-      website: seller.website || '',
-      contactPerson: seller.contactPerson || '',
-      street: seller.street || '',
-      number: seller.number || '',
-      complement: seller.complement || '',
-      neighborhood: seller.neighborhood || '',
-      city: seller.city || '',
-      state: seller.state || '',
-      zipCode: seller.zipCode || '',
-      country: seller.country || 'Brasil',
-    });
-    setFormErrors({});
-    setActiveTab('personal');
-    setIsEditModalOpen(true);
-  };
-
-  const openAddModal = () => {
-    resetForm();
-    setIsAddModalOpen(true);
   };
 
   const tabs = [
@@ -450,6 +451,11 @@ const SellerList: React.FC = () => {
     {
       id: 'address' as const,
       label: 'Endereço',
+      icon: <MapPin className="h-4 w-4" />,
+    },
+    {
+      id: 'taxas' as const,
+      label: 'Taxas',
       icon: <MapPin className="h-4 w-4" />,
     },
   ];
@@ -476,8 +482,8 @@ const SellerList: React.FC = () => {
               />
               <Input
                 label="Nome Completo *"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Nome do vendedor"
                 fullWidth
                 error={formErrors.name}
@@ -501,10 +507,19 @@ const SellerList: React.FC = () => {
               fullWidth
               error={formErrors.password}
             />
+            <Input
+              label={isEditModalOpen ? "Nova Senha (opcional)" : "Confirmação de senha *"}
+              type="password"
+              value={formData.confirmpassword}
+              onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
+              placeholder="••••••••"
+              fullWidth
+              error={formErrors.password}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 label="Marketplace *"
-                options={marketplaces.map(m => ({ value: m.id, label: m.name }))}
+                options={marketplaces.map(m => ({ value: m.id, label: m.cliente.nome }))}
                 value={formData.marketplaceId}
                 onChange={(e) => setFormData({ ...formData, marketplaceId: e.target.value })}
                 fullWidth
@@ -557,6 +572,47 @@ const SellerList: React.FC = () => {
                   <h4 className="font-semibold text-blue-900 text-sm">Informações de Contato</h4>
                   <p className="text-blue-700 text-xs mt-1">
                     Essas informações serão usadas para comunicação e suporte técnico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      case 'taxas':
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Taxa padrão ID Payform"
+                value={formData.taxa_padrao}
+                onChange={(e) => setFormData({ ...formData, taxa_padrao: e.target.value })}
+                placeholder="ID Juros Payform"
+                fullWidth
+                error={formErrors.taxa_padrao}
+              />
+              <Input
+                label="Taxa repasse ID Zoop"
+                value={formData.taxa_repasse_juros}
+                onChange={(e) => setFormData({ ...formData, taxa_repasse_juros: e.target.value })}
+                placeholder="Taxa Repasse ID Zoop"
+                fullWidth
+                error={formErrors.taxa_repasse_juros}
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Phone className="h-3 w-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">Informações de taxas</h4>
+                  <p className="text-blue-700 text-xs mt-1">
+                    Essas informações serão usadas para as vendas com taxas de juros.
                   </p>
                 </div>
               </div>
@@ -779,11 +835,23 @@ const SellerList: React.FC = () => {
                                     setSelectedSeller(seller);
                                     setIsEditModalOpen(true);
                                     setFormData({
-                                      id: seller.id,
-                                      nome: seller.cliente.nome,
-                                      email: seller.cliente.email,
-                                      password: '',
-                                      marketplaceId: seller.marketplaceId || '',
+                                        id: seller.id,
+                                        name: seller.cliente.nome,
+                                        email: seller.cliente.email,
+                                        password: '',
+                                        confirmpassword: '',
+                                        marketplaceId: seller.marketplaceId || '',
+                                        contactPerson: seller.contactPerson || '',
+                                        phone: seller.phone || '',
+                                        website: seller.website || '',
+                                        street: seller.address?.street || '',
+                                        number: seller.address?.number || '',
+                                        complement: seller.address?.complement || '',
+                                        neighborhood: seller.address?.neighborhood || '',
+                                        city: seller.address?.city || '',
+                                        state: seller.address?.state || '',
+                                        zipCode: seller.address?.zipCode || '',
+                                        country: seller.address?.country || '', 
                                     });
                                   }}
                                   icon={<Pencil className="h-4 w-4" />}
@@ -847,49 +915,6 @@ const SellerList: React.FC = () => {
         }}
         title="Adicionar Vendedor"
       >
-        {/* <div className="space-y-4">
-          <Input
-            label="ID"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-          />
-          <Input
-            label="Email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
-          <Input
-            label="Senha"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          />
-          <Input
-            label="Confirme a senha"
-            type="password"
-            value={formData.confirmpassword}
-            onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
-          />
-          <Select
-            label="Marketplace"
-            options={[
-              { value: '', label: 'Selecione um marketplace' },
-              ...marketplaces.map(m => ({
-                value: m.id,
-                label: m.cliente.nome
-              }))
-            ]}
-            value={formData.marketplaceId}
-            onChange={(e) => {
-              console.log('Select onChange value:', e.target.value);
-              setFormData({ ...formData, marketplaceId: e.target.value });
-            }}
-          /> */}
         <div className="space-y-6">
           {/* Tabs */}
           <div className="border-b border-gray-200">
