@@ -1,16 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+
 import {
   Plus,
   Pencil,
   Trash2,
   Search,
-  Eye,
-  ExternalLink,
-  CreditCard,
-  Smartphone,
-  Check,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
@@ -74,6 +68,7 @@ const JuroList: React.FC = () => {
       }
 
       const { data } = await api.get(`/juros/cliente/${userData.id}`);
+      console.log(data);
       localStorage.setItem("interest", JSON.stringify(data));
       setPaymentLinks(data);
     } catch (error) {
@@ -163,22 +158,26 @@ const JuroList: React.FC = () => {
       toast.error(error?.response?.data?.error || "Erro ao adicionar Juros");
     }
   };
-
-  const handleEditInterest = async () => {
-    try {
-      if (!selectedPayment) {
-        toast.error("Não foi possível selecionar o juros");
-        return;
-      }
-
-      const newFormData = {
-        ...formData,
-        cliente_id: user.id,
-        marketplaceId: user.marketplaceId,
+  console.log(formData);
+  const handleEditInterest = async (id: string) => {
+    const parcelas = Array.from({ length: 21 }, (_, i) => {
+      const key = `parcela_${i + 1}`;
+      return {
+        parcela: `${i + 1}x`,
+        taxa: parseFloat(formData[key]) || 0,
       };
+    });
 
+    const payload = {
+      nome: formData.nome,
+      status: formData.status,
+      description: formData.description,
+      parcelas: formData.parcelas,
+    };
+
+    try {
       const response = await api.put(`/juros/${selectedPayment.id}`, {
-        ...newFormData,
+        ...payload,
       });
 
       if (response?.data) {
@@ -186,10 +185,9 @@ const JuroList: React.FC = () => {
         await fetchInterest({}); // ✅ Aguarde a atualização
         setIsEditModalOpen(false);
         setSelectedPayment(null);
-      }
+      } // recarregar a lista
     } catch (error) {
-      toast.error("Erro ao atualizar Juros");
-      console.error(error);
+      toast.error("Erro ao atualizar juros.");
     }
   };
 
@@ -201,13 +199,27 @@ const JuroList: React.FC = () => {
 
   const openEditModal = (payment: any) => {
     setSelectedPayment(payment);
-    setIsEditModalOpen(true);
-    setFormData({
-      amount: payment.amount,
-      description: payment.description,
-      nome: payment.nome,
-      status: payment.status,
+    console.log(payment);
+    const parcelas = payment.parcelas || [];
+
+    const parcelasData = parcelas.map((item: any, index: number) => {
+      console.log(item);
+      return {
+        parcela: item.parcela,
+        taxa: item.taxa,
+      };
     });
+    console.log(parcelasData);
+
+    setFormData({
+      nome: payment.nome || "",
+      amount: payment.amount || "",
+      status: payment.status || "ativo",
+      description: payment.description || "",
+      parcelas: parcelasData,
+    });
+
+    setIsEditModalOpen(true);
   };
 
   const openDeleteModal = (payment: any) => {
@@ -321,9 +333,6 @@ const JuroList: React.FC = () => {
                           Descrição
                         </th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          Taxa de Juros
-                        </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
                           Status
                         </th>
                         <th className="text-right py-4 px-6 bg-gray-50 font-medium">
@@ -344,7 +353,6 @@ const JuroList: React.FC = () => {
                               {formatDate(payment?.createdAt)}
                             </td>
                             <td className="py-4 px-6">{payment.description}</td>
-                            <td className="py-4 px-6">{payment.amount}%</td>
                             <td className="py-4 px-6">
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -511,30 +519,28 @@ const JuroList: React.FC = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Editar Juros"
+        title="Editar Plano"
       >
-        <div className="space-y-4">
+        <Input
+          label="ID do Plano na Zoop"
+          value={formData.planoIdZoop || ""}
+          onChange={(e) =>
+            setFormData({ ...formData, planoIdZoop: e.target.value })
+          }
+          placeholder="ID do plano na Zoop"
+          fullWidth
+        />
+        <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
           <Input
             label="Nome"
             value={formData.nome}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
             fullWidth
           />
-          Novo campo de Intervalo
-          <Input
-            label="Taxa de Juros (%)"
-            type="number"
-            value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: e.target.value })
-            }
-            placeholder="ex: 30"
-            fullWidth
-          />
-          {/* Novo campo de Métodos de Pagamento */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Status do Juros
+              Status do Plano
             </label>
             <select
               value={formData.status}
@@ -545,10 +551,9 @@ const JuroList: React.FC = () => {
             >
               <option value="ativo">Ativo</option>
               <option value="inativo">Inativo</option>
-              {/* Você pode adicionar mais opções de métodos de pagamento aqui */}
             </select>
           </div>
-          {/* Novo campo de Descrição */}
+
           <Input
             label="Descrição"
             value={formData.description}
@@ -558,7 +563,39 @@ const JuroList: React.FC = () => {
             placeholder="Descrição do plano"
             fullWidth
           />
-          <div className="flex justify-end gap-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Lista de juros
+          </label>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            {formData.parcelas?.map((parcela, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <label className="w-8 text-sm text-gray-600 font-medium">
+                  {parcela.parcela} {/* Display the current parcela */}
+                </label>
+                <input
+                  type="number"
+                  placeholder="%"
+                  value={parcela.taxa || ""} // Use parcela.taxa for the input value
+                  onChange={(e) => {
+                    const newParcelas = [...formData.parcelas];
+                    const taxaValue = parseFloat(e.target.value);
+                    console.log(taxaValue);
+                    // Update existing taxa
+                    newParcelas[i].taxa = taxaValue;
+
+                    setFormData({
+                      ...formData,
+                      parcelas: newParcelas,
+                    });
+                  }}
+                  className="w-full max-w-[80px] px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring focus:ring-primary-200 focus:outline-none"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
