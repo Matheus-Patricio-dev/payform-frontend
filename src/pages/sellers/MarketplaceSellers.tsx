@@ -173,7 +173,33 @@ const MarketplaceSellers: React.FC = () => {
         return;
       }
 
-      const payload = {
+      // const payload = {
+      //   id_seller: formData.id,
+      //   nome: formData.nome,
+      //   email: formData.email,
+      //   password: formData.password,
+      //   confirmpassword: formData.confirmpassword,
+      //   marketplaceId: myMarketplaceId || "",
+      //   contactPerson: formData.contactPerson || "",
+      //   phone: formData.phone || "",
+      //   website: formData.website || "",
+      //   taxa_padrao: formData.taxa_padrao || "",
+      //   taxa_repasse_juros: formData.taxa_repasse_juros || "",
+      //   address: {
+      //     street: formData.street || "",
+      //     number: formData.number || "",
+      //     complement: formData.complement || "",
+      //     neighborhood: formData.neighborhood || "",
+      //     city: formData.city || "",
+      //     state: formData.state || "",
+      //     zipCode: formData.zipCode || "",
+      //     country: formData.country || "",
+      //   },
+      // };
+      setIsCreateSeller(true);
+      setLoading(true);
+
+      await signupSeller({
         id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
@@ -195,32 +221,12 @@ const MarketplaceSellers: React.FC = () => {
           zipCode: formData.zipCode || "",
           country: formData.country || "",
         },
-      };
-      setIsCreateSeller(true);
-      setLoading(true);
+      });
+      resetForm();
 
-      const response = await api.post(
-        "/register-seller-to-marketplace",
-        payload
-      );
-      console.log("enviando payload:", payload);
-      if (response?.data) {
-        resetForm();
-
-        toast.success("Vendedor adicionado com sucesso!");
-        setIsAddModalOpen(false);
-        await fetchSellers();
-      }
-      // await signupSeller({
-      //   id_seller: formData.id,
-      //   nome: formData.nome,
-      //   email: formData.email,
-      //   password: formData.password,
-      //   confirmpassword: formData.confirmpassword,
-      //   marketplaceId: formData.marketplaceId,
-      //   taxa_padrao: formData.taxa_padrao,
-      //   taxa_repasse_juros: formData.taxa_repasse_juros,
-      // });
+      toast.success("Vendedor adicionado com sucesso!");
+      setIsAddModalOpen(false);
+      await fetchSellers();
     } catch (error) {
       toast.error("Erro ao adicionar vendedor");
     } finally {
@@ -470,7 +476,7 @@ const MarketplaceSellers: React.FC = () => {
               fullWidth
               error={formErrors.password}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 label="Marketplace *"
                 options={marketplaces?.map((m) => ({
@@ -494,7 +500,7 @@ const MarketplaceSellers: React.FC = () => {
                 fullWidth
                 error={formErrors.contactPerson}
               />
-            </div>
+            </div> */}
           </motion.div>
         );
 
@@ -810,7 +816,29 @@ const MarketplaceSellers: React.FC = () => {
                                     taxa_padrao: seller?.cliente?.id_juros,
                                     taxa_repasse_juros:
                                       seller?.cliente?.taxa_repasse_juros,
-                                    phone: seller?.cliente?.phone,
+                                    contactPerson: formData.contactPerson,
+                                    phone: formData.phone || "S/N",
+                                    website: formData.website || "S/N",
+                                    address: {
+                                      street: formData.street || "S/N",
+                                      number: formData.number || "S/N",
+                                      complement: formData.complement || "S/N",
+                                      neighborhood:
+                                        formData.neighborhood || "S/N",
+                                      city: formData.city || "S/N",
+                                      state: formData.state || "S/N",
+                                      zipCode: formData.zipCode || "S/N",
+                                      country: formData.country || "S/N",
+                                    },
+                                    street: formData.street || "S/N",
+                                    number: formData.number || "S/N",
+                                    complement: formData.complement || "S/N",
+                                    neighborhood:
+                                      formData.neighborhood || "S/N",
+                                    city: formData.city || "S/N",
+                                    state: formData.state || "S/N",
+                                    zipCode: formData.zipCode || "S/N",
+                                    country: formData.country || "S/N",
                                   });
                                 }}
                                 icon={<Pencil className="h-4 w-4" />}
@@ -872,7 +900,7 @@ const MarketplaceSellers: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
-          // resetForm();
+          resetForm();
         }}
         title="Adicionar Vendedor"
       >
@@ -1000,7 +1028,7 @@ const MarketplaceSellers: React.FC = () => {
         onClose={() => {
           setIsEditModalOpen(false);
           setSelectedSeller(null);
-          // resetForm();
+          resetForm();
         }}
         title="Editar Vendedor"
       >
