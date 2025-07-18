@@ -32,7 +32,7 @@ const MarketplaceSellers: React.FC = () => {
   const [sellersData, setSellersData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isRefresh, setIsRefresh] = useState(false);
-
+  
   const myMarketplaceId = user?.id;
 
   const [formData, setFormData] = useState<SellerFormData>({
@@ -43,7 +43,7 @@ const MarketplaceSellers: React.FC = () => {
     confirmpassword: '',
     marketplaceId: myMarketplaceId || ''
   });
-
+  
   const fetchSellers = async ({ refreshData = true }) => {
     setIsRefresh(true);
     try {
@@ -145,7 +145,8 @@ useEffect(() => {
       toast.error(mensagem);
     }
   };
-
+  
+  
   const handleEditSeller = async () => {
     try {
       if (!user || !selectedSeller) return;
@@ -244,8 +245,7 @@ useEffect(() => {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setSelectedSeller(seller);
-                                setIsEditModalOpen(true);
+                                setSelectedSeller(seller)
                                 setFormData({
                                   id: seller.cliente.id,
                                   nome: seller.cliente.nome,
@@ -254,6 +254,7 @@ useEffect(() => {
                                   confirmpassword: '',
                                   marketplaceId: myMarketplaceId || ''
                                 });
+                                setIsEditModalOpen(true);
                               }}
                               icon={<Pencil className="h-4 w-4" />}
                               fullWidth
