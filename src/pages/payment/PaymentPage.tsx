@@ -243,7 +243,7 @@ const PaymentPage: React.FC = () => {
     }
 
     // Adiciona parcelas com juros
-    validInstallments.forEach((parcel) => {
+    validInstallments?.forEach((parcel) => {
       const times = parseInt(parcel.parcela); // Converte "Nx" para número
       if (times > parcelasSemJuros) {
         const interest = parcel.taxa / 100; // Converte a taxa de percentual para decimal
@@ -266,7 +266,7 @@ const PaymentPage: React.FC = () => {
   useEffect(() => {
     if (link?.amount) {
       const maxInstallments = 21;
-      const parcelasSemJuros = link.parcelasSemJuros || 0; // Pega o número de parcelas sem juros
+      const parcelasSemJuros = link?.parcelasSemJuros || 0; // Pega o número de parcelas sem juros
       setInstallmentValue(
         calculateInstallments(
           link.amount,
