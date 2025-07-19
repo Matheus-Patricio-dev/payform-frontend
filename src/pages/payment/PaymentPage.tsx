@@ -389,6 +389,8 @@ const PaymentPage: React.FC = () => {
       const payload = {
         ...cardData,
         amount: link?.amount,
+        id_juros: user?.cliente?.taxa_padrao,
+        taxa_repasse_juros: user?.cliente?.taxa_repasse_juros,
         number_installments: user?.juros?.parcelas?.filter(
           (item) => item.taxa > 0
         )?.length,
@@ -397,7 +399,6 @@ const PaymentPage: React.FC = () => {
       setIsProcessing(true);
 
       const response = await api.post(`/payment/${link?.id}`, payload);
-      console.log(response.data.data)
       if (response?.data) {
         const transactionStatus = response.data.data.status_transacao;
 
@@ -464,7 +465,6 @@ const PaymentPage: React.FC = () => {
         return <CardIcon className="h-5 w-5 text-gray-400" />;
     }
   };
-  console.log(cardErrors);
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">

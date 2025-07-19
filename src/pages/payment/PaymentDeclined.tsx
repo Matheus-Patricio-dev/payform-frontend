@@ -166,19 +166,19 @@ const PaymentDeclined: React.FC = () => {
                 >
                   Voltar ao Início
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline"
                   fullWidth
                   icon={<MessageCircle className="h-4 w-4" />}
                   className="border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all"
                 >
                   Falar com Suporte
-                </Button>
+                </Button> */}
               </div>
             </motion.div>
 
             {/* Help Section */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.4, duration: 0.5 }}
@@ -204,7 +204,7 @@ const PaymentDeclined: React.FC = () => {
                   <p className="text-xs text-gray-600">24h disponível</p>
                 </div>
               </div>
-            </motion.div>
+            </motion.div> */}
 
             {/* Security Note */}
             <motion.div

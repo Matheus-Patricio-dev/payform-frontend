@@ -154,7 +154,7 @@ const PaymentSuccess: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">ID da Transação:</span>
                   <span className="font-mono font-medium">
-                    TXN-{Math.random().toString(36).substr(2, 9).toUpperCase()}
+                    #ID-{transactionId?.id}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -257,7 +257,7 @@ const PaymentSuccess: React.FC = () => {
           </motion.div>
 
           {/* Next Steps */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2, duration: 0.5 }}
@@ -283,7 +283,7 @@ const PaymentSuccess: React.FC = () => {
                 <ArrowRight className="h-3 w-3 ml-1" />
               </a>
             </div>
-          </motion.div>
+          </motion.div> */}
         </motion.div>
       </main>
     </div>

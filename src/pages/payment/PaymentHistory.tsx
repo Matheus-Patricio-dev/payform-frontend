@@ -360,7 +360,7 @@ const TransactionModal: React.FC<{
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <label className="text-sm font-medium text-gray-600">
                     ID da Transação Zoop
@@ -373,6 +373,28 @@ const TransactionModal: React.FC<{
                     <button
                       onClick={() =>
                         copyToClipboard(transaction?.transacao_id_zoop, "id")
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "id" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    ID do Link de Pagamento
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900 font-mono">
+                      {transaction?.pagamento?.id ||
+                        "Sem ID do Link de Pagamento"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(transaction?.pagamento?.id, "id")
                       }
                       className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
                     >
@@ -396,20 +418,19 @@ const TransactionModal: React.FC<{
                   </div>
                 </div>
 
-                {transaction.descricao && (
+                {transaction?.pagamento?.description && (
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium text-gray-600">
                       Descrição
                     </label>
                     <p className="text-sm text-gray-900 mt-1 p-3 bg-gray-50 rounded-lg">
-                      {transaction.descricao}
+                      {transaction?.pagamento?.description}
                     </p>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
-
           {/* Informações do Vendedor (apenas para admin) */}
           {isAdmin && (
             <Card>
@@ -426,7 +447,7 @@ const TransactionModal: React.FC<{
                       Vendedor
                     </label>
                     <p className="text-sm text-gray-900 mt-1">
-                      {transaction?.vendedor?.nome || "Vendedor não informado"}
+                      {transaction?.cliente?.nome || "Vendedor não informado"}
                     </p>
                   </div>
                   <div>
@@ -434,7 +455,7 @@ const TransactionModal: React.FC<{
                       Marketplace
                     </label>
                     <p className="text-sm text-gray-900 mt-1">
-                      {transaction?.marketplace?.nome ||
+                      {transaction?.cliente?.marketplaceId ||
                         "Marketplace não informado"}
                     </p>
                   </div>
@@ -581,7 +602,7 @@ const PaymentHistory: React.FC = () => {
         statusFilter === "all" || transaction.status === statusFilter;
       const matchesMethod =
         methodFilter === "all" ||
-        transaction.paymentMethods?.includes(methodFilter);
+        transaction?.pagamento?.paymentMethods?.includes(methodFilter);
 
       let matchesDate = true;
       if (dateFilter !== "all") {
@@ -611,7 +632,8 @@ const PaymentHistory: React.FC = () => {
       let comparison = 0;
       if (sortBy === "date") {
         comparison =
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          new Date(a?.pagamento?.data_criacao_pagamento).getTime() -
+          new Date(b?.pagamento?.data_criacao_pagamento).getTime();
       } else {
         comparison = a.amount - b.amount;
       }

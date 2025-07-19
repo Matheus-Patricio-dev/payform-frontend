@@ -141,7 +141,7 @@ const MarketplaceSellers: React.FC = () => {
   }, []);
 
   const filteredSellers = useMemo(() => {
-    return sellersData.filter(
+    return sellersData?.filter(
       (seller) =>
         seller.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -313,7 +313,6 @@ const MarketplaceSellers: React.FC = () => {
         return [];
     }
   };
-  console.log(selectedSeller, "seller");
 
   const tabs = [
     {
@@ -358,7 +357,6 @@ const MarketplaceSellers: React.FC = () => {
   };
   useEffect(() => {
   if (isEditModalOpen) {
-    console.log('formData atualizado:', formData);
   }
 }, [formData]);
 
@@ -764,7 +762,7 @@ const MarketplaceSellers: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {sellersData.map((seller) => (
+                      {filteredSellers?.map((seller) => (
                         <tr
                           key={seller.id}
                           className="border-b last:border-0 hover:bg-gray-50"

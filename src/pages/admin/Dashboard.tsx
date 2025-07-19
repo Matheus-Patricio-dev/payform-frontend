@@ -54,7 +54,7 @@ const AdminDashboard: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<any>(null);
-
+  const [marketplaces, setMarketplaces] = useState([]);
   const [stats, setStats] = useState({
     totalTransactions: 0,
     completed: 0,
@@ -77,12 +77,15 @@ const AdminDashboard: React.FC = () => {
     try {
       // Tenta pegar os dados de transações do localStorage
       const cachedTransactions = localStorage.getItem("transactions");
+      const marketData = localStorage.getItem("market");
 
-      if (cachedTransactions && refreshData) {
+      if (cachedTransactions && marketData && refreshData) {
         // Se existir, usa os dados do cache
         const data = JSON.parse(cachedTransactions);
+        const dataMKT = JSON.parse(marketData);
 
         setTransactions(data);
+        setMarketplaces(dataMKT);
 
         const transacoes = data?.dados?.transacoes || [];
 
@@ -122,12 +125,17 @@ const AdminDashboard: React.FC = () => {
       // Se não houver cache, busca do backend normalmente
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       const response = await api.get(`/seller-dash/${userData?.id}`);
-      const data = response.data;
+      const responseMKT = await api.get("/marketplaces");
 
+      const data = response.data;
+      if (responseMKT?.data?.dados) {
+        setMarketplaces(responseMKT.data.dados);
+      }
       setTransactions(data);
 
       // Salva no localStorage para cache
       localStorage.setItem("transactions", JSON.stringify(data));
+      localStorage.setItem("market", JSON.stringify(responseMKT?.data?.dados));
 
       const transacoes = data?.dados?.transacoes || [];
       const totalAmount = transacoes
@@ -171,30 +179,8 @@ const AdminDashboard: React.FC = () => {
     }
   }, [user]);
 
-  const marketplaces = getAllMarketplaces();
   const sellers = getAllSellers();
-  // Calculate total transactions and revenue across all sellers
-  const totalStats =
-    sellers &&
-    sellers?.reduce(
-      (acc, seller) => {
-        const stats = {};
-        return {
-          totalTransactions: acc.totalTransactions + stats.totalTransactions,
-          totalAmount: acc.totalAmount + stats.totalAmount,
-          completed: acc.completed + stats.completed,
-          pending: acc.pending + stats.pending,
-          declined: acc.declined + stats.declined,
-        };
-      },
-      {
-        totalTransactions: 0,
-        totalAmount: 0,
-        completed: 0,
-        pending: 0,
-        declined: 0,
-      }
-    );
+  console.log(marketplaces);
 
   // Get all transactions for chart data
   const allTransactions = transactions?.dados?.transacoes || [];
@@ -297,12 +283,8 @@ const AdminDashboard: React.FC = () => {
     datasets: [
       {
         data: marketplaces.map((marketplace) => {
-          const marketplaceSellers = sellers.filter(
-            (s) => s.marketplaceId === marketplace.id
-          );
-          return marketplaceSellers.reduce((total, seller) => {
-            return total + stats.totalAmount;
-          }, 0);
+          // Retorna o total_faturado diretamente do marketplace
+          return marketplace.total_faturado || 0; // Garante que não seja undefined
         }),
         backgroundColor: [
           "rgb(99, 102, 241)",
@@ -312,7 +294,7 @@ const AdminDashboard: React.FC = () => {
         ],
         borderColor: "#fff",
         borderWidth: 4,
-        hoverOffset: 12,
+        hoverOffset: 10,
       },
     ],
   };
@@ -603,14 +585,6 @@ const AdminDashboard: React.FC = () => {
                               { totalAmount: 0, completed: 0, total: 0 }
                             );
 
-                            const successRate =
-                              marketplaceStats.total > 0
-                                ? (
-                                    (marketplaceStats.completed /
-                                      marketplaceStats.total) *
-                                    100
-                                  ).toFixed(1)
-                                : "0.0";
                             return (
                               <tr
                                 key={marketplace.id}
@@ -624,7 +598,7 @@ const AdminDashboard: React.FC = () => {
                                 </td>
                                 <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">
                                   {formatCurrency(
-                                    marketplaceStats.totalFaturado || 0
+                                    marketplace.total_faturado || 0
                                   )}
                                 </td>
                                 <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-600">

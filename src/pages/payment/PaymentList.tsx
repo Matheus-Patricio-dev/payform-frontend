@@ -5,7 +5,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Search,
   Eye,
   CreditCard,
   Smartphone,
@@ -13,6 +12,7 @@ import {
   AlertTriangle,
   RefreshCw,
   AlertCircle,
+  Fingerprint,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { formatCurrency, formatDate } from "../../utils/formatters";
@@ -62,7 +62,6 @@ const PaymentList: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [sellerFilter, setSellerFilter] = useState<string>("all");
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
@@ -228,117 +227,142 @@ const PaymentList: React.FC = () => {
           isCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
       >
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                 {isAdmin ? "Todos os Links de Pagamento" : "Links de Pagamento"}
               </h1>
               {!isAdmin && (
-                <div className="flex">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <Button
                     loading={isRefresh}
                     disabled={isRefresh}
                     variant="outline"
                     onClick={() => fetchPayments({ refreshData: false })}
                     icon={<RefreshCw className="h-4 w-4" />}
-                    className="hover:bg-gray-50"
+                    className="hover:bg-gray-50 transition-colors"
                   >
-                    {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                    <span className="hidden sm:inline">
+                      {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                    </span>
+                    <span className="sm:hidden">
+                      {isRefresh ? "Atualizando" : "Recarregar"}
+                    </span>
                   </Button>
 
                   <Link to="/create-payment-link">
-                    <Button icon={<Plus className="h-4 w-4" />}>
-                      Criar Link
+                    <Button
+                      icon={<Plus className="h-4 w-4" />}
+                      className="w-full sm:w-auto"
+                    >
+                      <span className="hidden sm:inline">Criar Link</span>
+                      <span className="sm:hidden">Criar</span>
                     </Button>
                   </Link>
                 </div>
               )}
             </div>
 
-            <div className="mb-6">
-              {/* <Input
-                placeholder={isAdmin ? "Buscar por descrição, ID, email ou vendedor..." : "Buscar links de pagamento..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                icon={<Search className="h-4 w-4" />}
-                fullWidth
-              /> */}
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* <Select
-                  options={[
-                    { value: 'all', label: 'Todos os Status' },
-                    { value: 'active', label: 'Ativos' },
-                    { value: 'pending', label: 'Pendentes' },
-                    { value: 'expired', label: 'Expirados' }
-                  ]}
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                /> */}
-
-                {isAdmin && (
-                  <>
-                    <Select
-                      options={[
-                        { value: "all", label: "Todos os Marketplaces" },
-                        ...marketplaces.map((m) => ({
-                          value: m.id,
-                          label: m.name,
-                        })),
-                      ]}
-                      value={marketplaceFilter}
-                      onChange={(e) => setMarketplaceFilter(e.target.value)}
-                    />
-                    <Select
-                      options={[
-                        { value: "all", label: "Todos os Vendedores" },
-                        ...sellers.map((s) => ({ value: s.id, label: s.name })),
-                      ]}
-                      value={sellerFilter}
-                      onChange={(e) => setSellerFilter(e.target.value)}
-                    />
-                  </>
-                )}
+            {/* Filters */}
+            {isAdmin && (
+              <div className="mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <Select
+                    options={[
+                      { value: "all", label: "Todos os Marketplaces" },
+                      ...marketplaces.map((m) => ({
+                        value: m.id,
+                        label: m.name,
+                      })),
+                    ]}
+                    value={marketplaceFilter}
+                    onChange={(e) => setMarketplaceFilter(e.target.value)}
+                    className="w-full"
+                  />
+                  <Select
+                    options={[
+                      { value: "all", label: "Todos os Vendedores" },
+                      ...sellers.map((s) => ({ value: s.id, label: s.name })),
+                    ]}
+                    value={sellerFilter}
+                    onChange={(e) => setSellerFilter(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            <Card>
+            <Card className="shadow-sm border border-gray-200">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                      <tr className="border-b border-gray-200 bg-gray-50/50">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">
+                          ID#
+                        </th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">
                           Data
                         </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">
                           Descrição
                         </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm">
                           Valor
                         </th>
-                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">
+                        <th className="text-right py-4 px-6 font-semibold text-gray-700 text-sm">
                           Ações
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredPayments.map((payment) => (
+                      {filteredPayments.map((payment, index) => (
                         <tr
                           key={payment.id}
-                          className="border-b last:border-0 hover:bg-gray-50"
+                          className={`
+                          border-b border-gray-100 last:border-0 
+                          hover:bg-gray-50/50 transition-colors duration-150
+                          ${index % 2 === 0 ? "bg-white" : "bg-gray-50/25"}
+                        `}
                         >
                           <td className="py-4 px-6">
+                            <div className="max-w-xs flex items-center">
+                              <Fingerprint className="mr-2 text-gray-500" />{" "}
+                              {/* Ícone com margem à direita */}
+                              <div className="flex flex-col">
+                                <p
+                                  className="text-sm text-gray-900 truncate"
+                                  title={payment.description || "Sem Descrição"}
+                                >
+                                  {payment?.id || "Sem ID"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-6 text-sm text-gray-900">
                             {formatDate(
                               new Date(payment.data_criacao_pagamento)
                             )}
                           </td>
-                          <td className="py-4 px-6">{payment.description}</td>
                           <td className="py-4 px-6">
-                            {formatCurrency(payment.amount)}
+                            <div className="max-w-xs">
+                              <p
+                                className="text-sm text-gray-900 truncate"
+                                title={payment.description || "Sem Descrição"}
+                              >
+                                {payment.description || "Sem Descrição"}
+                              </p>
+                            </div>
                           </td>
-
+                          <td className="py-4 px-6">
+                            <span className="text-sm font-semibold text-green-600">
+                              {formatCurrency(payment.amount)}
+                            </span>
+                          </td>
                           <td className="py-4 px-6">
                             <div className="flex items-center justify-end gap-2">
                               <Button
@@ -349,25 +373,31 @@ const PaymentList: React.FC = () => {
                                 }
                                 icon={<Eye className="h-4 w-4" />}
                                 title="Visualizar link de pagamento"
+                                className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
                               >
-                                Ver Link
+                                <span className="hidden lg:inline">
+                                  Ver Link
+                                </span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openEditModal(payment)}
                                 icon={<Pencil className="h-4 w-4" />}
+                                className="hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-colors"
                               >
-                                Editar
+                                <span className="hidden lg:inline">Editar</span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-error"
+                                className="text-red-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
                                 onClick={() => openDeleteModal(payment)}
                                 icon={<Trash2 className="h-4 w-4" />}
                               >
-                                Remover
+                                <span className="hidden lg:inline">
+                                  Remover
+                                </span>
                               </Button>
                             </div>
                           </td>
@@ -377,15 +407,91 @@ const PaymentList: React.FC = () => {
                   </table>
                 </div>
 
+                {/* Mobile/Tablet Cards */}
+                <div className="md:hidden">
+                  {filteredPayments.map((payment, index) => (
+                    <div
+                      key={payment.id}
+                      className={`
+                      p-4 border-b border-gray-100 last:border-0
+                      ${index % 2 === 0 ? "bg-white" : "bg-gray-50/25"}
+                    `}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <CreditCard className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatDate(
+                                new Date(payment.data_criacao_pagamento)
+                              )}
+                            </p>
+                            <p className="text-lg font-bold text-green-600">
+                              {formatCurrency(payment.amount)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-1">Descrição:</p>
+                        <p className="text-sm text-gray-900 break-words">
+                          {payment.description || "Sem Descrição"}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewPaymentLink(payment.id)}
+                          icon={<Eye className="h-4 w-4" />}
+                          className="flex-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
+                        >
+                          Ver Link
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditModal(payment)}
+                          icon={<Pencil className="h-4 w-4" />}
+                          className="flex-1 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-colors"
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-red-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
+                          onClick={() => openDeleteModal(payment)}
+                          icon={<Trash2 className="h-4 w-4" />}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Empty State */}
                 {filteredPayments.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">
-                      Nenhum link de pagamento encontrado
+                  <div className="text-center py-16 px-4">
+                    <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <CreditCard className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Nenhum link encontrado
+                    </h3>
+                    <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+                      Você ainda não possui links de pagamento. Crie seu
+                      primeiro link para começar.
                     </p>
                     <Link to="/create-payment-link">
                       <Button
                         icon={<Plus className="h-4 w-4" />}
-                        className="mt-4"
+                        className="inline-flex"
                       >
                         Criar Link de Pagamento
                       </Button>
@@ -397,7 +503,6 @@ const PaymentList: React.FC = () => {
           </div>
         </div>
       </main>
-
       {/* Edit Payment Modal */}
       <Modal
         isOpen={isEditModalOpen}

@@ -181,8 +181,6 @@ useEffect(() => {
       console.error(error);
     }
   };
-  console.log(formData)
-  console.log(setFormData)
 
   return (
     <div className="min-h-screen bg-background flex">

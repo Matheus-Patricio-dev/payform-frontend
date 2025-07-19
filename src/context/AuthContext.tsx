@@ -102,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signup = async (formData) => {
     setLoading(true);
     setError(null);
-    console.log(formData);
 
     try {
       const response = await api.post("/register", {
