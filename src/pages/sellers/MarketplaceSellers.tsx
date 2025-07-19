@@ -356,6 +356,11 @@ const MarketplaceSellers: React.FC = () => {
       setIsRemoveSeller(false);
     }
   };
+  useEffect(() => {
+  if (isEditModalOpen) {
+    console.log('formData atualizado:', formData);
+  }
+}, [formData]);
 
   if (isLoading) {
     return (
@@ -786,40 +791,30 @@ const MarketplaceSellers: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  setIsEditModalOpen(true),
-                                    setSelectedSeller(seller);
+                                  setIsEditModalOpen(true)
+                                  setSelectedSeller(seller)
                                   setFormData({
-                                    nome: seller?.cliente?.nome,
-                                    email: seller?.cliente?.email,
-                                    senha: seller?.cliente?.senha,
-                                    id: seller?.id_seller,
-                                    taxa_padrao: seller?.cliente?.id_juros,
-                                    taxa_repasse_juros:
-                                      seller?.cliente?.taxa_repasse_juros,
-                                    contactPerson: formData.contactPerson,
-                                    phone: formData.cliente?.phone || "S/N",
-                                    website: formData.cliente?.website || "S/N",
-                                    address: {
-                                      street: formData.street || "S/N",
-                                      number: formData.number || "S/N",
-                                      complement: formData.complement || "S/N",
-                                      neighborhood:
-                                        formData.neighborhood || "S/N",
-                                      city: formData.city || "S/N",
-                                      state: formData.state || "S/N",
-                                      zipCode: formData.zipCode || "S/N",
-                                      country: formData.country || "S/N",
+                                    nome: seller?.cliente?.nome || 'S/N',
+                                    email: seller?.cliente?.email || 'S/N',
+                                    senha: '', // por segurança, nunca preencha senha vinda do backend
+                                    confirmpassword: 'S/N',
+                                    id: seller?.id_seller || 'S/N',
+                                    taxa_padrao: seller?.cliente?.id_juros || 'S/N',
+                                    taxa_repasse_juros: seller?.cliente?.taxa_repasse_juros || 'S/N',
+                                    contactPerson: seller?.cliente?.contactPerson || 'S/N',
+                                    phone: seller?.cliente?.phone || 'S/N',
+                                    website: seller?.cliente?.website || 'S/N',
+                                   
+                                      street: seller?.cliente?.address?.street || 'S/N',
+                                      number: seller?.cliente?.address?.number || 'S/N',
+                                      complement: seller?.cliente?.address?.complement || 'S/N',
+                                      neighborhood: seller?.cliente?.address?.neighborhood || 'S/N',
+                                      city: seller?.cliente?.address?.city || 'S/N',
+                                      state: seller?.cliente?.address?.state || 'S/N',
+                                      zipCode: seller?.cliente?.address?.zipCode || 'S/N',
+                                      country: seller?.cliente?.address?.country || 'S/N',
                                     },
-                                    street: formData.street || "S/N",
-                                    number: formData.number || "S/N",
-                                    complement: formData.complement || "S/N",
-                                    neighborhood:
-                                      formData.neighborhood || "S/N",
-                                    city: formData.city || "S/N",
-                                    state: formData.state || "S/N",
-                                    zipCode: formData.zipCode || "S/N",
-                                    country: formData.country || "S/N",
-                                  });
+                                  );
                                 }}
                                 icon={<Pencil className="h-4 w-4" />}
                               >
