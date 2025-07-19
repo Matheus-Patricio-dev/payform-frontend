@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, ExternalLink, CreditCard, Smartphone, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -12,6 +12,9 @@ import Modal from '../../components/ui/Modal';
 import Sidebar from '../../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import Select from '../../components/ui/Select';
+import api from '../../api/api';
+import { div, form } from 'framer-motion/client';
+
 
 const AssinaturaList: React.FC = () => {
   const { user } = useAuth();
@@ -20,96 +23,91 @@ const AssinaturaList: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [paymentLinks, setPaymentLinks] = useState<any[]>([]);
   const [sellerFilter, setSellerFilter] = useState<string>('all');
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [ isRefresh, setIsRefresh] = useState(false);
   const [formData, setFormData] = useState({
+  plano_id: '',
+  seller_id: '',
+  customer_id: '',
+  payment_methods: 'credito',
+  data_cobranca: '',
+  amount: '',
+  status: 'active',
+
   });
   // Get data based on user type
   const isAdmin = user?.cargo === 'admin';
-  const paymentLinks = [];
+  // const paymentLinks = [];
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
-  const filteredPayments = paymentLinks.filter(link =>
-    link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    link.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
-  const handleDeletePayment = () => {
+  const filteredPayments = paymentLinks.filter(link =>{
+    const matchesSearch =
+    link.customer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    link.seller_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === 'all' || link.status === statusFilter
+
+    return matchesSearch && matchesStatus 
+
+  });
+
+  const handleDeleteSignature = async () => {
+    if (!selectedPayment?.id) {
+        toast.error('Assinatura inválida');
+        return;
+    }
     try {
-      if (!selectedPayment) return;
-
-      // Delete payment link logic here
-      toast.success('Link de pagamento removido com sucesso!');
+      await api.delete(`/assinaturas/${selectedPayment.id}`)
+      toast.success('Assinatura removida com sucesso!');
       setIsDeleteModalOpen(false);
       setSelectedPayment(null);
+      fetchData({})
     } catch (error) {
-      toast.error('Erro ao remover link de pagamento');
+      toast.error('Erro ao remover assinatura');
     }
   };
 
-  const handleAddSeller = async () => {
-    console.log(formData)
-    // try {
-    //   if (!user) return;
-    //   if (!formData.id.trim()) {
-    //     toast.error('ID do vendedor é obrigatório');
-    //     setIsCreateSeller(false)
+  const handleAddSignature = async () => {
+  const { plano_id, seller_id, customer_id, amount, payment_methods, status } = formData;
 
-    //     return;
-    //   }
-    //   setIsCreateSeller(true)
+  if (!plano_id || !seller_id || !customer_id || !amount || !payment_methods || !status) {
+    toast.error('Preencha todos os campos obrigatórios!');
+    return;
+  }
 
-    //   if (sellersData.some(seller => seller.cliente.id === formData.id)) {
-    //     toast.error('Este ID já está em uso');
-    //     return;
-    //   }
-
-    //   await signupSeller({
-    //     id_seller: formData.id,
-    //     nome: formData.nome,
-    //     email: formData.email,
-    //     password: formData.password,
-    //     confirmpassword: formData.confirmpassword,
-    //     marketplaceId: formData.marketplaceId
-    //   });
-
-    //   setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
-    //   toast.success('Vendedor adicionado com sucesso!');
-    //   setIsAddModalOpen(false);
-    //   await fetchSellers();
-    // } catch (error) {
-    //   toast.error('Erro ao adicionar vendedor');
-    // } finally {
-    //   setIsCreateSeller(false)
-
-    // }
+  try {
+    const data = await api.post('/assinaturas',formData);
+    
+    toast.success('Assinatura criada com sucesso!');
+    setFormData({});
+    setIsAddModalOpen(false);
+    await fetchData({}); // Atualiza a lista
+  } catch (error) {
+    console.error(error);
+    toast.error('Erro ao criar assinatura');
+  }
   };
 
-  const handleEditSeller = async (id_seller: string) => {
+  const handleEditSignature = async () => {
+    if (!selectedPayment?.id) {
+      toast.error('Assinatura inválida');
+      return;
+    }
+
     try {
-      // console.log(id_seller)
-      // if (!user || !selectedSeller) return;
-
-      // const response = await api.put(`/seller/${id_seller}`, {
-      //   nome: formData.nome,
-      //   email: formData.email,
-      //   password: formData.password || null,
-      //   marketplaceId: myMarketplaceId
-      // });
-      // console.log(response)
-
-      // if (response.data) {
-      //   toast.success('Vendedor atualizado com sucesso!');
-      //   setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
-      //   setIsEditModalOpen(false);
-      //   // setSelectedSeller(null);
-      //   // await fetchSellers();
-      // }
-
+      
+      const data = await api.put(`/assinaturas/${selectedPayment.id}`, formData)
+      
+      toast.success('Assinatura atualizada com sucesso!');
+      setIsAddModalOpen(false);
+      fetchData({})
     } catch (error) {
-      toast.error('Erro ao atualizar vendedor');
+      toast.error('Erro ao criar assinatura');
       console.error(error);
     }
   };
@@ -121,8 +119,8 @@ const AssinaturaList: React.FC = () => {
   };
 
   const openEditModal = (payment: any) => {
-    if (payment.status !== 'pending') {
-      toast.error('Apenas links pendentes podem ser editados');
+    if (payment.status !== 'active') {
+      toast.error('Apenas assinaturas ativas podem ser editados');
       return;
     }
     setSelectedPayment(payment);
@@ -130,6 +128,7 @@ const AssinaturaList: React.FC = () => {
     setFormData({
       amount: payment.amount,
       description: payment.description,
+      status: payment.status,
       paymentMethods: payment.paymentMethods,
     });
   };
@@ -139,6 +138,39 @@ const AssinaturaList: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+// ✅ Corrigir a função fetchData
+const fetchData = async ({refreshData = true}) => {
+  setIsRefresh(true)
+  try {
+
+      const cache = localStorage.getItem('assinatura')
+
+      if (cache && refreshData) {
+        const data = JSON.parse(cache)
+        setPaymentLinks(data)
+        setIsRefresh(false)
+        return
+      }
+    
+
+    const response = await api.get('/assinaturas');
+    const data = response.data
+    setPaymentLinks(data); // 👈 aqui salva os dados corretamente
+    localStorage.setItem("assinaturas", JSON.stringify(data))
+  } catch (error) {
+    console.log('erro na api');
+    toast.error('Erro ao buscar assinaturas');
+  } finally{
+    setIsRefresh(false)
+  }
+  
+};
+
+// ✅ Executar somente uma vez ao montar
+useEffect(() => {
+  fetchData({});
+}, []
+)
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -153,11 +185,24 @@ const AssinaturaList: React.FC = () => {
                 {isAdmin ? 'Todos os Links de Pagamento' : 'Gerenciamento de Assinaturas'}
               </h1>
               {!isAdmin && (
+
+                <div className="flex gap-2 ml-auto">
+                      <Button
+                  loading={isRefresh}
+                  disabled={isRefresh}
+                  variant="outline"
+                  onClick={() => fetchData({ refreshData: false })}
+                  icon={<RefreshCw className="h-4 w-4" />}
+                  className="hover:bg-gray-50"
+                >
+                  {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                </Button>
                 <button onClick={() => setIsAddModalOpen(true)}>
                   <Button icon={<Plus className="h-4 w-4" />}>
                     Criar Assinatura
                   </Button>
                 </button>
+                </div>
               )}
             </div>
 
@@ -175,8 +220,7 @@ const AssinaturaList: React.FC = () => {
                   options={[
                     { value: 'all', label: 'Todos os Status' },
                     { value: 'active', label: 'Ativos' },
-                    { value: 'pending', label: 'Pendentes' },
-                    { value: 'expired', label: 'Expirados' }
+                    { value: 'inactive', label: 'Inativos' },
                   ]}
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -212,7 +256,9 @@ const AssinaturaList: React.FC = () => {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Plano ID</th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Data Cobrança</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Referencia Vendedor</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID customer</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Forma de pagamento</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Valor</th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">Status</th>
                         <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
@@ -221,19 +267,26 @@ const AssinaturaList: React.FC = () => {
                     <tbody>
                       {filteredPayments.map((payment) => (
                         <tr key={payment.id} className="border-b last:border-0 hover:bg-gray-50">
-                          <td className="py-4 px-6">
-                            {formatDate(new Date(payment.createdAt))}
-                          </td>
+                          <td className="py-4 px-6">{payment.plano_id}</td>
+                          <td className="py-4 px-6">{payment.seller_id}</td>
+                          <td className="py-4 px-6">{payment.customer_id}</td>
+                          <td className="py-4 px-6">{payment.payment_methods}</td>
                           <td className="py-4 px-6">{formatCurrency(payment.amount)}</td>
                           <td className="py-4 px-6">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${payment.status === 'active'
-                              ? 'bg-success/10 text-success'
-                              : payment.status === 'pending'
-                                ? 'bg-warning/10 text-warning'
-                                : 'bg-error/10 text-error'
-                              }`}>
-                              {payment.status === 'active' ? 'Ativo' :
-                                payment.status === 'pending' ? 'Pendente' : 'Expirado'}
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                payment.status === 'active'
+                                  ? 'bg-success/10 text-success'
+                                  : payment.status === 'pending'
+                                  ? 'bg-warning/10 text-warning'
+                                  : 'bg-error/10 text-error'
+                              }`}
+                            >
+                              {payment.status === 'active'
+                                ? 'Ativo'
+                                : payment.status === 'inactive'
+                                ? 'Inativo'
+                                : 'Inativo'}
                             </span>
                           </td>
                           <td className="py-4 px-6">
@@ -243,7 +296,6 @@ const AssinaturaList: React.FC = () => {
                                 size="sm"
                                 onClick={() => handleViewPaymentLink(payment.id)}
                                 icon={<Eye className="h-4 w-4" />}
-                                title="Visualizar link de pagamento"
                               >
                                 Ver Link
                               </Button>
@@ -252,7 +304,7 @@ const AssinaturaList: React.FC = () => {
                                 size="sm"
                                 onClick={() => openEditModal(payment)}
                                 icon={<Pencil className="h-4 w-4" />}
-                                disabled={payment.status !== 'pending'}
+                                disabled={payment.status !== 'active'}
                               >
                                 Editar
                               </Button>
@@ -335,9 +387,19 @@ const AssinaturaList: React.FC = () => {
             label="data da cobrança"
             type="date"
             value={formData.data_cobranca}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, data_cobranca: e.target.value })}
             placeholder="ex: 10000 (R$ 100,00)"
             fullWidth
+          />
+          <Select
+            label='Status'
+            value={formData.status}
+            onChange={(e)=> setFormData({ ...formData, status: e.target.value})}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
+               options={[
+                    { value: 'active', label: 'Ativo' },
+                    { value: 'inactive', label: 'Inativo' },
+                  ]}
           />
           {/* Novo campo de Valor do Plano */}
           <Input
@@ -353,7 +415,7 @@ const AssinaturaList: React.FC = () => {
             <Button variant="outline" onClick={() => { setIsAddModalOpen(false); setFormData({}) }}>
               Cancelar
             </Button>
-            <Button onClick={handleAddSeller}>
+            <Button onClick={handleAddSignature}>
               Adicionar
             </Button>
           </div>
@@ -408,6 +470,16 @@ const AssinaturaList: React.FC = () => {
             placeholder="ex: 10000 (R$ 100,00)"
             fullWidth
           />
+          <Select
+            label='Status'
+            value={formData.status}
+            onChange={(e)=> setFormData({ ...formData, status: e.target.value})}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-opacity-50"
+               options={[
+                    { value: 'active', label: 'Ativo' },
+                    { value: 'inactive', label: 'Inativo' },
+                  ]}
+          />
           {/* Novo campo de Valor do Plano */}
           <Input
             label="Valor da Assinatura (em centavos)"
@@ -422,7 +494,7 @@ const AssinaturaList: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => handleEditSeller(selectedPayment?.id)}>
+            <Button onClick={() => handleEditSignature(selectedPayment?.id)}>
               Salvar
             </Button>
           </div>
@@ -460,7 +532,7 @@ const AssinaturaList: React.FC = () => {
               Cancelar
             </Button>
             <Button
-              onClick={handleDeletePayment}
+              onClick={handleDeleteSignature}
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
             >
               Excluir Plano

@@ -38,7 +38,7 @@ export interface PaymentLink {
 
 export type PaymentMethod = 'pix' | 'credit_card' | 'bank_slip' | 'bank_transfer';
 
-export type TransactionStatus = 'completa' | 'pendente' | 'rejeitada';
+export type TransactionStatus = 'completa' | 'pendente' | 'rejeitada' | 'paga' | 'falha';
 
 export interface Transaction {
   id: string;

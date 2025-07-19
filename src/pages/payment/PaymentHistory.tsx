@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   History,
   Search,
@@ -20,56 +20,538 @@ import {
   Eye,
   RefreshCw,
   Store,
-  Building2
-} from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { getUserTransactions, getTransactionStats } from '../../services/paymentService';
-import { formatCurrency, formatDateTime, formatDate } from '../../utils/formatters';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Select from '../../components/ui/Select';
-import Sidebar from '../../components/layout/Sidebar';
-import { TransactionStatus, PaymentMethod } from '../../types';
-import api from '../../api/api';
+  Building2,
+  Hash,
+  Copy,
+  User,
+  FileText,
+  X,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import {
+  getUserTransactions,
+  getTransactionStats,
+} from "../../services/paymentService";
+import {
+  formatCurrency,
+  formatDateTime,
+  formatDate,
+} from "../../utils/formatters";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
+import Sidebar from "../../components/layout/Sidebar";
+import { TransactionStatus, PaymentMethod } from "../../types";
+import api from "../../api/api";
+// Modal Component
+const TransactionModal: React.FC<{
+  transaction: any;
+  isOpen: boolean;
+  onClose: () => void;
+  isAdmin: boolean;
+}> = ({ transaction, isOpen, onClose, isAdmin }) => {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const getStatusConfig = (status: TransactionStatus) => {
+    switch (status) {
+      case "pago":
+        return {
+          label: "Paga",
+          color: "text-green-700 bg-green-50 border-green-200",
+          icon: <CheckCircle className="h-4 w-4" />,
+          dotColor: "bg-green-500",
+        };
+      case "pendente":
+        return {
+          label: "Pendente",
+          color: "text-yellow-700 bg-yellow-50 border-yellow-200",
+          icon: <Clock className="h-4 w-4" />,
+          dotColor: "bg-yellow-500",
+        };
+      case "falha":
+        return {
+          label: "Recusada",
+          color: "text-red-700 bg-red-50 border-red-200",
+          icon: <XCircle className="h-4 w-4" />,
+          dotColor: "bg-red-500",
+        };
+      default:
+        return {
+          label: status,
+          color: "text-gray-700 bg-gray-50 border-gray-200",
+          icon: <Clock className="h-4 w-4" />,
+          dotColor: "bg-gray-500",
+        };
+    }
+  };
+
+  const getPaymentMethodConfig = (methods: PaymentMethod[]) => {
+    return methods.map((method) => {
+      switch (method) {
+        case "credit_card":
+          return {
+            label: "Cartão de Crédito",
+            icon: <CreditCard className="h-4 w-4" />,
+            color: "text-blue-600 bg-blue-50",
+          };
+        case "pix":
+          return {
+            label: "PIX",
+            icon: <Smartphone className="h-4 w-4" />,
+            color: "text-green-600 bg-green-50",
+          };
+        case "bank_transfer":
+          return {
+            label: "Transferência",
+            icon: <ArrowUpRight className="h-4 w-4" />,
+            color: "text-indigo-600 bg-indigo-50",
+          };
+        default:
+          return {
+            label: method,
+            icon: <CreditCard className="h-4 w-4" />,
+            color: "text-gray-600 bg-gray-50",
+          };
+      }
+    });
+  };
+
+  if (!isOpen || !transaction) return null;
+
+  const statusConfig = getStatusConfig(transaction.status);
+  const methodConfig = getPaymentMethodConfig(
+    transaction?.pagamento?.paymentMethods || []
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Detalhes da Transação
+              </h2>
+              <p className="text-sm text-gray-600">
+                ID: {transaction.id.slice(0, 8)}...
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Status e Valor */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Valor</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(transaction.valor)}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Status</p>
+                    <div
+                      className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium border ${statusConfig.color} mt-2`}
+                    >
+                      {statusConfig.icon}
+                      <span>{statusConfig.label}</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`w-3 h-3 rounded-full ${statusConfig.dotColor}`}
+                  ></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Informações do Cliente */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="h-5 w-5" />
+                <span>Informações do Cliente</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Nome
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900">
+                      {transaction?.cliente?.nome || "Cliente Anônimo"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(
+                          transaction?.cliente?.nome || "",
+                          "nome"
+                        )
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "nome" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Email
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900">
+                      {transaction?.cliente?.email || "Email não informado"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(
+                          transaction?.cliente?.email || "",
+                          "email"
+                        )
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "email" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+
+                {transaction?.cliente?.telefone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Telefone
+                    </label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <p className="text-sm text-gray-900">
+                        {transaction.cliente.telefone}
+                      </p>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            transaction.cliente.telefone,
+                            "telefone"
+                          )
+                        }
+                        className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                      {copiedField === "telefone" && (
+                        <span className="text-xs text-green-600">Copiado!</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {transaction?.cliente?.endereco && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Endereço
+                    </label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <p className="text-sm text-gray-900">
+                        {transaction.cliente.endereco}
+                      </p>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            transaction.cliente.endereco,
+                            "endereco"
+                          )
+                        }
+                        className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                      {copiedField === "endereco" && (
+                        <span className="text-xs text-green-600">Copiado!</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Métodos de Pagamento */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CreditCard className="h-5 w-5" />
+                <span>Métodos de Pagamento</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {methodConfig.map((config, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border ${config.color}`}
+                  >
+                    {config.icon}
+                    <span className="font-medium">{config.label}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Informações da Transação */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Hash className="h-5 w-5" />
+                <span>Detalhes da Transação</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    ID da Transação Zoop
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900 font-mono">
+                      {transaction?.transacao_id_zoop ||
+                        "Sem ID de transação zoop"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(transaction?.transacao_id_zoop, "id")
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "id" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    ID do Link de Pagamento
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900 font-mono">
+                      {transaction?.pagamento?.id ||
+                        "Sem ID do Link de Pagamento"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(transaction?.pagamento?.id, "id")
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "id" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Data de Criação
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <p className="text-sm text-gray-900">
+                      {formatDateTime(new Date(transaction.data_criacao))}
+                    </p>
+                  </div>
+                </div>
+
+                {transaction?.pagamento?.description && (
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-600">
+                      Descrição
+                    </label>
+                    <p className="text-sm text-gray-900 mt-1 p-3 bg-gray-50 rounded-lg">
+                      {transaction?.pagamento?.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          {/* Informações do Vendedor (apenas para admin) */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Store className="h-5 w-5" />
+                  <span>Informações do Vendedor</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Vendedor
+                    </label>
+                    <p className="text-sm text-gray-900 mt-1">
+                      {transaction?.cliente?.nome || "Vendedor não informado"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Marketplace
+                    </label>
+                    <p className="text-sm text-gray-900 mt-1">
+                      {transaction?.cliente?.marketplaceId ||
+                        "Marketplace não informado"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+          <div className="flex justify-end space-x-3">
+            <Button variant="outline" onClick={onClose}>
+              Fechar
+            </Button>
+            <Button
+              onClick={() => window.print()}
+              icon={<Download className="h-4 w-4" />}
+            >
+              Imprimir
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const PaymentHistory: React.FC = () => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isrefresh, setIsRefresh] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [transactions, setTransactions] = useState([]);
-  const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
-  const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'all'>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [sellerFilter, setSellerFilter] = useState<string>('all');
-  const [marketplaceFilter, setMarketplaceFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<TransactionStatus | "all">(
+    "all"
+  );
+  const [methodFilter, setMethodFilter] = useState<PaymentMethod | "all">(
+    "all"
+  );
+  const [dateFilter, setDateFilter] = useState<
+    "all" | "today" | "week" | "month"
+  >("all");
+  const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sellerFilter, setSellerFilter] = useState<string>("all");
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
+  // Modal states
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const fetchPayments = async ({ refreshData = true }) => {
+    setIsLoading(true);
+    setIsRefresh(true);
 
-
-  const fetchPayments = async () => {
     try {
-      const userData = JSON.parse(localStorage.getItem("user"));
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      const cache = localStorage.getItem("transactions");
 
-      const response = await api.get(`/transactions/${userData?.id}`);
-      setTransactions(response?.data?.transactions);
-      setIsLoading(false)
+      if (!userData.id) {
+        console.warn("Usuário não identificado.");
+        setTransactions([]);
+        return;
+      }
+
+      if (cache && refreshData) {
+        const data = JSON.parse(cache);
+        setTransactions(data?.dados?.transacoes);
+      }
+
+      const response = await api.get(`/transactions/${userData.id}`);
+      const data = response.data;
+      setTransactions(data);
+      localStorage.setItem("transactions", JSON.stringify(data));
+
+      if (Array.isArray(data?.transactions?.transacoes)) {
+        setTransactions(data.transactions.transacoes);
+      } else {
+        console.warn("Resposta da API não está no formato esperado:", data);
+        setTransactions([]);
+      }
     } catch (error) {
-      console.error("Erro ao buscar sellers:", error);
+      console.error("Erro ao buscar transações:", error);
+      setTransactions([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefresh(false);
     }
   };
 
-  React.useEffect(() => {
-    fetchPayments();
-  }, [user])
-  // Simulate loading
-  // React.useEffect(() => {
-  //   const timer = setTimeout(() => setIsLoading(false), 1200);
-  //   return () => clearTimeout(timer);
-  // }, []);
+  useEffect(() => {
+    fetchPayments({ refreshData: true });
+  }, [user]);
+
   // Get data based on user type
-  const isAdmin = user?.cargo === 'admin';
+  const isAdmin = user?.cargo === "admin";
 
   // Inicializa o objeto stats
   const stats = {
@@ -77,53 +559,65 @@ const PaymentHistory: React.FC = () => {
     completed: 0,
     pending: 0,
     declined: 0,
-    totalAmount: 0
+    totalAmount: 0,
   };
 
   // Calcula as estatísticas
-  transactions.forEach(transaction => {
-    stats.totalTransactions += 1; // Incrementa o total de transações
-    stats.totalAmount += parseFloat(transaction.valor) // Soma o valor da transação
+  if (Array.isArray(transactions)) {
+    transactions.forEach((transaction) => {
+      stats.totalTransactions += 1;
+      // Soma o valor da transação apenas se o status for "pago"
+      if (transaction.status === "pago") {
+        stats.totalAmount += parseFloat(transaction.valor) || 0; // Soma o valor da transação
+      }
 
-    // Conta o status da transação
-    if (transaction.status === 'completa') {
-      stats.completed += 1;
-    } else if (transaction.status === 'pendente') {
-      stats.pending += 1;
-    } else if (transaction.status === 'rejeitada') {
-      stats.declined += 1;
-    }
-  });
+      if (transaction.status === "pago") {
+        stats.completed += 1;
+      } else if (transaction.status === "pendente") {
+        stats.pending += 1;
+      } else if (transaction.status === "rejeitada") {
+        stats.declined += 1;
+      }
+    });
+  } else {
+    console.warn("Transações não estão em formato de array:", transactions);
+  }
 
   // Get sellers and marketplaces for admin filters
   const sellers = isAdmin ? [] : [];
   const marketplaces = isAdmin ? [] : [];
 
-
   const filteredTransactions = useMemo(() => {
-    let filtered = transactions?.filter(transaction => {
+    let filtered = transactions?.filter((transaction) => {
       const matchesSearch =
-        transaction.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.customerName
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        transaction.customerEmail
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         transaction.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus = statusFilter === 'all' || transaction.status === statusFilter;
-      const matchesMethod = methodFilter === 'all' || transaction.paymentMethod === methodFilter;
+      const matchesStatus =
+        statusFilter === "all" || transaction.status === statusFilter;
+      const matchesMethod =
+        methodFilter === "all" ||
+        transaction?.pagamento?.paymentMethods?.includes(methodFilter);
 
       let matchesDate = true;
-      if (dateFilter !== 'all') {
+      if (dateFilter !== "all") {
         const transactionDate = new Date(transaction.data_criacao);
         const now = new Date();
 
         switch (dateFilter) {
-          case 'today':
+          case "today":
             matchesDate = transactionDate.toDateString() === now.toDateString();
             break;
-          case 'week':
+          case "week":
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             matchesDate = transactionDate >= weekAgo;
             break;
-          case 'month':
+          case "month":
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             matchesDate = transactionDate >= monthAgo;
             break;
@@ -134,78 +628,88 @@ const PaymentHistory: React.FC = () => {
     });
 
     // Sort transactions
-    filtered.sort((a, b) => {
+    filtered?.sort((a, b) => {
       let comparison = 0;
-      if (sortBy === 'date') {
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "date") {
+        comparison =
+          new Date(a?.pagamento?.data_criacao_pagamento).getTime() -
+          new Date(b?.pagamento?.data_criacao_pagamento).getTime();
       } else {
         comparison = a.amount - b.amount;
       }
-      return sortOrder === 'asc' ? comparison : -comparison;
+      return sortOrder === "asc" ? comparison : -comparison;
     });
 
     return filtered;
-  }, [transactions, searchTerm, statusFilter, methodFilter, dateFilter, sortBy, sortOrder]);
+  }, [
+    transactions,
+    searchTerm,
+    statusFilter,
+    methodFilter,
+    dateFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const getStatusConfig = (status: TransactionStatus) => {
     switch (status) {
-      case 'completa':
+      case "pago":
         return {
-          label: 'Completada',
-          color: 'text-green-700 bg-green-50 border-green-200',
+          label: "Paga",
+          color: "text-green-700 bg-green-50 border-green-200",
           icon: <CheckCircle className="h-4 w-4" />,
-          dotColor: 'bg-green-500'
+          dotColor: "bg-green-500",
         };
-      case 'pendente':
+      case "pendente":
         return {
-          label: 'Pendente',
-          color: 'text-yellow-700 bg-yellow-50 border-yellow-200',
+          label: "Pendente",
+          color: "text-yellow-700 bg-yellow-50 border-yellow-200",
           icon: <Clock className="h-4 w-4" />,
-          dotColor: 'bg-yellow-500'
+          dotColor: "bg-yellow-500",
         };
-      case 'rejeitada':
+      case "falha":
         return {
-          label: 'Recusada',
-          color: 'text-red-700 bg-red-50 border-red-200',
+          label: "Recusada",
+          color: "text-red-700 bg-red-50 border-red-200",
           icon: <XCircle className="h-4 w-4" />,
-          dotColor: 'bg-red-500'
+          dotColor: "bg-red-500",
         };
       default:
         return {
           label: status,
-          color: 'text-gray-700 bg-gray-50 border-gray-200',
+          color: "text-gray-700 bg-gray-50 border-gray-200",
           icon: <Clock className="h-4 w-4" />,
-          dotColor: 'bg-gray-500'
+          dotColor: "bg-gray-500",
         };
     }
   };
 
   const getPaymentMethodConfig = (methods: PaymentMethod[]) => {
-    return methods.map(method => {
+    return methods.map((method) => {
       switch (method) {
-        case 'credit_card':
+        case "credit_card":
           return {
-            label: 'Cartão de Crédito',
+            label: "Cartão de Crédito",
             icon: <CreditCard className="h-4 w-4" />,
-            color: 'text-blue-600 bg-blue-50'
+            color: "text-blue-600 bg-blue-50",
           };
-        case 'pix':
+        case "pix":
           return {
-            label: 'PIX',
+            label: "PIX",
             icon: <Smartphone className="h-4 w-4" />,
-            color: 'text-green-600 bg-green-50'
+            color: "text-green-600 bg-green-50",
           };
-        case 'bank_transfer':
+        case "bank_transfer":
           return {
-            label: 'Transferência',
+            label: "Transferência",
             icon: <ArrowUpRight className="h-4 w-4" />,
-            color: 'text-indigo-600 bg-indigo-50'
+            color: "text-indigo-600 bg-indigo-50",
           };
         default:
           return {
             label: method,
             icon: <CreditCard className="h-4 w-4" />,
-            color: 'text-gray-600 bg-gray-50'
+            color: "text-gray-600 bg-gray-50",
           };
       }
     });
@@ -213,13 +717,23 @@ const PaymentHistory: React.FC = () => {
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    await fetchPayments()
+    await fetchPayments({ refreshData: true });
     setTimeout(() => setIsLoading(false), 800);
   };
+  const openTransactionModal = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
+  };
 
+  const closeTransactionModal = () => {
+    setSelectedTransaction(null);
+    setIsModalOpen(false);
+  };
   const getSellerInfo = (sellerId: string) => {
-    const seller = sellers.find(s => s.id === sellerId);
-    const marketplace = seller ? marketplaces.find(m => m.id === seller.marketplaceId) : null;
+    const seller = sellers.find((s) => s.id === sellerId);
+    const marketplace = seller
+      ? marketplaces.find((m) => m.id === seller.marketplaceId)
+      : null;
     return { seller, marketplace };
   };
 
@@ -228,15 +742,22 @@ const PaymentHistory: React.FC = () => {
       <div className="min-h-screen bg-background flex">
         <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-        <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-          }`}>
+        <main
+          className={`flex-1 transition-all duration-300 ${
+            isCollapsed ? "lg:ml-20" : "lg:ml-64"
+          }`}
+        >
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-[2000px] mx-auto">
               <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                   <div className="loader w-12 h-12 mx-auto mb-4"></div>
-                  <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando Transações</h2>
-                  <p className="text-gray-500">Aguarde enquanto carregamos seu histórico...</p>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                    Carregando Transações
+                  </h2>
+                  <p className="text-gray-500">
+                    Aguarde enquanto carregamos seu histórico...
+                  </p>
                 </div>
               </div>
             </div>
@@ -250,8 +771,11 @@ const PaymentHistory: React.FC = () => {
     <div className="min-h-screen bg-background flex">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
-      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-        }`}>
+      <main
+        className={`flex-1 transition-all duration-300 ${
+          isCollapsed ? "lg:ml-20" : "lg:ml-64"
+        }`}
+      >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto space-y-6">
             {/* Header */}
@@ -267,13 +791,14 @@ const PaymentHistory: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    {isAdmin ? 'Todas as Transações' : 'Histórico de Transações'}
+                    {isAdmin
+                      ? "Todas as Transações"
+                      : "Histórico de Transações"}
                   </h1>
                   <p className="text-gray-600 text-sm sm:text-base">
                     {isAdmin
-                      ? 'Visualize e gerencie todas as transações do sistema'
-                      : 'Acompanhe todas as suas transações em tempo real'
-                    }
+                      ? "Visualize e gerencie todas as transações do sistema"
+                      : "Acompanhe todas as suas transações em tempo real"}
                   </p>
                 </div>
               </div>
@@ -307,8 +832,12 @@ const PaymentHistory: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Total de Transações</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.totalTransactions}</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Total de Transações
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.totalTransactions}
+                      </p>
                     </div>
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <TrendingUp className="h-5 w-5 text-primary" />
@@ -321,8 +850,12 @@ const PaymentHistory: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Receita Total</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalAmount)}</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Receita Total
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {formatCurrency(stats.totalAmount)}
+                      </p>
                     </div>
                     <div className="p-2 bg-green-100 rounded-lg">
                       <DollarSign className="h-5 w-5 text-green-600" />
@@ -376,7 +909,11 @@ const PaymentHistory: React.FC = () => {
                   <div className="space-y-4">
                     <div className="flex-1">
                       <Input
-                        placeholder={isAdmin ? "Buscar por cliente, email, ID da transação ou vendedor..." : "Buscar por cliente, email ou ID..."}
+                        placeholder={
+                          isAdmin
+                            ? "Buscar por cliente, email, ID da transação ou vendedor..."
+                            : "Buscar por cliente, email ou ID..."
+                        }
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         icon={<Search className="h-4 w-4" />}
@@ -387,48 +924,68 @@ const PaymentHistory: React.FC = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                       <Select
                         options={[
-                          { value: 'all', label: 'Todos os Status' },
-                          { value: 'completed', label: 'Completadas' },
-                          { value: 'pending', label: 'Pendentes' },
-                          { value: 'declined', label: 'Recusadas' }
+                          { value: "all", label: "Todos os Status" },
+                          { value: "pago", label: "Aprovadas" },
+                          { value: "pendente", label: "Pendentes" },
+                          { value: "falha", label: "Recusadas" },
                         ]}
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as TransactionStatus | 'all')}
+                        onChange={(e) =>
+                          setStatusFilter(
+                            e.target.value as TransactionStatus | "all"
+                          )
+                        }
                       />
                       <Select
                         options={[
-                          { value: 'all', label: 'Todos os Métodos' },
-                          { value: 'pix', label: 'PIX' },
-                          { value: 'credit_card', label: 'Cartão de Crédito' },
-                          { value: 'bank_slip', label: 'Boleto bancário' }
+                          { value: "all", label: "Todos os Métodos" },
+                          { value: "pix", label: "PIX" },
+                          { value: "credit_card", label: "Cartão de Crédito" },
+                          { value: "bank_slip", label: "Boleto bancário" },
                         ]}
                         value={methodFilter}
-                        onChange={(e) => setMethodFilter(e.target.value as PaymentMethod | 'all')}
+                        onChange={(e) =>
+                          setMethodFilter(
+                            e.target.value as PaymentMethod | "all"
+                          )
+                        }
                       />
                       <Select
                         options={[
-                          { value: 'all', label: 'Todo o Período' },
-                          { value: 'today', label: 'Hoje' },
-                          { value: 'week', label: 'Última Semana' },
-                          { value: 'month', label: 'Último Mês' }
+                          { value: "all", label: "Todo o Período" },
+                          { value: "today", label: "Hoje" },
+                          { value: "week", label: "Última Semana" },
+                          { value: "month", label: "Último Mês" },
                         ]}
                         value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
+                        onChange={(e) =>
+                          setDateFilter(
+                            e.target.value as "all" | "today" | "week" | "month"
+                          )
+                        }
                       />
                       {isAdmin && (
                         <>
                           <Select
                             options={[
-                              { value: 'all', label: 'Todos os Marketplaces' },
-                              ...marketplaces.map(m => ({ value: m.id, label: m.name }))
+                              { value: "all", label: "Todos os Marketplaces" },
+                              ...marketplaces.map((m) => ({
+                                value: m.id,
+                                label: m.name,
+                              })),
                             ]}
                             value={marketplaceFilter}
-                            onChange={(e) => setMarketplaceFilter(e.target.value)}
+                            onChange={(e) =>
+                              setMarketplaceFilter(e.target.value)
+                            }
                           />
                           <Select
                             options={[
-                              { value: 'all', label: 'Todos os Vendedores' },
-                              ...sellers.map(s => ({ value: s.id, label: s.name }))
+                              { value: "all", label: "Todos os Vendedores" },
+                              ...sellers.map((s) => ({
+                                value: s.id,
+                                label: s.name,
+                              })),
                             ]}
                             value={sellerFilter}
                             onChange={(e) => setSellerFilter(e.target.value)}
@@ -439,11 +996,19 @@ const PaymentHistory: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                          icon={sortOrder === 'asc' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                          onClick={() =>
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                          }
+                          icon={
+                            sortOrder === "asc" ? (
+                              <ArrowUpRight className="h-4 w-4" />
+                            ) : (
+                              <ArrowDownRight className="h-4 w-4" />
+                            )
+                          }
                           className="flex-1"
                         >
-                          {sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}
+                          {sortOrder === "asc" ? "Crescente" : "Decrescente"}
                         </Button>
                       </div>
                     </div>
@@ -464,7 +1029,11 @@ const PaymentHistory: React.FC = () => {
                     <CardTitle className="flex items-center space-x-2">
                       <span>Transações</span>
                       <span className="text-sm font-normal text-gray-500">
-                        ({filteredTransactions.length} {filteredTransactions.length === 1 ? 'resultado' : 'resultados'})
+                        ({filteredTransactions.length}{" "}
+                        {filteredTransactions.length === 1
+                          ? "resultado"
+                          : "resultados"}
+                        )
                       </span>
                     </CardTitle>
                   </div>
@@ -474,16 +1043,25 @@ const PaymentHistory: React.FC = () => {
                     <div className="space-y-0">
                       <AnimatePresence>
                         {filteredTransactions.map((transaction, index) => {
-                          const statusConfig = getStatusConfig(transaction.status);
-                          const methodConfig = getPaymentMethodConfig(transaction?.pagamento?.paymentMethods || []);
-                          const { seller, marketplace } = isAdmin ? getSellerInfo(transaction.sellerId) : { seller: null, marketplace: null };
+                          const statusConfig = getStatusConfig(
+                            transaction.status
+                          );
+                          const methodConfig = getPaymentMethodConfig(
+                            transaction?.pagamento?.paymentMethods || []
+                          );
+                          const { seller, marketplace } = isAdmin
+                            ? getSellerInfo(transaction.sellerId)
+                            : { seller: null, marketplace: null };
                           return (
                             <motion.div
                               key={transaction.id}
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.3, delay: index * 0.05 }}
+                              transition={{
+                                duration: 0.3,
+                                delay: index * 0.05,
+                              }}
                               className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors"
                             >
                               <div className="p-4 sm:p-6">
@@ -491,7 +1069,10 @@ const PaymentHistory: React.FC = () => {
                                   <div className="flex items-start space-x-4">
                                     <div>
                                       {methodConfig.map((config, index) => (
-                                        <div key={index} className={`p-2 rounded-lg ${config.color}`}>
+                                        <div
+                                          key={index}
+                                          className={`p-2 rounded-lg ${config.color}`}
+                                        >
                                           {config.icon}
                                         </div>
                                       ))}
@@ -499,12 +1080,16 @@ const PaymentHistory: React.FC = () => {
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center space-x-2 mb-1">
                                         <h3 className="font-semibold text-gray-900 truncate">
-                                          {transaction?.cliente?.nome || 'Cliente Anônimo'}
+                                          {transaction?.cliente?.nome ||
+                                            "Cliente Anônimo"}
                                         </h3>
-                                        <div className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}></div>
+                                        <div
+                                          className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`}
+                                        ></div>
                                       </div>
                                       <p className="text-sm text-gray-600 truncate">
-                                        {transaction?.cliente?.email || 'Email não informado'}
+                                        {transaction?.cliente?.email ||
+                                          "Email não informado"}
                                       </p>
                                       {isAdmin && seller && (
                                         <div className="flex items-center space-x-2 mt-1">
@@ -523,9 +1108,15 @@ const PaymentHistory: React.FC = () => {
                                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                                         <span className="flex items-center space-x-1">
                                           <Calendar className="h-3 w-3" />
-                                          <span>{formatDateTime(new Date(transaction.data_criacao))}</span>
+                                          <span>
+                                            {formatDateTime(
+                                              new Date(transaction.data_criacao)
+                                            )}
+                                          </span>
                                         </span>
-                                        <span>ID: {transaction.id.slice(0, 8)}...</span>
+                                        <span>
+                                          ID: {transaction.id.slice(0, 8)}...
+                                        </span>
                                       </div>
                                     </div>
                                   </div>
@@ -535,7 +1126,9 @@ const PaymentHistory: React.FC = () => {
                                       <p className="text-lg font-bold text-gray-900">
                                         {formatCurrency(transaction.valor)}
                                       </p>
-                                      <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                                      <div
+                                        className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}
+                                      >
                                         {statusConfig.icon}
                                         <span>{statusConfig.label}</span>
                                       </div>
@@ -543,20 +1136,27 @@ const PaymentHistory: React.FC = () => {
 
                                     <div className="flex flex-col space-y-2">
                                       {methodConfig.map((config, index) => (
-                                        <div key={index} className="flex items-center space-x-2 group">
-                                          <div className={`px-2 py-1 rounded-lg text-xs font-medium ${config.color}`}>
+                                        <div
+                                          key={index}
+                                          className="flex items-center space-x-2 group"
+                                        >
+                                          <div
+                                            className={`px-2 py-1 rounded-lg text-xs font-medium ${config.color}`}
+                                          >
                                             {config.label}
                                           </div>
-                                          {/* <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon={<Eye className="h-4 w-4" />}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                          >
-                                            Ver
-                                          </Button> */}
                                         </div>
                                       ))}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon={<Eye className="h-4 w-4" />}
+                                        onClick={() =>
+                                          openTransactionModal(transaction)
+                                        }
+                                      >
+                                        Ver Detalhes
+                                      </Button>
                                     </div>
                                   </div>
                                 </div>
@@ -575,19 +1175,24 @@ const PaymentHistory: React.FC = () => {
                         Nenhuma transação encontrada
                       </h3>
                       <p className="text-gray-600 mb-4">
-                        {searchTerm || statusFilter !== 'all' || methodFilter !== 'all' || dateFilter !== 'all'
-                          ? 'Tente ajustar os filtros para encontrar suas transações.'
-                          : 'Você ainda não possui transações registradas.'
-                        }
+                        {searchTerm ||
+                        statusFilter !== "all" ||
+                        methodFilter !== "all" ||
+                        dateFilter !== "all"
+                          ? "Tente ajustar os filtros para encontrar suas transações."
+                          : "Você ainda não possui transações registradas."}
                       </p>
-                      {(searchTerm || statusFilter !== 'all' || methodFilter !== 'all' || dateFilter !== 'all') && (
+                      {(searchTerm ||
+                        statusFilter !== "all" ||
+                        methodFilter !== "all" ||
+                        dateFilter !== "all") && (
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setSearchTerm('');
-                            setStatusFilter('all');
-                            setMethodFilter('all');
-                            setDateFilter('all');
+                            setSearchTerm("");
+                            setStatusFilter("all");
+                            setMethodFilter("all");
+                            setDateFilter("all");
                           }}
                         >
                           Limpar Filtros
@@ -601,6 +1206,12 @@ const PaymentHistory: React.FC = () => {
           </div>
         </div>
       </main>
+      <TransactionModal
+        isOpen={isModalOpen}
+        transaction={selectedTransaction}
+        onClose={closeTransactionModal}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };

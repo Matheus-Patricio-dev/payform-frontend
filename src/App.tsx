@@ -20,6 +20,7 @@ import MarketplaceSellers from './pages/sellers/MarketplaceSellers';
 import NotFound from './pages/NotFound';
 import PlanList from './pages/plans/PlanList';
 import AssinaturaList from './pages/assinaturas/AssinaturaList';
+import JuroList from './pages/juros/JurosList';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -137,6 +138,14 @@ function App() {
         element={
           <PrivateRoute>
             <AssinaturaList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/juros"
+        element={
+          <PrivateRoute>
+            <JuroList />
           </PrivateRoute>
         }
       />

@@ -19,8 +19,8 @@ const loadData = () => {
 
 const saveData = () => {
   try {
-    localStorage.setItem('paymentLinks', JSON.stringify(paymentLinks));
-    localStorage.setItem('transactions', JSON.stringify(transactions));
+    // localStorage.setItem('paymentLinks', JSON.stringify(paymentLinks));
+    // localStorage.setItem('transactions', JSON.stringify(transactions));
   } catch (error) {
     console.error('Error saving data:', error);
   }

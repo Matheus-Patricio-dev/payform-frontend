@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getPaymentLinks } from '../../services/paymentService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';

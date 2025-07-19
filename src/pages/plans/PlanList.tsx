@@ -38,7 +38,8 @@ const PlanList: React.FC = () => {
     payment_methods: ['credit'],
     nome: '',                  // defina se quiser um padrão
     description: '',                  // defina se quiser um padrão
-    amount: 0,                  // defina se quiser um padrão
+    amount: 0,
+    status: ''                  // defina se quiser um padrão
   });
   // Get data based on user type
   const isAdmin = user?.cargo === 'admin';
@@ -49,7 +50,16 @@ const PlanList: React.FC = () => {
     try {
       const userData = JSON.parse(localStorage.getItem("user"));
 
+        
+      const cacheKey = `planos_${userData.id}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        setPaymentLinks(JSON.parse(cached))
+        return
+      }
+
       const response = await api.get(`/planos/cliente/${userData?.id}`);
+
       setPaymentLinks(response?.data);
     } catch (error) {
       console.error("Erro ao buscar sellers:", error);
@@ -64,15 +74,20 @@ const PlanList: React.FC = () => {
     link?.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     link?.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleDeletePayment = () => {
+  const handleDeletePayment = async () => {
     try {
-      if (!selectedPayment) return;
+      if (!selectedPayment.id){
+        toast.error('Nenhum plano selecionado')
+        return
+      } 
+      
 
-      // Delete payment link logic here
-      toast.success('Plano removido com sucesso!');
+      const response = await api.delete(`/planos/${selectedPayment.id}`)
+  
+      toast.success(`Plano ${selectedPayment.name} com sucesso!`);
       setIsDeleteModalOpen(false);
       setSelectedPayment(null);
+      await fecthPlans() // renderizar novamente os planos
     } catch (error) {
       toast.error('Erro ao remover plano');
     }
@@ -81,9 +96,8 @@ const PlanList: React.FC = () => {
   const handleAddPlan = async () => {
     try {
       if (!user) return;
-      console.log(formData, user)
       const requiredFields = {
-        frequency: 'Frequência',
+        // frequency: 'Frequência',
         interval: 'Intervalo',
         // payment_methods: 'Método de pagamento',
         nome: 'Nome'
@@ -99,7 +113,9 @@ const PlanList: React.FC = () => {
       const newFormData = {
         ...formData,
         cliente_id: user.id,
+        marketplaceId: user.marketplaceId,
         payment_methods: ['credit'],
+        frequency: 'diario',
         status: "ativo",
         createdAt: Date.now()
       }
@@ -118,30 +134,30 @@ const PlanList: React.FC = () => {
     }
   };
 
-  const handleEditSeller = async (id_seller: string) => {
+  const handleEditPlan = async (planId: string) => {
     try {
-      // console.log(id_seller)
-      // if (!user || !selectedSeller) return;
+      if (!selectedPayment.id) {
+        toast.error("Não foi possivel selecionar o plano!")
+        return
+      }
 
-      // const response = await api.put(`/seller/${id_seller}`, {
-      //   nome: formData.nome,
-      //   email: formData.email,
-      //   password: formData.password || null,
-      //   marketplaceId: myMarketplaceId
-      // });
-      // console.log(response)
+      const newData = {
+        ...formData,
+        cliente_id: user.id,
+        marketplaceId: user.marketplaceId,
+        createdAt: selectedPayment.createdAt,
+      }
+      const response = await api.put(`/planos/${selectedPayment.id}`, newData)
 
-      // if (response.data) {
-      //   toast.success('Vendedor atualizado com sucesso!');
-      //   setFormData({ id: '', nome: '', email: '', password: '', confirmpassword: '', marketplaceId: '' });
-      //   setIsEditModalOpen(false);
-      //   // setSelectedSeller(null);
-      //   // await fetchSellers();
-      // }
-
+      if (response?.data) {
+          toast.success('Plano atualizado com sucesso!');
+          setIsEditModalOpen(false);
+          setSelectedPayment(null);
+          await fecthPlans(); // Recarrega os planos atualizados
+      }
     } catch (error) {
-      toast.error('Erro ao atualizar vendedor');
-      console.error(error);
+      toast.error(error?.response?.data?.error || 'Erro ao atualizar plano');
+      console.error("Erro ao editar plano:", error);
     }
   };
 
@@ -152,16 +168,15 @@ const PlanList: React.FC = () => {
   };
 
   const openEditModal = (payment: any) => {
-    if (payment.status !== 'pending') {
-      toast.error('Apenas links pendentes podem ser editados');
-      return;
-    }
+    
     setSelectedPayment(payment);
     setIsEditModalOpen(true);
     setFormData({
+      nome: payment.nome,
       amount: payment.amount,
       description: payment.description,
       paymentMethods: payment.paymentMethods,
+      status: payment.status
     });
   };
 
@@ -273,7 +288,7 @@ const PlanList: React.FC = () => {
                                 : 'bg-error/10 text-error'
                               }`}>
                               {payment.status === 'ativo' ? 'Ativo' :
-                                payment.status === 'pendente' ? 'Pendente' : 'Expirado'}
+                                payment.status === 'pendente' ? 'Pendente' : 'Inativo'}
                             </span>
                           </td>
                           <td className="py-4 px-6">
@@ -385,6 +400,17 @@ const PlanList: React.FC = () => {
             fullWidth
           />
 
+          <Select
+            label="Status *"
+            options={[
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' },
+            ]}
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ativo' | 'inativo' })}
+            fullWidth
+          />
+
           {/* Novo campo de Descrição */}
           <Input
             label="Descrição"
@@ -468,7 +494,16 @@ const PlanList: React.FC = () => {
             placeholder="ex: 10000 (R$ 100,00)"
             fullWidth
           />
-
+          <Select
+            label="Status *"
+            options={[
+              { value: 'ativo', label: 'Ativo' },
+              { value: 'inativo', label: 'Inativo' },
+            ]}
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ativo' | 'inativo' })}
+            fullWidth
+          />
           {/* Novo campo de Descrição */}
           <Input
             label="Descrição"
@@ -482,7 +517,7 @@ const PlanList: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => handleEditSeller(selectedPayment?.id)}>
+            <Button onClick={() => handleEditPlan(selectedPayment?.id)}>
               Salvar
             </Button>
           </div>
