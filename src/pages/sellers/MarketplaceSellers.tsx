@@ -173,33 +173,7 @@ const MarketplaceSellers: React.FC = () => {
         return;
       }
 
-      // const payload = {
-      //   id_seller: formData.id,
-      //   nome: formData.nome,
-      //   email: formData.email,
-      //   password: formData.password,
-      //   confirmpassword: formData.confirmpassword,
-      //   marketplaceId: myMarketplaceId || "",
-      //   contactPerson: formData.contactPerson || "",
-      //   phone: formData.phone || "",
-      //   website: formData.website || "",
-      //   taxa_padrao: formData.taxa_padrao || "",
-      //   taxa_repasse_juros: formData.taxa_repasse_juros || "",
-      //   address: {
-      //     street: formData.street || "",
-      //     number: formData.number || "",
-      //     complement: formData.complement || "",
-      //     neighborhood: formData.neighborhood || "",
-      //     city: formData.city || "",
-      //     state: formData.state || "",
-      //     zipCode: formData.zipCode || "",
-      //     country: formData.country || "",
-      //   },
-      // };
-      setIsCreateSeller(true);
-      setLoading(true);
-
-      await signupSeller({
+      const payload = {
         id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
@@ -221,13 +195,19 @@ const MarketplaceSellers: React.FC = () => {
           zipCode: formData.zipCode || "",
           country: formData.country || "",
         },
-      });
+      };
+      setIsCreateSeller(true);
+      setLoading(true);
+   
+      // console.log(formData)
+      await signupSeller(payload);
       resetForm();
 
       toast.success("Vendedor adicionado com sucesso!");
       setIsAddModalOpen(false);
       await fetchSellers();
     } catch (error) {
+      console.log(error);
       toast.error("Erro ao adicionar vendedor");
     } finally {
       setIsCreateSeller(false);
@@ -817,8 +797,8 @@ const MarketplaceSellers: React.FC = () => {
                                     taxa_repasse_juros:
                                       seller?.cliente?.taxa_repasse_juros,
                                     contactPerson: formData.contactPerson,
-                                    phone: formData.phone || "S/N",
-                                    website: formData.website || "S/N",
+                                    phone: formData.cliente?.phone || "S/N",
+                                    website: formData.cliente?.website || "S/N",
                                     address: {
                                       street: formData.street || "S/N",
                                       number: formData.number || "S/N",

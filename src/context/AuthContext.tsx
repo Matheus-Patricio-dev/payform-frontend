@@ -102,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signup = async (formData) => {
     setLoading(true);
     setError(null);
+    console.log(formData);
 
     try {
       const response = await api.post("/register", {
@@ -184,23 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   //REGISTRAR SELLER
-  const signupSeller = async ({
-    id_seller,
-    nome,
-    email,
-    password,
-    confirmpassword,
-    taxa_padrao,
-    taxa_repasse_juros,
-  }: {
-    id_seller: string;
-    nome: string;
-    email: string;
-    password: string;
-    confirmpassword: string;
-    taxa_padrao: string;
-    taxa_repasse_juros: string;
-  }) => {
+  const signupSeller = async (formData) => {
     let marketplaceId = user?.marketplaceId;
     if (user?.cargo === "marketplace") {
       marketplaceId = user?.dataInfo.id;
@@ -212,20 +197,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       );
     }
     try {
-      const response = await api.post("register-seller", {
-        id_seller,
-        nome,
-        email,
-        password,
-        confirmpassword,
-        marketplaceId,
-        taxa_padrao,
-        taxa_repasse_juros,
+      const response = await api.post("/register-seller", {
+       ...formData
       });
       return response.data; // dados + token
     } catch (error: any) {
       throw new Error(
-        error.response.data.message || "Erro ao registrar vendedor!"
+        error?.response?.data?.message || "Erro ao registrar vendedor!"
       );
     }
   };
