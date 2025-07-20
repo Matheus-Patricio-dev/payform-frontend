@@ -389,8 +389,8 @@ const PaymentPage: React.FC = () => {
       const payload = {
         ...cardData,
         amount: link?.amount,
-        id_juros: user?.cliente?.taxa_padrao,
-        taxa_repasse_juros: user?.cliente?.taxa_repasse_juros,
+        id_juros: user?.id_juros,
+        taxa_repasse_juros: user?.juros?.id_zoop,
         number_installments: user?.juros?.parcelas?.filter(
           (item) => item.taxa > 0
         )?.length,
