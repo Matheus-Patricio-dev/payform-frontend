@@ -2,7 +2,7 @@ import axios from "axios";
 
 // instancia a api
 const api = axios.create({
-    baseURL: 'http://localhost:9001/api/auth',
+    baseURL: 'https://payform-backend.onrender.com/api/auth',
 })
 // https://payform-backend.onrender.com/api/auth
 // pega o token
