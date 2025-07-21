@@ -75,7 +75,14 @@ const TransactionModal: React.FC<{
         };
       case "pendente":
         return {
-          label: "Pendente",
+          label: "Pré Autorizadas",
+          color: "text-yellow-700 bg-yellow-50 border-yellow-200",
+          icon: <Clock className="h-4 w-4" />,
+          dotColor: "bg-yellow-500",
+        };
+      case "pendente_pix":
+        return {
+          label: "Pendente Pix",
           color: "text-yellow-700 bg-yellow-50 border-yellow-200",
           icon: <Clock className="h-4 w-4" />,
           dotColor: "bg-yellow-500",
@@ -131,9 +138,7 @@ const TransactionModal: React.FC<{
   if (!isOpen || !transaction) return null;
 
   const statusConfig = getStatusConfig(transaction.status);
-  const methodConfig = getPaymentMethodConfig(
-    transaction?.pagamento?.paymentMethods || []
-  );
+  const methodConfig = getPaymentMethodConfig(transaction?.paymentMethod || []);
 
   return (
     <motion.div
@@ -179,9 +184,11 @@ const TransactionModal: React.FC<{
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Valor</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Valor Líquido
+                    </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(transaction.valor)}
+                      {formatCurrency(transaction?.valor_liquido || 0)}
                     </p>
                   </div>
                   <div className="p-2 bg-primary/10 rounded-lg">
@@ -190,7 +197,37 @@ const TransactionModal: React.FC<{
                 </div>
               </CardContent>
             </Card>
-
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">
+                      Valor Bruto
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(transaction?.valor)}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">
+                      Parcela Selecionada
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {transaction?.parcela_selecionada || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -405,7 +442,27 @@ const TransactionModal: React.FC<{
                     )}
                   </div>
                 </div>
-
+                <div>
+                  <label className="text-sm font-medium text-gray-600">
+                    Valor Link do Pagamento
+                  </label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-gray-900 font-mono">
+                      {formatCurrency(transaction?.pagamento?.amount)}
+                    </p>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(transaction?.pagamento?.id, "id")
+                      }
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    {copiedField === "id" && (
+                      <span className="text-xs text-green-600">Copiado!</span>
+                    )}
+                  </div>
+                </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">
                     Data de Criação
@@ -662,7 +719,14 @@ const PaymentHistory: React.FC = () => {
         };
       case "pendente":
         return {
-          label: "Pendente",
+          label: "Pré Autorizadas",
+          color: "text-yellow-700 bg-yellow-50 border-yellow-200",
+          icon: <Clock className="h-4 w-4" />,
+          dotColor: "bg-yellow-500",
+        };
+      case "pendente_pix":
+        return {
+          label: "Pendente Pix",
           color: "text-yellow-700 bg-yellow-50 border-yellow-200",
           icon: <Clock className="h-4 w-4" />,
           dotColor: "bg-yellow-500",
@@ -814,9 +878,10 @@ const PaymentHistory: React.FC = () => {
                 <Button
                   variant="outline"
                   icon={<Download className="h-4 w-4" />}
-                  className="hover:bg-gray-50"
+                  className="hover:bg-gray-50 disabled:cursor-not-allowed"
+                  disabled
                 >
-                  Exportar
+                  Em Breve
                 </Button>
               </div>
             </motion.div>
@@ -926,7 +991,8 @@ const PaymentHistory: React.FC = () => {
                         options={[
                           { value: "all", label: "Todos os Status" },
                           { value: "pago", label: "Aprovadas" },
-                          { value: "pendente", label: "Pendentes" },
+                          { value: "pendente", label: "Pré Autorizadas" },
+                          { value: "pendente_pix", label: "Pendente Pix" },
                           { value: "falha", label: "Recusadas" },
                         ]}
                         value={statusFilter}
@@ -1047,7 +1113,7 @@ const PaymentHistory: React.FC = () => {
                             transaction.status
                           );
                           const methodConfig = getPaymentMethodConfig(
-                            transaction?.pagamento?.paymentMethods || []
+                            transaction?.paymentMethod || []
                           );
                           const { seller, marketplace } = isAdmin
                             ? getSellerInfo(transaction.sellerId)

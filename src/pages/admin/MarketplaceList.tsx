@@ -31,9 +31,12 @@ import { useAuth } from "../../hooks/useAuth";
 import api from "../../api/api";
 import * as yup from "yup";
 import { motion } from "framer-motion";
+import axios from "axios";
 
 interface MarketplaceFormData {
   id: string;
+  zpk_id_marketplace: string;
+  cpf_cnpj: string;
   name: string;
   email: string;
   password: string;
@@ -65,25 +68,96 @@ interface SellerFormData {
 interface FormErrors {
   [key: string]: string;
 }
+
+// Função para validar CPF
+const validateCpf = (cpf) => {
+  // Remove caracteres não numéricos
+  const cleaned = cpf.replace(/\D/g, "");
+
+  if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) {
+    return false; // CPF deve ter 11 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 9),
+    [10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 9) + firstDigit,
+    [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[9] == firstDigit && cleaned[10] == secondDigit;
+};
+
+// Função para validar CNPJ
+const validateCnpj = (cnpj) => {
+  // Remove caracteres não numéricos
+  const cleaned = cnpj.replace(/\D/g, "");
+
+  if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) {
+    return false; // CNPJ deve ter 14 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 12),
+    [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 12) + firstDigit,
+    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[12] == firstDigit && cleaned[13] == secondDigit;
+};
+
 // Validation schemas
 const personalInfoSchema = yup.object().shape({
   id: yup
     .string()
-    .required("ID é obrigatório")
-    .min(3, "ID deve ter pelo menos 3 caracteres"),
+    .required("ID Zoop é obrigatório")
+    .min(3, "ID Zoop deve ter pelo menos 3 caracteres"),
+  zpk_id_marketplace: yup
+    .string()
+    .required("ID Base64 é obrigatório")
+    .min(3, "ID Base64 deve ter pelo menos 3 caracteres"),
+  cpf_cnpj: yup
+    .string()
+    .required("CPF ou CNPJ é obrigatório")
+    .test("is-valid", "CPF ou CNPJ inválido", (value) => {
+      if (!value) return false;
+      return validateCpf(value) || validateCnpj(value);
+    }),
   name: yup
     .string()
-    .required("Nome é obrigatório")
-    .min(2, "Nome deve ter pelo menos 2 caracteres"),
+    .required("Nome Da Empresa é obrigatório")
+    .min(2, "Nome Da empresa deve ter pelo menos 2 caracteres"),
   email: yup.string().required("Email é obrigatório").email("Email inválido"),
   password: yup.string().when("isEdit", {
-    is: false,
+    is: false, // Se não estiver em edição
     then: (schema) =>
       schema
         .required("Senha é obrigatória")
         .min(6, "Senha deve ter pelo menos 6 caracteres"),
     otherwise: (schema) =>
-      schema.min(6, "Senha deve ter pelo menos 6 caracteres"),
+      schema // Quando estiver em edição, a senha é opcional
+        .nullable(), // Permite que a senha seja nula
   }),
   status: yup.string().required("Status é obrigatório"),
 });
@@ -124,13 +198,15 @@ const MarketplaceList: React.FC = () => {
   >("personal");
   const [formData, setFormData] = useState<MarketplaceFormData>({
     id: "",
+    zpk_id_marketplace: "",
+    cpf_cnpj: "",
     name: "",
     email: "",
     password: "",
     confirmpassword: "",
     status: "active",
     phone: "",
-    website: "",
+    website: "https://", // Valor padrão para o website
     contactPerson: "",
     street: "",
     number: "",
@@ -223,6 +299,8 @@ const MarketplaceList: React.FC = () => {
   const resetForm = () => {
     setFormData({
       id: "",
+      zpk_id_marketplace: "",
+      cpf_cnpj: "",
       name: "",
       email: "",
       password: "",
@@ -291,6 +369,11 @@ const MarketplaceList: React.FC = () => {
 
       const payload = {
         id: formData.id,
+        zpk_id_marketplace: formData?.zpk_id_marketplace,
+        cpf_cnpj: formData?.cpf_cnpj,
+        phone: formData?.phone,
+        website: formData?.website,
+        contactPerson: formData.contactPerson,
         nome: formData.name,
         email: formData.email,
         password: formData.password,
@@ -299,20 +382,21 @@ const MarketplaceList: React.FC = () => {
         myMarketplaceId: formData.id,
         taxa_padrao: "0",
         taxa_repasse_juros: "0",
+        street: formData.street || "",
+        number: formData.number || "",
+        complement: formData.complement || "",
+        neighborhood: formData.neighborhood || "",
+        city: formData.city || "",
+        state: formData.state || "",
+        zipCode: formData.zipCode || "",
+        country: formData.country || "",
       };
 
       const result = await signup(payload);
 
       if (!result.error) {
         setIsAddModalOpen(false);
-        setFormData({
-          id: "",
-          nome: "",
-          email: "",
-          password: "",
-          confirmpassword: "",
-          status: "active",
-        });
+        resetForm();
         toast.success("Marketplace adicionado com sucesso!");
         const onCreate = true;
         resetForm();
@@ -335,24 +419,35 @@ const MarketplaceList: React.FC = () => {
   const handleEditMarketplace = async (id: string) => {
     try {
       if (!selectedMarketplace) return;
+      const isValid = await validateAllTabs(true);
+      if (!isValid) {
+        toast.error("Por favor, corrija os erros no formulário");
+        return;
+      }
       const response = await api.put(`/marketplace/${id}`, {
         ...formData,
         password: formData?.password ? formData?.password : null,
         marketplaceId: formData.id,
+        contactPerson: formData.contactPerson || "",
+        cpf_cnpj: formData.cpf_cnpj || "",
+        phone: formData.phone || "",
+        website: formData.website || "",
         nome: formData?.name,
+        address: {
+          street: formData.street || "",
+          number: formData.number || "",
+          complement: formData.complement || "",
+          neighborhood: formData.neighborhood || "",
+          city: formData.city || "",
+          state: formData.state || "",
+          zipCode: formData.zipCode || "",
+          country: formData.country || "",
+        },
       });
 
       if (response?.data) {
         setIsEditModalOpen(false);
         setSelectedMarketplace(null);
-        setFormData({
-          id: "",
-          nome: "",
-          email: "",
-          password: "",
-          confirmpassword: "",
-          status: "active",
-        });
         toast.success("Marketplace atualizado com sucesso!");
         const onCreate = false;
         resetForm();
@@ -454,11 +549,11 @@ const MarketplaceList: React.FC = () => {
   };
 
   const openEditModal = (marketplace: any) => {
-    console.log(marketplace);
-
     setSelectedMarketplace(marketplace);
     setFormData({
-      id: marketplace?.cliente_id,
+      id: marketplace?.cliente?.marketplaceId,
+      zpk_id_marketplace: marketplace?.cliente?.zpk_id_marketplace,
+      cpf_cnpj: marketplace?.cliente?.cpf_cnpj,
       name: marketplace?.cliente?.nome,
       email: marketplace?.cliente?.email,
       password: "",
@@ -466,21 +561,115 @@ const MarketplaceList: React.FC = () => {
       status: marketplace?.cliente?.status,
       phone: marketplace.cliente?.phone || "",
       website: marketplace?.cliente?.website || "",
-      contactPerson: marketplace.contactPerson || "",
-      street: marketplace.street || "",
-      number: marketplace.number || "",
-      complement: marketplace.complement || "",
-      neighborhood: marketplace.neighborhood || "",
-      city: marketplace.city || "",
-      state: marketplace.state || "",
-      zipCode: marketplace.zipCode || "",
-      country: marketplace.country || "Brasil",
+      contactPerson: marketplace?.cliente?.contactPerson || "",
+      street: marketplace?.cliente?.address?.street || "",
+      number: marketplace?.cliente?.address?.number || "",
+      complement: marketplace?.cliente?.address?.complement || "",
+      neighborhood: marketplace?.cliente?.address?.neighborhood || "",
+      city: marketplace?.cliente?.address?.city || "",
+      state: marketplace?.cliente?.address?.state || "",
+      zipCode: marketplace?.cliente?.address?.zipCode || "",
+      country: marketplace?.cliente?.address?.country || "Brasil",
     });
     setFormErrors({});
     setActiveTab("personal");
     setIsEditModalOpen(true);
   };
 
+  // Função para formatar CPF ou CNPJ
+  const formatCpfCnpj = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
+
+    if (cleaned.length <= 11) {
+      // Formatar CPF
+      return cleaned
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    } else {
+      // Formatar CNPJ
+      return cleaned
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1/$2")
+        .replace(/(\d{4})(\d{2})$/, "$1-$2");
+    }
+  };
+
+  const handleChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatCpfCnpj(value);
+    setFormData({ ...formData, cpf_cnpj: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, cpf_cnpj: validateCpfOrCnpj(formattedValue) });
+  };
+  // Função para formatar o telefone
+  const formatPhone = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
+
+    if (cleaned.length <= 11) {
+      return cleaned
+        .replace(/(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d)(\d{4})$/, "$1-$2")
+        .replace(/(\d)(\d{5})$/, "$1-$2"); // Formato para 9 dígitos
+    }
+    return value; // Retorna o valor original se exceder 11 dígitos
+  };
+
+  const handlePhoneChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatPhone(value);
+    setFormData({ ...formData, phone: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, phone: validatePhone(formattedValue) });
+  };
+
+  const handleWebsiteChange = (e) => {
+    const { value } = e.target;
+    setFormData({ ...formData, website: value });
+  };
+
+  // Função para buscar dados do CEP
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    console.log(zipCode);
+    try {
+      const response = await axios.get(
+        `https://viacep.com.br/ws/${zipCode}/json/`
+      );
+      const data = response.data;
+
+      if (!data.erro) {
+        setFormData({
+          ...formData,
+          street: data.logradouro,
+          complement: data.complemento,
+          neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf,
+          zipCode: data.cep,
+        });
+      } else {
+        alert("CEP não encontrado.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar o CEP:", error);
+      alert("Erro ao buscar o CEP. Tente novamente.");
+    }
+  };
+
+  const handleZipCodeChange = (e) => {
+    const { value } = e.target;
+    setFormData({ ...formData, zipCode: value });
+
+    // Verifica se o valor do CEP possui 8 caracteres (sem considerar o hífen)
+    if (value.replace(/\D/g, "").length === 8) {
+      fetchAddressByZipCode(value);
+    }
+  };
   const tabs = [
     {
       id: "personal" as const,
@@ -517,8 +706,22 @@ const MarketplaceList: React.FC = () => {
                 }
                 placeholder="ID Marketplace Zoop"
                 fullWidth
-                disabled={isEditModalOpen}
+                // disabled={isEditModalOpen}
                 error={formErrors.id}
+              />
+              <Input
+                label="ID Base64 Zoop*"
+                value={formData.zpk_id_marketplace}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    zpk_id_marketplace: e.target.value,
+                  })
+                }
+                placeholder="ID Base64 Zoop Marketplace"
+                fullWidth
+                // disabled={isEditModalOpen}
+                error={formErrors.zpk_id_marketplace}
               />
               <Input
                 label="Nome da Empresa *"
@@ -529,6 +732,14 @@ const MarketplaceList: React.FC = () => {
                 placeholder="Nome do marketplace"
                 fullWidth
                 error={formErrors.name}
+              />
+              <Input
+                label="CPF ou CNPJ *"
+                value={formData.cpf_cnpj}
+                onChange={handleChange}
+                placeholder="CPF ou CNPJ"
+                fullWidth
+                error={formErrors.cpf_cnpj}
               />
             </div>
             <Input
@@ -610,19 +821,15 @@ const MarketplaceList: React.FC = () => {
               <Input
                 label="Telefone"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                placeholder="(11) 99999-9999"
+                onChange={handlePhoneChange}
+                placeholder="(11) 99187-6655"
                 fullWidth
                 error={formErrors.phone}
               />
               <Input
                 label="Website"
                 value={formData.website}
-                onChange={(e) =>
-                  setFormData({ ...formData, website: e.target.value })
-                }
+                onChange={handleWebsiteChange}
                 placeholder="https://www.marketplace.com"
                 fullWidth
                 error={formErrors.website}
@@ -725,9 +932,7 @@ const MarketplaceList: React.FC = () => {
               <Input
                 label="CEP"
                 value={formData.zipCode}
-                onChange={(e) =>
-                  setFormData({ ...formData, zipCode: e.target.value })
-                }
+                onChange={handleZipCodeChange}
                 placeholder="00000-000"
                 fullWidth
                 error={formErrors.zipCode}
@@ -947,6 +1152,18 @@ const MarketplaceList: React.FC = () => {
                                 Editar
                               </Button>
                               <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMarketplace(seller);
+                                  fetchSellersList(seller.id);
+                                }}
+                                icon={<Eye className="h-4 w-4" />}
+                                className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
+                              >
+                                Ver Vendedores
+                              </Button>
+                              <Button
                                 loading={isRemoveMKT}
                                 variant="outline"
                                 size="sm"
@@ -1049,6 +1266,21 @@ const MarketplaceList: React.FC = () => {
                             </span>
                           </Button>
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedMarketplace(seller);
+                              fetchSellersList(seller.id);
+                            }}
+                            icon={<Eye className="h-4 w-4 sm:h-4 sm:w-4" />}
+                            className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
+                          >
+                            <span className="xs:hidden">Ver Vendedores</span>
+                            <span className="hidden xs:inline">
+                              Ver Vendedores
+                            </span>
+                          </Button>
+                          <Button
                             loading={isRemoveMKT}
                             variant="outline"
                             size="sm"
@@ -1077,12 +1309,12 @@ const MarketplaceList: React.FC = () => {
                   </div>
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
                     {searchTerm
-                      ? "Nenhum vendedor encontrado"
-                      : "Nenhum vendedor cadastrado"}
+                      ? "Nenhum marketplace encontrado"
+                      : "Nenhum marketplace cadastrado"}
                   </h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto px-4">
                     {searchTerm
-                      ? `Não encontramos vendedores que correspondam à busca "${searchTerm}". Tente com outros termos.`
+                      ? `Não encontramos marketplaces que correspondam à busca "${searchTerm}". Tente com outros termos.`
                       : "Comece adicionando seu primeiro vendedor para gerenciar suas vendas."}
                   </p>
                   {searchTerm ? (
@@ -1105,7 +1337,7 @@ const MarketplaceList: React.FC = () => {
                         icon={<Plus className="h-4 w-4" />}
                         className="bg-gradient-to-r from-primary to-primary-600 w-full sm:w-auto"
                       >
-                        Adicionar Vendedor
+                        Adicionar Marketplace
                       </Button>
                     </div>
                   ) : (
@@ -1116,9 +1348,9 @@ const MarketplaceList: React.FC = () => {
                       size="lg"
                     >
                       <span className="hidden xs:inline">
-                        Adicionar Primeiro Vendedor
+                        Adicionar Primeiro Marketplace
                       </span>
-                      <span className="xs:hidden">Adicionar Vendedor</span>
+                      <span className="xs:hidden">Adicionar Marketplace</span>
                     </Button>
                   )}
                 </CardContent>
@@ -1577,7 +1809,7 @@ const MarketplaceList: React.FC = () => {
           <div className="flex flex-col sm:flex-row justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={() => setIsEditModalOpen(false)}
               className="w-full sm:w-auto"
             >
               Cancelar
@@ -1704,6 +1936,18 @@ const MarketplaceList: React.FC = () => {
                         className="text-xs"
                       >
                         Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMarketplace(seller);
+                          fetchSellersList(seller.id);
+                        }}
+                        icon={<Eye className="h-4 w-4" />}
+                        className="text-xs"
+                      >
+                        Ver Vendedores
                       </Button>
                       <Button
                         variant="outline"

@@ -27,11 +27,13 @@ import toast from "react-hot-toast";
 import api from "../../api/api";
 import * as yup from "yup";
 import { motion } from "framer-motion";
+import axios from "axios";
 
 interface SellerFormData {
   id: string;
   nome: string;
   email: string;
+  cpf_cnpj: string;
   password: string;
   confirmpassword: string;
   marketplaceId: string;
@@ -56,12 +58,76 @@ interface FormErrors {
   [key: string]: string;
 }
 
+// Função para validar CPF
+const validateCpf = (cpf) => {
+  // Remove caracteres não numéricos
+  const cleaned = cpf.replace(/\D/g, "");
+
+  if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) {
+    return false; // CPF deve ter 11 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 9),
+    [10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 9) + firstDigit,
+    [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[9] == firstDigit && cleaned[10] == secondDigit;
+};
+
+// Função para validar CNPJ
+const validateCnpj = (cnpj) => {
+  // Remove caracteres não numéricos
+  const cleaned = cnpj.replace(/\D/g, "");
+
+  if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) {
+    return false; // CNPJ deve ter 14 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 12),
+    [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 12) + firstDigit,
+    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[12] == firstDigit && cleaned[13] == secondDigit;
+};
 // Validation schemas
 const personalInfoSchema = yup.object().shape({
   id: yup
     .string()
     .required("ID é obrigatório")
     .min(3, "ID deve ter pelo menos 3 caracteres"),
+  cpf_cnpj: yup
+    .string()
+    .required("CPF ou CNPJ é obrigatório")
+    .test("is-valid", "CPF ou CNPJ inválido", (value) => {
+      if (!value) return false;
+      return validateCpf(value) || validateCnpj(value);
+    }),
   nome: yup
     .string()
     .required("Nome é obrigatório")
@@ -74,7 +140,8 @@ const personalInfoSchema = yup.object().shape({
         .required("Senha é obrigatória")
         .min(3, "Senha deve ter pelo menos 3 caracteres"),
     otherwise: (schema) =>
-      schema.min(3, "Senha deve ter pelo menos 3 caracteres"),
+      schema // Quando estiver em edição, a senha é opcional
+        .nullable(), // Permite que a senha seja nula
   }),
   marketplaceId: yup.string().required("Marketplace é obrigatório"),
 });
@@ -94,6 +161,7 @@ const addressInfoSchema = yup.object().shape({
     .string()
     .matches(/^\d{5}-\d{3}$/, "CEP inválido (ex: 00000-000)"),
 });
+
 const ITEMS_PER_PAGE = 10;
 
 const SellerList: React.FC = () => {
@@ -113,12 +181,13 @@ const SellerList: React.FC = () => {
   const [formData, setFormData] = useState<SellerFormData>({
     id: "",
     nome: "",
+    cpf_cnpj: "",
     email: "",
     password: "",
     confirmpassword: "",
     marketplaceId: "",
     phone: "",
-    website: "",
+    website: "https://",
     contactPerson: "",
     street: "",
     number: "",
@@ -203,6 +272,7 @@ const SellerList: React.FC = () => {
     setFormData({
       id: "",
       nome: "",
+      cpf_cnpj: "",
       email: "",
       password: "",
       confirmpassword: "",
@@ -225,51 +295,51 @@ const SellerList: React.FC = () => {
     setActiveTab("personal");
   };
 
-  const validateCurrentTab = async (isEdit = false) => {
-    try {
-      let schema;
-      switch (activeTab) {
-        case "personal":
-          schema = personalInfoSchema;
-          break;
-        case "contact":
-          schema = contactInfoSchema;
-          break;
-        case "address":
-          schema = addressInfoSchema;
-          break;
-        default:
-          return true;
-      }
+  // const validateCurrentTab = async (isEdit = false) => {
+  //   try {
+  //     let schema;
+  //     switch (activeTab) {
+  //       case "personal":
+  //         schema = personalInfoSchema;
+  //         break;
+  //       case "contact":
+  //         schema = contactInfoSchema;
+  //         break;
+  //       case "address":
+  //         schema = addressInfoSchema;
+  //         break;
+  //       default:
+  //         return true;
+  //     }
 
-      await schema.validate(formData, {
-        abortEarly: false,
-        context: { isEdit },
-      });
+  //     await schema.validate(formData, {
+  //       abortEarly: false,
+  //       context: { isEdit },
+  //     });
 
-      // Clear errors for current tab
-      const newErrors = { ...formErrors };
-      Object.keys(newErrors).forEach((key) => {
-        if (getFieldsForTab(activeTab).includes(key)) {
-          delete newErrors[key];
-        }
-      });
-      setFormErrors(newErrors);
+  //     // Clear errors for current tab
+  //     const newErrors = { ...formErrors };
+  //     Object.keys(newErrors).forEach((key) => {
+  //       if (getFieldsForTab(activeTab).includes(key)) {
+  //         delete newErrors[key];
+  //       }
+  //     });
+  //     setFormErrors(newErrors);
 
-      return true;
-    } catch (error) {
-      if (error instanceof yup.ValidationError) {
-        const newErrors: FormErrors = {};
-        error.inner.forEach((err) => {
-          if (err.path) {
-            newErrors[err.path] = err.message;
-          }
-        });
-        setFormErrors((prev) => ({ ...prev, ...newErrors }));
-      }
-      return false;
-    }
-  };
+  //     return true;
+  //   } catch (error) {
+  //     if (error instanceof yup.ValidationError) {
+  //       const newErrors: FormErrors = {};
+  //       error.inner.forEach((err) => {
+  //         if (err.path) {
+  //           newErrors[err.path] = err.message;
+  //         }
+  //       });
+  //       setFormErrors((prev) => ({ ...prev, ...newErrors }));
+  //     }
+  //     return false;
+  //   }
+  // };
 
   const validateAllTabs = async (isEdit = false) => {
     try {
@@ -306,6 +376,7 @@ const SellerList: React.FC = () => {
         return [
           "id",
           "name",
+          "cpf_cnpj",
           "email",
           "password",
           "marketplaceId",
@@ -374,6 +445,7 @@ const SellerList: React.FC = () => {
         password: formData.password,
         confirmpassword: formData.confirmpassword,
         marketplaceId: formData.marketplaceId || "",
+        cpf_cnpj: formData.cpf_cnpj || "",
         contactPerson: formData.contactPerson || "",
         phone: formData.phone || "",
         website: formData.website || "",
@@ -466,16 +538,22 @@ const SellerList: React.FC = () => {
   const handleEditSeller = async () => {
     try {
       if (!selectedSeller) return;
-
+      const isValid = await validateAllTabs(true);
+      if (!isValid) {
+        toast.error("Por favor, corrija os erros no formulário");
+        return;
+      }
       await api.put(`/seller/${selectedSeller.cliente.id}`, {
         id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
+        cliente_id: selectedSeller?.id,
         marketplaceId: formData.marketplaceId || "",
         password: formData.password || undefined,
-        contactPerson: formData.contactPerson,
-        phone: formData.phone,
-        website: formData.website,
+        cpf_cnpj: formData?.cpf_cnpj || "",
+        contactPerson: formData.contactPerson || "",
+        phone: formData.phone || "",
+        website: formData.website || "",
         taxa_padrao: formData.taxa_padrao || "",
         taxa_repasse_juros: formData.taxa_repasse_juros || "",
         address: {
@@ -498,6 +576,101 @@ const SellerList: React.FC = () => {
     } catch (error) {
       toast.error("Erro ao atualizar vendedor");
       console.error(error);
+    }
+  };
+
+  // Função para formatar CPF ou CNPJ
+  const formatCpfCnpj = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
+
+    if (cleaned.length <= 11) {
+      // Formatar CPF
+      return cleaned
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    } else {
+      // Formatar CNPJ
+      return cleaned
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1/$2")
+        .replace(/(\d{4})(\d{2})$/, "$1-$2");
+    }
+  };
+
+  const handleChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatCpfCnpj(value);
+    setFormData({ ...formData, cpf_cnpj: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, cpf_cnpj: validateCpfOrCnpj(formattedValue) });
+  };
+  // Função para formatar o telefone
+  const formatPhone = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
+
+    if (cleaned.length <= 11) {
+      return cleaned
+        .replace(/(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d)(\d{4})$/, "$1-$2")
+        .replace(/(\d)(\d{5})$/, "$1-$2"); // Formato para 9 dígitos
+    }
+    return value; // Retorna o valor original se exceder 11 dígitos
+  };
+
+  const handlePhoneChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatPhone(value);
+    setFormData({ ...formData, phone: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, phone: validatePhone(formattedValue) });
+  };
+
+  const handleWebsiteChange = (e) => {
+    const { value } = e.target;
+    setFormData({ ...formData, website: value });
+  };
+
+  // Função para buscar dados do CEP
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    console.log(zipCode);
+    try {
+      const response = await axios.get(
+        `https://viacep.com.br/ws/${zipCode}/json/`
+      );
+      const data = response.data;
+
+      if (!data.erro) {
+        setFormData({
+          ...formData,
+          street: data.logradouro,
+          complement: data.complemento,
+          neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf,
+          zipCode: data.cep,
+        });
+      } else {
+        alert("CEP não encontrado.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar o CEP:", error);
+      alert("Erro ao buscar o CEP. Tente novamente.");
+    }
+  };
+
+  const handleZipCodeChange = (e) => {
+    const { value } = e.target;
+    setFormData({ ...formData, zipCode: value });
+
+    // Verifica se o valor do CEP possui 8 caracteres (sem considerar o hífen)
+    if (value.replace(/\D/g, "").length === 8) {
+      fetchAddressByZipCode(value);
     }
   };
 
@@ -543,7 +716,6 @@ const SellerList: React.FC = () => {
                 }
                 placeholder="ID Zoop do Vendedor"
                 fullWidth
-                disabled={isEditModalOpen}
                 error={formErrors.id}
               />
               <Input
@@ -555,6 +727,14 @@ const SellerList: React.FC = () => {
                 placeholder="Nome do vendedor"
                 fullWidth
                 error={formErrors.name}
+              />
+              <Input
+                label="CPF ou CNPJ *"
+                value={formData.cpf_cnpj}
+                onChange={handleChange}
+                placeholder="CPF ou CNPJ"
+                fullWidth
+                error={formErrors.cpf_cnpj}
               />
             </div>
             <Input
@@ -579,21 +759,23 @@ const SellerList: React.FC = () => {
               fullWidth
               error={formErrors.password}
             />
-            <Input
-              label={
-                isEditModalOpen
-                  ? "Nova Senha (opcional)"
-                  : "Confirmação de senha *"
-              }
-              type="password"
-              value={formData.confirmpassword}
-              onChange={(e) =>
-                setFormData({ ...formData, confirmpassword: e.target.value })
-              }
-              placeholder="••••••••"
-              fullWidth
-              error={formErrors.password}
-            />
+            {!isEditModalOpen && (
+              <Input
+                label={
+                  isEditModalOpen
+                    ? "Nova Senha (opcional)"
+                    : "Confirmação de senha *"
+                }
+                type="password"
+                value={formData.confirmpassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmpassword: e.target.value })
+                }
+                placeholder="••••••••"
+                fullWidth
+                error={formErrors.password}
+              />
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 label="Marketplace *"
@@ -634,20 +816,16 @@ const SellerList: React.FC = () => {
               <Input
                 label="Telefone"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                placeholder="(11) 99999-9999"
+                onChange={handlePhoneChange}
+                placeholder="(11) 99187-6655"
                 fullWidth
                 error={formErrors.phone}
               />
               <Input
                 label="Website"
                 value={formData.website}
-                onChange={(e) =>
-                  setFormData({ ...formData, website: e.target.value })
-                }
-                placeholder="https://www.loja.com"
+                onChange={handleWebsiteChange}
+                placeholder="https://www.marketplace.com"
                 fullWidth
                 error={formErrors.website}
               />
@@ -800,9 +978,7 @@ const SellerList: React.FC = () => {
               <Input
                 label="CEP"
                 value={formData.zipCode}
-                onChange={(e) =>
-                  setFormData({ ...formData, zipCode: e.target.value })
-                }
+                onChange={handleZipCodeChange}
                 placeholder="00000-000"
                 fullWidth
                 error={formErrors.zipCode}
@@ -1013,22 +1189,31 @@ const SellerList: React.FC = () => {
                                     id: seller.id,
                                     nome: seller.cliente.nome,
                                     email: seller.cliente.email,
+                                    cpf_cnpj: seller?.cliente?.cpf_cnpj,
                                     password: "",
                                     confirmpassword: "",
                                     marketplaceId: seller.marketplaceId || "",
-                                    contactPerson: seller.contactPerson || "",
+                                    contactPerson:
+                                      seller?.cliente?.contactPerson || "",
                                     phone: seller?.cliente?.phone || "",
                                     website: seller?.cliente?.website || "",
-                                    street: seller.address?.street || "",
-                                    number: seller.address?.number || "",
+                                    street:
+                                      seller?.cliente?.address?.street || "",
+                                    number:
+                                      seller?.cliente?.address?.number || "",
                                     complement:
-                                      seller.address?.complement || "",
+                                      seller?.cliente?.address?.complement ||
+                                      "",
                                     neighborhood:
-                                      seller.address?.neighborhood || "",
-                                    city: seller.address?.city || "",
-                                    state: seller.address?.state || "",
-                                    zipCode: seller.address?.zipCode || "",
-                                    country: seller.address?.country || "",
+                                      seller?.cliente?.address?.neighborhood ||
+                                      "",
+                                    city: seller?.cliente?.address?.city || "",
+                                    state:
+                                      seller?.cliente?.address?.state || "",
+                                    zipCode:
+                                      seller?.cliente?.address?.zipCode || "",
+                                    country:
+                                      seller?.cliente?.address?.country || "",
                                     taxa_padrao:
                                       seller?.cliente?.id_juros || "",
                                     taxa_repasse_juros:
@@ -1130,21 +1315,26 @@ const SellerList: React.FC = () => {
                                 id: seller.id,
                                 nome: seller.cliente.nome,
                                 email: seller.cliente.email,
+                                cpf_cnpj: seller?.cliente?.cpf_cnpj,
                                 password: "",
                                 confirmpassword: "",
                                 marketplaceId: seller.marketplaceId || "",
-                                contactPerson: seller.contactPerson || "",
+                                contactPerson:
+                                  seller?.cliente?.contactPerson || "",
                                 phone: seller?.cliente?.phone || "",
                                 website: seller?.cliente?.website || "",
-                                street: seller.address?.street || "",
-                                number: seller.address?.number || "",
-                                complement: seller.address?.complement || "",
+                                street: seller?.cliente?.address?.street || "",
+                                number: seller?.cliente?.address?.number || "",
+                                complement:
+                                  seller?.cliente?.address?.complement || "",
                                 neighborhood:
-                                  seller.address?.neighborhood || "",
-                                city: seller.address?.city || "",
-                                state: seller.address?.state || "",
-                                zipCode: seller.address?.zipCode || "",
-                                country: seller.address?.country || "",
+                                  seller?.cliente?.address?.neighborhood || "",
+                                city: seller?.cliente?.address?.city || "",
+                                state: seller?.cliente?.address?.state || "",
+                                zipCode:
+                                  seller?.cliente?.address?.zipCode || "",
+                                country:
+                                  seller?.cliente?.address?.country || "",
                                 taxa_padrao: seller?.cliente?.id_juros || "",
                                 taxa_repasse_juros:
                                   seller?.cliente?.taxa_repasse_juros || "",

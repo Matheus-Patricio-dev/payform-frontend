@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
     setIsRefresh(true);
     try {
       // Tenta pegar os dados de transações do localStorage
-      const cachedTransactions = localStorage.getItem("transactions");
+      const cachedTransactions = localStorage.getItem("transactionsDash");
 
       if (cachedTransactions && refreshData) {
         // Se existir, usa os dados do cache
@@ -88,7 +88,7 @@ const Dashboard: React.FC = () => {
       setTransactions(data);
 
       // Salva no localStorage para cache
-      localStorage.setItem("transactions", JSON.stringify(data));
+      localStorage.setItem("transactionsDash", JSON.stringify(data));
 
       const transacoes = data?.dados?.transacoes || [];
       const totalAmount = transacoes
@@ -194,10 +194,9 @@ const Dashboard: React.FC = () => {
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
                   <TransactionsTable
-                    transactions={(transactions?.dados?.transacoes || []).slice(
-                      0,
-                      5
-                    )}
+                    transactions={(transactions?.dados?.transacoes || [])
+                      .slice(0, 5)
+                      .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao))}
                   />
                 </div>
 

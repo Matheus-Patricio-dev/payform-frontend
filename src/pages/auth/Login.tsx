@@ -5,7 +5,7 @@ import * as yup from 'yup';
 import toast from 'react-hot-toast';
 import { CreditCard, Eye, EyeOff, ArrowRight, Shield, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-
+import Logo from '../../assets/logoAdmin.jpeg'
 // Validation schema
 const loginSchema = yup.object().shape({
   email: yup
@@ -94,32 +94,6 @@ const Login: React.FC = () => {
     validateField(field, value);
   };
 
-  const demoAccounts = [
-    {
-      type: 'Admin',
-      email: 'admin@example.com',
-      password: 'admin123',
-      description: 'Acesso completo ao sistema'
-    },
-    {
-      type: 'Marketplace',
-      email: 'marketplace1@example.com',
-      password: 'password',
-      description: 'Gerenciar vendedores'
-    },
-    {
-      type: 'Vendedor',
-      email: 'seller1@example.com',
-      password: 'password',
-      description: 'Criar links de pagamento'
-    }
-  ];
-
-  const fillDemoAccount = (email: string, password: string) => {
-    setFormData({ email, password });
-    setErrors({});
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex">
       {/* Left Side - Form */}
@@ -135,13 +109,12 @@ const Login: React.FC = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-8"
+            className="text-center "
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary to-primary-dark rounded-2xl shadow-lg mb-4">
-              <CreditCard className="h-8 w-8 text-white" />
+            <div className="inline-flex items-center justify-center w-32 h-full">
+              <img src={Logo} alt="PayForm" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">PayLink</h1>
-            <p className="text-gray-600 mt-2">Faça login na sua conta</p>
+            <p className="text-gray-600">Faça login na sua conta</p>
           </motion.div>
 
           {/* Form */}

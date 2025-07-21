@@ -57,7 +57,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, userData }) => {
 
     },
     {
-      title: 'Pendentes',
+      title: 'Pré Autorizadas',
       value: stats.pending,
       icon: <Clock className="h-5 w-5 text-warning" />,
       color: 'bg-warning/10',

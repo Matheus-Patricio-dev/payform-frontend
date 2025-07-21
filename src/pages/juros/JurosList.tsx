@@ -9,8 +9,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { getPaymentLinks } from "../../services/paymentService";
-import { formatCurrency, formatDate } from "../../utils/formatters";
+import { formatDate } from "../../utils/formatters";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { Card, CardContent } from "../../components/ui/Card";
@@ -19,12 +18,6 @@ import Sidebar from "../../components/layout/Sidebar";
 import toast from "react-hot-toast";
 import Select from "../../components/ui/Select";
 import api from "../../api/api";
-
-interface PaymentLinkFormData {
-  amount: number;
-  description: string;
-  paymentMethods: string[];
-}
 
 const JuroList: React.FC = () => {
   const { user } = useAuth();
@@ -124,15 +117,6 @@ const JuroList: React.FC = () => {
         };
       });
 
-      const objeto = {
-        id_zoop: formData.planoIdZoop || "",
-        nome: formData.nome || "",
-        description: formData.description || "",
-        status: formData.status || "ativo",
-        cliente_id: user.id,
-        marketplaceId: user.marketplaceId,
-      }; // <-- Intercepta aqui também
-
       const newFormData = {
         id_zoop: formData.planoIdZoop || "",
         nome: formData.nome || "",
@@ -155,19 +139,14 @@ const JuroList: React.FC = () => {
       toast.error(error?.response?.data?.error || "Erro ao adicionar Juros");
     }
   };
-  const handleEditInterest = async (id: string) => {
-    const parcelas = Array.from({ length: 21 }, (_, i) => {
-      const key = `parcela_${i + 1}`;
-      return {
-        parcela: `${i + 1}x`,
-        taxa: parseFloat(formData[key]) || 0,
-      };
-    });
-
+  const handleEditInterest = async () => {
     const payload = {
       nome: formData.nome,
+      id_zoop: formData.planoIdZoop || "",
       status: formData.status,
       description: formData.description,
+      cliente_id: user.id,
+      marketplaceId: user.marketplaceId,
       parcelas: formData.parcelas,
     };
 
@@ -187,12 +166,6 @@ const JuroList: React.FC = () => {
     }
   };
 
-  const handleViewPaymentLink = (paymentId: string) => {
-    const baseUrl = window.location.origin;
-    const paymentUrl = `${baseUrl}/pay/${paymentId}`;
-    window.open(paymentUrl, "_blank");
-  };
-
   const openEditModal = (payment: any) => {
     setSelectedPayment(payment);
     const parcelas = payment.parcelas || [];
@@ -206,13 +179,23 @@ const JuroList: React.FC = () => {
 
     setFormData({
       nome: payment.nome || "",
-      amount: payment.amount || "",
+      planoIdZoop: payment.id_zoop,
       status: payment.status || "ativo",
       description: payment.description || "",
       parcelas: parcelasData,
     });
 
     setIsEditModalOpen(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      nome: "",
+      planoIdZoop: "",
+      status: "ativo",
+      description: "",
+      parcelas: [],
+    });
   };
 
   const openDeleteModal = (payment: any) => {
@@ -249,7 +232,10 @@ const JuroList: React.FC = () => {
                   </Button>
                   <Button
                     icon={<Plus className="h-4 w-4" />}
-                    onClick={() => setIsAddModalOpen(true)}
+                    onClick={() => {
+                      resetForm();
+                      setIsAddModalOpen(true);
+                    }}
                   >
                     Criar Juros
                   </Button>
@@ -314,7 +300,10 @@ const JuroList: React.FC = () => {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          ID
+                          ID documento
+                        </th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                          ID Zoop
                         </th>
                         <th className="text-left py-4 px-6 bg-gray-50 font-medium">
                           Nome
@@ -341,6 +330,9 @@ const JuroList: React.FC = () => {
                             className="border-b last:border-0 hover:bg-gray-50"
                           >
                             <td className="py-4 px-6">{payment?.id}</td>
+                            <td className="py-4 px-6">
+                              {payment?.id_zoop || "Sem Informação"}
+                            </td>
                             <td className="py-4 px-6">{payment?.nome}</td>
                             <td className="py-4 px-6">
                               {formatDate(payment?.createdAt)}
@@ -396,7 +388,10 @@ const JuroList: React.FC = () => {
                     <Button
                       icon={<Plus className="h-4 w-4" />}
                       className="mt-4"
-                      onClick={() => setIsAddModalOpen(true)}
+                      onClick={() => {
+                        resetForm();
+                        setIsAddModalOpen(true);
+                      }}
                     >
                       Criar Juros
                     </Button>
@@ -435,32 +430,102 @@ const JuroList: React.FC = () => {
           />
 
           {/* Juros por parcela em 2 colunas */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Juros por parcela{" "}
-              <span className="text-sm text-gray-500">(1x até 21x)</span>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 ">
+            <h3 className="text-xl font-bold text-gray-800 mb-1">
+              Taxa de Juros por Parcela
             </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Configure as taxas de juros de 1x até 21x
+            </p>
 
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {[...Array(21)].map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <label className="w-8 text-sm text-gray-600 font-medium">
-                    {i + 1}x
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="%"
-                    value={formData[`parcela_${i + 1}`] || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        [`parcela_${i + 1}`]: e.target.value,
-                      })
-                    }
-                    className="w-full max-w-[80px] px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring focus:ring-primary-200 focus:outline-none"
+            <div className="grid grid-cols-2 gap-8">
+              {/* Primeira coluna: 1x até 12x */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                  1x - 12x parcelas
+                </h4>
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <label className="w-6 text-sm text-gray-700 font-semibold flex-shrink-0">
+                      {i + 1}x
+                    </label>
+                    <div className="relative flex-1 max-w-[120px]">
+                      <input
+                        type="text"
+                        placeholder={`1,0`}
+                        value={formData[`parcela_${i + 1}`] || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [`parcela_${i + 1}`]: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-200 hover:border-gray-400"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-gray-400">
+                        %
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Segunda coluna: 13x até 21x */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                  13x - 21x parcelas
+                </h4>
+                {[...Array(9)].map((_, i) => (
+                  <div key={i + 12} className="flex items-center gap-3">
+                    <label className="w-6 text-sm text-gray-700 font-semibold flex-shrink-0">
+                      {i + 13}x
+                    </label>
+                    <div className="relative flex-1 max-w-[120px]">
+                      <input
+                        type="text"
+                        placeholder={`1,0`}
+                        value={formData[`parcela_${i + 13}`] || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [`parcela_${i + 13}`]: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-200 hover:border-gray-400"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-gray-400">
+                        %
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
                   />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Como usar:
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Digite valores como: <strong>1,0</strong> para 1%,{" "}
+                    <strong>1,5</strong> para 1,5%, <strong>2,3</strong> para
+                    2,3%
+                  </p>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
 
@@ -512,7 +577,7 @@ const JuroList: React.FC = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Editar Plano"
+        title="Editar Juros"
       >
         <Input
           label="ID do Plano na Zoop"
@@ -531,6 +596,114 @@ const JuroList: React.FC = () => {
             fullWidth
           />
 
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 ">
+            <h3 className="text-xl font-bold text-gray-800 ">
+              Taxa de Juros por Parcela
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Configure as taxas de juros de 1x até 21x
+            </p>
+
+            <div className="grid grid-cols-2 gap-8">
+              {/* Primeira coluna: 1x até 12x */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                  1x - 12x parcelas
+                </h4>
+                {formData?.parcelas?.slice(0, 12).map((parcela, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <label className="w-6 text-sm text-gray-700 font-semibold flex-shrink-0">
+                      {parcela.parcela}
+                    </label>
+                    <div className="relative flex-1 max-w-[120px]">
+                      <input
+                        type="text"
+                        placeholder={`0`}
+                        value={parcela.taxa || ""}
+                        onChange={(e) => {
+                          const newParcelas = [...formData.parcelas];
+                          const taxaValue = e.target.value;
+                          // Update existing taxa
+                          newParcelas[i].taxa = taxaValue;
+
+                          setFormData({
+                            ...formData,
+                            parcelas: newParcelas,
+                          });
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-200 hover:border-gray-400"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-gray-400">
+                        %
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Segunda coluna: 13x até 21x */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                  13x - 21x parcelas
+                </h4>
+                {formData?.parcelas?.slice(12, 21).map((parcela, i) => (
+                  <div key={i + 12} className="flex items-center gap-3">
+                    <label className="w-6 text-sm text-gray-700 font-semibold flex-shrink-0">
+                      {parcela.parcela}
+                    </label>
+                    <div className="relative flex-1 max-w-[120px]">
+                      <input
+                        type="text"
+                        placeholder={`0`}
+                        value={parcela.taxa || ""}
+                        onChange={(e) => {
+                          const newParcelas = [...formData.parcelas];
+                          const taxaValue = e.target.value;
+                          // Update existing taxa (index adjusted for second column)
+                          newParcelas[i + 12].taxa = taxaValue;
+
+                          setFormData({
+                            ...formData,
+                            parcelas: newParcelas,
+                          });
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-200 hover:border-gray-400"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-gray-400">
+                        %
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Como usar:
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Digite valores como: <strong>1,0</strong> para 1%,{" "}
+                    <strong>1,5</strong> para 1,5%, <strong>2,3</strong> para
+                    2,3%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Status do Plano
@@ -556,37 +729,6 @@ const JuroList: React.FC = () => {
             placeholder="Descrição do plano"
             fullWidth
           />
-          <label className="block text-sm font-medium text-gray-700">
-            Lista de juros
-          </label>
-
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {formData.parcelas?.map((parcela, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <label className="w-8 text-sm text-gray-600 font-medium">
-                  {parcela.parcela} {/* Display the current parcela */}
-                </label>
-                <input
-                  type="number"
-                  placeholder="%"
-                  value={parcela.taxa || ""} // Use parcela.taxa for the input value
-                  onChange={(e) => {
-                    const newParcelas = [...formData.parcelas];
-                    const taxaValue = parseFloat(e.target.value);
-                    // Update existing taxa
-                    newParcelas[i].taxa = taxaValue;
-
-                    setFormData({
-                      ...formData,
-                      parcelas: newParcelas,
-                    });
-                  }}
-                  className="w-full max-w-[80px] px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring focus:ring-primary-200 focus:outline-none"
-                />
-              </div>
-            ))}
-          </div>
-
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar

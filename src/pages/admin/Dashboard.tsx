@@ -76,7 +76,7 @@ const AdminDashboard: React.FC = () => {
     setIsRefresh(true);
     try {
       // Tenta pegar os dados de transações do localStorage
-      const cachedTransactions = localStorage.getItem("transactions");
+      const cachedTransactions = localStorage.getItem("transactionsDash");
       const marketData = localStorage.getItem("market");
 
       if (cachedTransactions && marketData && refreshData) {
@@ -134,7 +134,7 @@ const AdminDashboard: React.FC = () => {
       setTransactions(data);
 
       // Salva no localStorage para cache
-      localStorage.setItem("transactions", JSON.stringify(data));
+      localStorage.setItem("transactionsDash", JSON.stringify(data));
       localStorage.setItem("market", JSON.stringify(responseMKT?.data?.dados));
 
       const transacoes = data?.dados?.transacoes || [];
@@ -218,7 +218,7 @@ const AdminDashboard: React.FC = () => {
         tension: 0.4,
       },
       {
-        label: "Pendente",
+        label: "Pré Autorizadas",
         data: Object.values(transactionsByDate).map((day) => day.pending),
         borderColor: "rgb(234, 179, 8)",
         tension: 0.4,
@@ -571,19 +571,6 @@ const AdminDashboard: React.FC = () => {
                             const marketplaceSellers = sellers.filter(
                               (s) => s.marketplaceId === marketplace.id
                             );
-                            const marketplaceStats = marketplaceSellers.reduce(
-                              (acc, seller) => {
-                                const stats = {};
-                                return {
-                                  totalAmount:
-                                    acc.totalAmount + stats.totalAmount,
-                                  completed: acc.completed + stats.completed,
-                                  total: acc.total + stats.totalTransactions,
-                                };
-                              },
-                              { totalAmount: 0, completed: 0, total: 0 }
-                            );
-
                             return (
                               <tr
                                 key={marketplace.id}

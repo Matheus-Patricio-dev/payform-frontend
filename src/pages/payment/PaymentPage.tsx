@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import * as yup from "yup";
+import QRCode from "react-qr-code"; // Importando a biblioteca
+
 import {
   CreditCard,
   Smartphone,
@@ -27,7 +29,64 @@ import { PaymentMethod } from "../../types";
 import { formatCurrency } from "../../utils/formatters";
 import toast from "react-hot-toast";
 import api from "../../api/api";
+import axios from "axios";
+// Função para validar CPF
+const validateCpf = (cpf) => {
+  // Remove caracteres não numéricos
+  const cleaned = cpf.replace(/\D/g, "");
 
+  if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) {
+    return false; // CPF deve ter 11 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 9),
+    [10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 9) + firstDigit,
+    [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[9] == firstDigit && cleaned[10] == secondDigit;
+};
+
+// Função para validar CNPJ
+const validateCnpj = (cnpj) => {
+  // Remove caracteres não numéricos
+  const cleaned = cnpj.replace(/\D/g, "");
+
+  if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) {
+    return false; // CNPJ deve ter 14 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 12),
+    [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 12) + firstDigit,
+    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[12] == firstDigit && cleaned[13] == secondDigit;
+};
 // Card validation schema
 const cardValidationSchema = yup.object().shape({
   number: yup
@@ -49,7 +108,10 @@ const cardValidationSchema = yup.object().shape({
   cpf: yup
     .string()
     .required("CPF é obrigatório")
-    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido"),
+    .test("is-valid", "CPF inválido", (value) => {
+      if (!value) return false;
+      return validateCpf(value) || validateCnpj(value);
+    }),
   email: yup.string().required("Email é obrigatório").email("Email inválido"),
   postal_code: yup
     .string()
@@ -132,9 +194,7 @@ const PaymentPage: React.FC = () => {
             setSelectedMethod(result?.paymentMethods[0]);
           }
 
-          setPixCode(
-            `00020126580014BR.GOV.BCB.PIX0136${linkId}5204000053039865802BR5925PAYLINK PAGAMENTOS LTDA6009SAO PAULO62070503***6304`
-          );
+          setPixCode("");
           setLoading(false);
         } else {
           if (!result) {
@@ -161,9 +221,8 @@ const PaymentPage: React.FC = () => {
             setSelectedMethod(result?.paymentMethods[0]);
           }
 
-          setPixCode(
-            `00020126580014BR.GOV.BCB.PIX0136${linkId}5204000053039865802BR5925PAYLINK PAGAMENTOS LTDA6009SAO PAULO62070503***6304`
-          );
+          setPixCode("");
+
           setLoading(false);
           setLink(null);
         }
@@ -177,27 +236,73 @@ const PaymentPage: React.FC = () => {
   }, [linkId]);
   // PIX timer effect
   useEffect(() => {
-    if (
-      selectedMethod === "pix" &&
-      showPaymentForm &&
-      !paymentDetected &&
-      !pixExpired
-    ) {
-      const timer = setInterval(() => {
-        setPixTimeLeft((prev) => {
-          if (prev <= 1) {
-            setPixExpired(true);
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    const sendPayment = async () => {
+      if (
+        selectedMethod === "pix" &&
+        showPaymentForm &&
+        !paymentDetected &&
+        !pixExpired
+      ) {
+        console.log("entrou");
+        setLoading(true);
+        const payload = {
+          valor: link?.amount,
+          paymentMethod: "pix",
+        };
 
-      return () => clearInterval(timer);
-    }
-  }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired]);
-  // console.log(cardData)
+        try {
+          const response = await api.post(`/payment/${link?.id}`, payload);
+          console.log("Payment response:", response.data);
+          if (response?.data && response?.data?.barCode?.emv) {
+            setPixCode(response?.data?.barCode?.emv);
+            setLoading(false);
+            const timer = setInterval(() => {
+              setPixTimeLeft((prev) => {
+                if (prev <= 1) {
+                  setPixExpired(true);
+                  clearInterval(timer);
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+
+            return () => clearInterval(timer);
+          } else {
+            setError(
+              "Error de comunicação com a Zoop ao realizar pagamento Via PIX"
+            );
+            setPixCode("");
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          setError(
+            "Error de comunicação com a Zoop ao realizar pagamento Via PIX"
+          );
+          setPixCode("");
+          setLoading(false);
+
+          console.error("Error sending payment:", error);
+        }
+      }
+    };
+
+    sendPayment();
+  }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired, link]);
+
+  // const timer = setInterval(() => {
+  //   setPixTimeLeft((prev) => {
+  //     if (prev <= 1) {
+  //       setPixExpired(true);
+  //       clearInterval(timer);
+  //       return 0;
+  //     }
+  //     return prev - 1;
+  //   });
+  // }, 1000);
+
+  // return () => clearInterval(timer);
   // Simulate payment detection for PIX
   useEffect(() => {
     if (
@@ -245,17 +350,18 @@ const PaymentPage: React.FC = () => {
     // Adiciona parcelas com juros
     validInstallments?.forEach((parcel) => {
       const times = parseInt(parcel.parcela); // Converte "Nx" para número
+
       if (times > parcelasSemJuros) {
         const interest = parcel.taxa / 100; // Converte a taxa de percentual para decimal
         // Fórmula de preço parcelado: Valor * (1 + juros) ^ parcelas
-        const total = amount * Math.pow(1 + interest, times);
+        const total = amount / (1 - interest);
 
         installments.push({
           times: times,
           value: total / times,
           taxa: parcel.taxa,
           total: total || amount,
-          parcela: parcel.parcela
+          parcela: parcel.parcela,
         });
       }
     });
@@ -390,12 +496,15 @@ const PaymentPage: React.FC = () => {
         ...cardData,
         amount: link?.amount,
         id_juros: user?.id_juros,
+        paymentMethod: "credit_card",
         taxa_repasse_juros: user?.juros?.id_zoop,
         number_installments: user?.juros?.parcelas?.filter(
           (item) => item.taxa > 0
         )?.length,
       };
 
+      // console.log(payload)
+      // return
       setIsProcessing(true);
 
       const response = await api.post(`/payment/${link?.id}`, payload);
@@ -442,7 +551,28 @@ const PaymentPage: React.FC = () => {
     navigator.clipboard.writeText(pixCode);
     toast.success("Código PIX copiado!");
   };
+  // Função para formatar o telefone
+  const formatPhone = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
 
+    if (cleaned.length <= 11) {
+      return cleaned
+        .replace(/(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d)(\d{4})$/, "$1-$2")
+        .replace(/(\d)(\d{5})$/, "$1-$2"); // Formato para 9 dígitos
+    }
+    return value; // Retorna o valor original se exceder 11 dígitos
+  };
+
+  const handlePhoneChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatPhone(value);
+    setCardData({ ...cardData, phone_number: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, phone: validatePhone(formattedValue) });
+  };
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -450,7 +580,41 @@ const PaymentPage: React.FC = () => {
       .toString()
       .padStart(2, "0")}`;
   };
+  // Função para buscar dados do CEP
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    try {
+      const response = await axios.get(
+        `https://viacep.com.br/ws/${zipCode}/json/`
+      );
+      const data = response.data;
 
+      if (!data.erro) {
+        setCardData({
+          ...cardData,
+          address: data.logradouro,
+          // complement: data.complemento,
+          // neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf,
+          postal_code: data.cep,
+        });
+      } else {
+        alert("CEP não encontrado.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar o CEP:", error);
+      alert("Erro ao buscar o CEP. Tente novamente.");
+    }
+  };
+
+  const handleZipCodeChange = (e) => {
+    const { value } = e.target;
+    setCardData({ ...cardData, postal_code: value });
+    // Verifica se o valor do CEP possui 8 caracteres (sem considerar o hífen)
+    if (value.replace(/\D/g, "").length === 8) {
+      fetchAddressByZipCode(value);
+    }
+  };
   const getCardBrandIcon = () => {
     switch (cardBrand) {
       case "visa":
@@ -705,18 +869,12 @@ const PaymentPage: React.FC = () => {
                             <div className="w-48 h-48 mx-auto bg-white border-2 border-gray-200 rounded-2xl flex items-center justify-center">
                               <div className="text-center">
                                 <div className="w-32 h-32 bg-gray-100 rounded-xl mb-4 flex items-center justify-center">
-                                  <div className="grid grid-cols-8 gap-1">
-                                    {Array.from({ length: 64 }).map((_, i) => (
-                                      <div
-                                        key={i}
-                                        className={`w-1 h-1 rounded-sm ${
-                                          Math.random() > 0.5
-                                            ? "bg-gray-800"
-                                            : "bg-gray-300"
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
+                                  {pixCode && (
+                                    <div className="w-32 h-32 bg-gray-100 rounded-xl mb-4 flex items-center justify-center">
+                                      <QRCode value={pixCode} size={128} />{" "}
+                                      {/* Gera o QR Code aqui */}
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-xs text-gray-500">
                                   QR Code PIX
@@ -1070,12 +1228,7 @@ const PaymentPage: React.FC = () => {
                                   <input
                                     type="text"
                                     value={cardData.postal_code}
-                                    onChange={(e) =>
-                                      handleCardInputChange(
-                                        "postal_code",
-                                        e.target.value
-                                      )
-                                    }
+                                    onChange={(e) => handleZipCodeChange(e)}
                                     placeholder="00000-000"
                                     maxLength={9}
                                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
@@ -1137,12 +1290,7 @@ const PaymentPage: React.FC = () => {
                                     <input
                                       type="text"
                                       value={cardData.phone_number}
-                                      onChange={(e) =>
-                                        handleCardInputChange(
-                                          "phone_number",
-                                          e.target.value
-                                        )
-                                      }
+                                      onChange={handlePhoneChange}
                                       placeholder="(11) 99999-9999"
                                       className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
                                         cardErrors.phone_number
@@ -1182,16 +1330,15 @@ const PaymentPage: React.FC = () => {
                         </div>
 
                         <div className="mt-6 bg-white border rounded-xl shadow-sm p-4 space-y-4">
-                          <div className="text-sm text-gray-500">
+                          {/* <div className="text-sm text-gray-500">
                             Pague em até{" "}
                             <span className="font-bold text-primary">
                               {user?.juros?.parcelas
                                 ?.filter((parcel) => parcel.taxa > 0)
                                 .map((parcel) => parcel.parcela) // Mapeia para obter apenas a string da parcela
                                 .join(", ")}{" "}
-                              {/* Junta as parcelas em uma string separada por vírgulas */}
                             </span>{" "}
-                          </div>
+                          </div> */}
 
                           <select
                             className={`w-full mt-2 p-3 border rounded-xl focus:border-primary focus:ring-primary transition`}

@@ -112,7 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         password: formData.password,
         confirmpassword: formData.confirmpassword,
         marketplaceId: formData?.myMarketplaceId || "",
-        contactPerson: formData.contactPerson || "",
+        zpk_id_marketplace: formData?.zpk_id_marketplace || "",
+        cpf_cnpj: formData?.cpf_cnpj || "",
+        contactPerson: formData.contactPerson || "", 
         phone: formData.phone || "",
         website: formData.website || "",
         taxa_padrao: formData.taxa_padrao || "",
@@ -138,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return { data: response.data, error: null };
     } catch (err) {
       console.error("Erro durante o registro:", err);
-      toast.error(error?.response?.data?.error)
+      toast.error(error?.response?.data?.error);
       if (err.response) {
         // O servidor respondeu com um erro
         const status = err.response.status;
@@ -198,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     try {
       const response = await api.post("/register-seller", {
-       ...formData
+        ...formData,
       });
       return response.data; // dados + token
     } catch (error: any) {

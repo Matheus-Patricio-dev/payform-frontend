@@ -246,9 +246,9 @@ const PaymentSuccess: React.FC = () => {
               transition={{ delay: 1, duration: 0.5 }}
               className="mt-8 pt-6 border-t border-gray-200 text-center"
             >
-              <p className="text-sm text-gray-500 mb-3">
+              {/* <p className="text-sm text-gray-500 mb-3">
                 Um comprovante foi enviado para seu email
-              </p>
+              </p> */}
               <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
                 <CheckCircle className="h-3 w-3" />
                 <span>Transação segura processada pela PayLink</span>

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   AlertCircle,
   Fingerprint,
+  Copy,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { formatCurrency, formatDate } from "../../utils/formatters";
@@ -198,7 +199,12 @@ const PaymentList: React.FC = () => {
     setSelectedPayment(payment);
     setIsDeleteModalOpen(true);
   };
-
+  const handleCopy = (payment) => {
+    navigator.clipboard.writeText(
+      `${window.location.origin}/pay/${payment.id}`
+    );
+    toast.success("Link copiado!"); // Mostra o toast
+  };
   const handleViewPaymentLink = (paymentId: string) => {
     const url = `${window.location.origin}/pay/${paymentId}`;
     window.open(url, "_blank");
@@ -377,6 +383,17 @@ const PaymentList: React.FC = () => {
                               >
                                 <span className="hidden lg:inline">
                                   Ver Link
+                                </span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopy(payment)}
+                                icon={<Copy className="h-4 w-4" />} // Ícone de Copy
+                                className="hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-colors"
+                              >
+                                <span className="hidden lg:inline">
+                                  Copiar Link
                                 </span>
                               </Button>
                               <Button

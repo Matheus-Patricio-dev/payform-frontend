@@ -14,13 +14,9 @@ import {
   Mail,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { getMarketplaceSellers } from "../../services/marketplaceService";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/Card";
+import * as yup from "yup";
+
+import { Card, CardContent } from "../../components/ui/Card";
 import Sidebar from "../../components/layout/Sidebar";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -29,11 +25,12 @@ import Pagination from "../../components/ui/Pagination";
 import toast from "react-hot-toast";
 import api from "../../api/api";
 import { motion } from "framer-motion";
-import Select from "../../components/ui/Select";
+import axios from "axios";
 
 interface SellerFormData {
   id: string;
   nome: string;
+  cpf_cnpj: string;
   email: string;
   password: string;
   confirmpassword: string;
@@ -56,10 +53,115 @@ interface SellerFormData {
   id_juros: string;
 }
 
-const ITEMS_PER_PAGE = 10;
 interface FormErrors {
   [key: string]: string;
 }
+
+// Função para validar CPF
+const validateCpf = (cpf) => {
+  // Remove caracteres não numéricos
+  const cleaned = cpf.replace(/\D/g, "");
+
+  if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) {
+    return false; // CPF deve ter 11 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 9),
+    [10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 9) + firstDigit,
+    [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[9] == firstDigit && cleaned[10] == secondDigit;
+};
+
+// Função para validar CNPJ
+const validateCnpj = (cnpj) => {
+  // Remove caracteres não numéricos
+  const cleaned = cnpj.replace(/\D/g, "");
+
+  if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) {
+    return false; // CNPJ deve ter 14 dígitos e não pode ser todos iguais
+  }
+
+  const calculateDigit = (digits, weights) => {
+    const sum = digits
+      .split("")
+      .reduce((acc, digit, index) => acc + digit * weights[index], 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const firstDigit = calculateDigit(
+    cleaned.slice(0, 12),
+    [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+  const secondDigit = calculateDigit(
+    cleaned.slice(0, 12) + firstDigit,
+    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  );
+
+  return cleaned[12] == firstDigit && cleaned[13] == secondDigit;
+};
+// Validation schemas
+const personalInfoSchema = yup.object().shape({
+  id: yup
+    .string()
+    .required("ID é obrigatório")
+    .min(3, "ID deve ter pelo menos 3 caracteres"),
+  cpf_cnpj: yup
+    .string()
+    .required("CPF ou CNPJ é obrigatório")
+    .test("is-valid", "CPF ou CNPJ inválido", (value) => {
+      if (!value) return false;
+      return validateCpf(value) || validateCnpj(value);
+    }),
+  nome: yup
+    .string()
+    .required("Nome é obrigatório")
+    .min(2, "Nome deve ter pelo menos 2 caracteres"),
+  email: yup.string().required("Email é obrigatório").email("Email inválido"),
+  password: yup.string().when("isEdit", {
+    is: false,
+    then: (schema) =>
+      schema
+        .required("Senha é obrigatória")
+        .min(3, "Senha deve ter pelo menos 3 caracteres"),
+    otherwise: (schema) =>
+      schema // Quando estiver em edição, a senha é opcional
+        .nullable(), // Permite que a senha seja nula
+  }),
+});
+
+const contactInfoSchema = yup.object().shape({
+  phone: yup
+    .string()
+    .matches(
+      /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
+      "Telefone inválido (ex: (11) 99999-9999)"
+    ),
+  website: yup.string().url("Website deve ser uma URL válida"),
+});
+
+const addressInfoSchema = yup.object().shape({
+  zipCode: yup
+    .string()
+    .matches(/^\d{5}-\d{3}$/, "CEP inválido (ex: 00000-000)"),
+});
+
+const ITEMS_PER_PAGE = 10;
+
 const MarketplaceSellers: React.FC = () => {
   const { user, signupSeller } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -83,6 +185,7 @@ const MarketplaceSellers: React.FC = () => {
   const [formData, setFormData] = useState<SellerFormData>({
     id: "",
     nome: "",
+    cpf_cnpj: "",
     email: "",
     password: "",
     confirmpassword: "",
@@ -158,10 +261,46 @@ const MarketplaceSellers: React.FC = () => {
   );
 
   const [isCreateSeller, setIsCreateSeller] = useState(false);
+
+  const validateAllTabs = async (isEdit = false) => {
+    try {
+      const allSchemas = yup.object().shape({
+        ...personalInfoSchema.fields,
+        ...contactInfoSchema.fields,
+        ...addressInfoSchema.fields,
+      });
+
+      await allSchemas.validate(formData, {
+        abortEarly: false,
+        context: { isEdit },
+      });
+
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const newErrors: FormErrors = {};
+        error.inner.forEach((err) => {
+          if (err.path) {
+            newErrors[err.path] = err.message;
+          }
+        });
+        console.log(newErrors);
+
+        setFormErrors(newErrors);
+      }
+      return false;
+    }
+  };
   const handleAddSeller = async () => {
     setIsCreateSeller(true);
     try {
       if (!user) return;
+      const isValid = await validateAllTabs(false);
+      if (!isValid) {
+        toast.error("Por favor, corrija os erros no formulário");
+        return;
+      }
       if (!formData.id.trim()) {
         toast.error("ID do vendedor é obrigatório");
         setIsCreateSeller(false);
@@ -179,6 +318,7 @@ const MarketplaceSellers: React.FC = () => {
         id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
+        cpf_cnpj: formData.cpf_cnpj,
         password: formData.password,
         confirmpassword: formData.confirmpassword,
         marketplaceId: myMarketplaceId || "",
@@ -210,7 +350,7 @@ const MarketplaceSellers: React.FC = () => {
       await fetchSellers();
     } catch (error) {
       console.log(error);
-      toast.error("Erro ao adicionar vendedor");
+      toast.error(error?.response?.data?.error || "Erro ao adicionar vendedor");
     } finally {
       setIsCreateSeller(false);
     }
@@ -219,7 +359,11 @@ const MarketplaceSellers: React.FC = () => {
   const handleEditSeller = async (id_seller: string) => {
     try {
       if (!user || !selectedSeller) return;
-
+      const isValid = await validateAllTabs(true);
+      if (!isValid) {
+        toast.error("Por favor, corrija os erros no formulário");
+        return;
+      }
       const response = await api.put(`/seller/${id_seller}`, {
         // id_seller: formData.id,
         // nome: formData.nome,
@@ -229,6 +373,8 @@ const MarketplaceSellers: React.FC = () => {
         taxa_padrao: formData.taxa_padrao,
         taxa_repasse_juros: formData.taxa_repasse_juros,
         id_seller: formData.id,
+        cliente_id: id_seller,
+        cpf_cnpj: formData.cpf_cnpj,
         nome: formData.nome,
         email: formData.email,
         password: formData.password || undefined,
@@ -263,6 +409,7 @@ const MarketplaceSellers: React.FC = () => {
     setFormData({
       id: "",
       nome: "",
+      cpf_cnpj: "",
       email: "",
       password: "",
       confirmpassword: "",
@@ -285,6 +432,7 @@ const MarketplaceSellers: React.FC = () => {
     setFormErrors({});
     setActiveTab("personal");
   };
+
   const getFieldsForTab = (tab: string) => {
     switch (tab) {
       case "personal":
@@ -362,6 +510,100 @@ const MarketplaceSellers: React.FC = () => {
     }
   }, [formData]);
 
+  // Função para formatar CPF ou CNPJ
+  const formatCpfCnpj = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
+
+    if (cleaned.length <= 11) {
+      // Formatar CPF
+      return cleaned
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    } else {
+      // Formatar CNPJ
+      return cleaned
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1/$2")
+        .replace(/(\d{4})(\d{2})$/, "$1-$2");
+    }
+  };
+
+  const handleChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatCpfCnpj(value);
+    setFormData({ ...formData, cpf_cnpj: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, cpf_cnpj: validateCpfOrCnpj(formattedValue) });
+  };
+  // Função para formatar o telefone
+  const formatPhone = (value) => {
+    // Remove caracteres não numéricos
+    const cleaned = value.replace(/\D/g, "");
+
+    if (cleaned.length <= 11) {
+      return cleaned
+        .replace(/(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d)(\d{4})$/, "$1-$2")
+        .replace(/(\d)(\d{5})$/, "$1-$2"); // Formato para 9 dígitos
+    }
+    return value; // Retorna o valor original se exceder 11 dígitos
+  };
+
+  const handlePhoneChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatPhone(value);
+    setFormData({ ...formData, phone: formattedValue });
+
+    // Aqui você pode adicionar a lógica de validação para definir erros
+    // setFormErrors({ ...formErrors, phone: validatePhone(formattedValue) });
+  };
+
+  const handleWebsiteChange = (e) => {
+    const { value } = e.target;
+    setFormData({ ...formData, website: value });
+  };
+
+  // Função para buscar dados do CEP
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    try {
+      const response = await axios.get(
+        `https://viacep.com.br/ws/${zipCode}/json/`
+      );
+      const data = response.data;
+
+      if (!data.erro) {
+        setFormData({
+          ...formData,
+          street: data.logradouro,
+          complement: data.complemento,
+          neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf,
+          zipCode: data.cep,
+        });
+      } else {
+        alert("CEP não encontrado.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar o CEP:", error);
+      alert("Erro ao buscar o CEP. Tente novamente.");
+    }
+  };
+
+  const handleZipCodeChange = (e) => {
+    const { value } = e.target;
+    setFormData({ ...formData, zipCode: value });
+
+    // Verifica se o valor do CEP possui 8 caracteres (sem considerar o hífen)
+    if (value.replace(/\D/g, "").length === 8) {
+      fetchAddressByZipCode(value);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex">
@@ -410,7 +652,6 @@ const MarketplaceSellers: React.FC = () => {
                 }
                 placeholder="ID Zoop do Vendedor"
                 fullWidth
-                disabled={isEditModalOpen}
                 error={formErrors.id}
               />
               <Input
@@ -421,7 +662,15 @@ const MarketplaceSellers: React.FC = () => {
                 }
                 placeholder="Nome do vendedor"
                 fullWidth
-                error={formErrors.name}
+                error={formErrors.nome}
+              />
+              <Input
+                label="CPF ou CNPJ *"
+                value={formData.cpf_cnpj}
+                onChange={handleChange}
+                placeholder="CPF ou CNPJ"
+                fullWidth
+                error={formErrors.cpf_cnpj}
               />
             </div>
             <Input
@@ -446,21 +695,23 @@ const MarketplaceSellers: React.FC = () => {
               fullWidth
               error={formErrors.password}
             />
-            <Input
-              label={
-                isEditModalOpen
-                  ? "Nova Senha (opcional)"
-                  : "Confirmação de senha *"
-              }
-              type="password"
-              value={formData.confirmpassword}
-              onChange={(e) =>
-                setFormData({ ...formData, confirmpassword: e.target.value })
-              }
-              placeholder="••••••••"
-              fullWidth
-              error={formErrors.password}
-            />
+            {!isEditModalOpen && (
+              <Input
+                label={
+                  isEditModalOpen
+                    ? "Nova Senha (opcional)"
+                    : "Confirmação de senha *"
+                }
+                type="password"
+                value={formData.confirmpassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmpassword: e.target.value })
+                }
+                placeholder="••••••••"
+                fullWidth
+                error={formErrors.password}
+              />
+            )}
             {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 label="Marketplace *"
@@ -486,6 +737,31 @@ const MarketplaceSellers: React.FC = () => {
                 error={formErrors.contactPerson}
               />
             </div> */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* <Select
+                label="Marketplace *"
+                options={marketplaces.map((m) => ({
+                  value: m.id,
+                  label: m.cliente.nome,
+                }))}
+                value={formData.marketplaceId}
+                onChange={(e) =>
+                  setFormData({ ...formData, marketplaceId: e.target.value })
+                }
+                fullWidth
+                error={formErrors.marketplaceId}
+              /> */}
+              <Input
+                label="Pessoa de Contato"
+                value={formData.contactPerson}
+                onChange={(e) =>
+                  setFormData({ ...formData, contactPerson: e.target.value })
+                }
+                placeholder="Nome do responsável"
+                fullWidth
+                error={formErrors.contactPerson}
+              />
+            </div>
           </motion.div>
         );
 
@@ -501,20 +777,16 @@ const MarketplaceSellers: React.FC = () => {
               <Input
                 label="Telefone"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                placeholder="(11) 99999-9999"
+                onChange={handlePhoneChange}
+                placeholder="(11) 99187-6655"
                 fullWidth
                 error={formErrors.phone}
               />
               <Input
                 label="Website"
                 value={formData.website}
-                onChange={(e) =>
-                  setFormData({ ...formData, website: e.target.value })
-                }
-                placeholder="https://www.loja.com"
+                onChange={handleWebsiteChange}
+                placeholder="https://www.marketplace.com"
                 fullWidth
                 error={formErrors.website}
               />
@@ -667,9 +939,7 @@ const MarketplaceSellers: React.FC = () => {
               <Input
                 label="CEP"
                 value={formData.zipCode}
-                onChange={(e) =>
-                  setFormData({ ...formData, zipCode: e.target.value })
-                }
+                onChange={handleZipCodeChange}
                 placeholder="00000-000"
                 fullWidth
                 error={formErrors.zipCode}
@@ -812,7 +1082,7 @@ const MarketplaceSellers: React.FC = () => {
                                   {seller.cliente.nome}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  Vendedor #{index + 1}
+                                  Id Zoop #{seller?.id_seller}
                                 </div>
                               </div>
                             </div>
@@ -841,9 +1111,10 @@ const MarketplaceSellers: React.FC = () => {
                                   setFormData({
                                     nome: seller?.cliente?.nome || "S/N",
                                     email: seller?.cliente?.email || "S/N",
-                                    senha: '',
+                                    senha: "",
                                     confirmpassword: "S/N",
                                     id: seller?.id_seller || "S/N",
+                                    cpf_cnpj: seller?.cliente?.cpf_cnpj,
                                     taxa_padrao:
                                       seller?.cliente?.id_juros || "S/N",
                                     taxa_repasse_juros:
@@ -925,7 +1196,7 @@ const MarketplaceSellers: React.FC = () => {
                               {seller.cliente.nome}
                             </h3>
                             <p className="text-sm text-gray-500">
-                              Vendedor #{index + 1}
+                              Id Zoop #{seller?.id_seller}
                             </p>
                           </div>
                         </div>
@@ -957,6 +1228,7 @@ const MarketplaceSellers: React.FC = () => {
                               senha: "",
                               confirmpassword: "S/N",
                               id: seller?.id_seller || "S/N",
+                              cpf_cnpj: seller?.cliente?.cpf_cnpj,
                               taxa_padrao: seller?.cliente?.id_juros || "S/N",
                               taxa_repasse_juros:
                                 seller?.cliente?.taxa_repasse_juros || "S/N",
@@ -1164,7 +1436,7 @@ const MarketplaceSellers: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => handleEditSeller(selectedSeller.id)}>
+            <Button onClick={() => handleEditSeller(selectedSeller?.id)}>
               Salvar
             </Button>
           </div>

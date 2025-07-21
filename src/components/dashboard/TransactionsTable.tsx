@@ -171,7 +171,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {getPaymentMethodName(
-                      transaction?.pagamento?.paymentMethods
+                      transaction?.paymentMethod
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

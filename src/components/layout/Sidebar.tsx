@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import Button from "../../components/ui/Button";
+import Logo from "../../assets/logoAdmin.jpeg";
+import LogoMini from "../../assets/favicon.jpeg";
 
 interface SidebarProps {
   onCollapse?: (collapsed: boolean) => void;
@@ -206,18 +208,33 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
         {/* Container principal com scroll */}
         <div className="flex flex-col h-full">
           {/* Header da sidebar - fixo no topo */}
+          {/* Header da sidebar - fixo no topo */}
           <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
+              {/* Logo Mini - visível apenas quando a sidebar está fechada */}
+              {isCollapsed && (
+                <img
+                  src={LogoMini}
+                  alt="PayForm"
+                  className="h-10 w-10 sm:h-12 sm:w-12 text-primary shrink-0" // Aumentando o tamanho quando a sidebar está fechada
+                />
+              )}
+
+              {/* Logo Grande - visível apenas quando a sidebar está aberta */}
               <AnimatePresence mode="wait">
                 {!isCollapsed && (
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-lg sm:text-xl font-bold"
+                    className="text-lg sm:text-xl font-bold flex items-center"
                   >
-                    PayLink
+                    <img
+                      src={Logo}
+                      alt="PayForm"
+                      className="h-full w-full sm:h-full sm:w-full"
+                    />{" "}
+                    {/* Ajuste o tamanho conforme necessário */}
                   </motion.span>
                 )}
               </AnimatePresence>
