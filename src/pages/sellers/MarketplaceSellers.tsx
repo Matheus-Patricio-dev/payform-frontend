@@ -10,6 +10,8 @@ import {
   User,
   Phone,
   MapPin,
+  X,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { getMarketplaceSellers } from "../../services/marketplaceService";
@@ -198,7 +200,7 @@ const MarketplaceSellers: React.FC = () => {
       };
       setIsCreateSeller(true);
       setLoading(true);
-   
+
       // console.log(formData)
       await signupSeller(payload);
       resetForm();
@@ -356,9 +358,9 @@ const MarketplaceSellers: React.FC = () => {
     }
   };
   useEffect(() => {
-  if (isEditModalOpen) {
-  }
-}, [formData]);
+    if (isEditModalOpen) {
+    }
+  }, [formData]);
 
   if (isLoading) {
     return (
@@ -401,12 +403,12 @@ const MarketplaceSellers: React.FC = () => {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="ID do Vendedor *"
+                label="ID Zoop *"
                 value={formData.id}
                 onChange={(e) =>
                   setFormData({ ...formData, id: e.target.value })
                 }
-                placeholder="ex: seller-123"
+                placeholder="ID Zoop do Vendedor"
                 fullWidth
                 disabled={isEditModalOpen}
                 error={formErrors.id}
@@ -692,7 +694,7 @@ const MarketplaceSellers: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
       <main
@@ -700,121 +702,181 @@ const MarketplaceSellers: React.FC = () => {
           isCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
       >
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="max-w-[2000px] mx-auto">
-            <div className="flex items-center justify-between mb-6">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <div className="flex items-center">
-                <Users className="h-6 w-6 text-gray-600 mr-2" />
-                <h1 className="text-2xl font-bold">Meus Vendedores</h1>
+                <div className="bg-primary/10 p-2 rounded-lg mr-3">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                    Meus Vendedores
+                  </h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {filteredSellers?.length || 0} vendedor(es){" "}
+                    {searchTerm && `encontrado(s) para "${searchTerm}"`}
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-2 ml-auto">
+              <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto">
                 <Button
                   loading={isRefresh}
                   disabled={isRefresh}
                   variant="outline"
                   onClick={() => fetchSellers()}
-                  icon={<RefreshCw className="h-4 w-4" />}
-                  className="hover:bg-gray-50"
+                  icon={
+                    <RefreshCw
+                      className={`h-4 w-4 ${isRefresh ? "animate-spin" : ""}`}
+                    />
+                  }
+                  className="hover:bg-gray-50 transition-all duration-200 hover:shadow-md order-2 sm:order-1"
                 >
-                  {isRefresh ? "Atualizando" : "Recarregar Dados"}
+                  {isRefresh ? "Atualizando" : "Recarregar"}
                 </Button>
                 <Button
                   loading={isCreateSeller}
                   onClick={() => setIsAddModalOpen(true)}
                   icon={<Plus className="h-4 w-4" />}
+                  className="bg-gradient-to-r from-primary to-primary-600 hover:from-primary-600 hover:to-primary-700 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5 order-1 sm:order-2"
                 >
-                  Adicionar
+                  <span className="hidden sm:inline">Adicionar Vendedor</span>
+                  <span className="sm:hidden">Adicionar</span>
                 </Button>
               </div>
             </div>
 
+            {/* Search Section */}
             <div className="mb-6">
-              <Input
-                placeholder="Buscar vendedores..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                icon={<Search className="h-4 w-4" />}
-                fullWidth
-              />
+              <div className="relative">
+                <Input
+                  placeholder="Buscar por nome, email ou ID..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  icon={<Search className="h-4 w-4" />}
+                  fullWidth
+                  className="bg-white shadow-sm border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCurrentPage(1);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <Card>
+            {/* Desktop Table View */}
+            <Card className="hidden lg:block shadow-sm border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          Nome
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                          Vendedor
                         </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
                           Email
                         </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
                           ID
                         </th>
-                        <th className="text-center py-4 px-6 bg-gray-50 font-medium">
+                        <th className="text-center py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
                           Ações
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredSellers?.map((seller) => (
+                      {filteredSellers?.map((seller, index) => (
                         <tr
                           key={seller.id}
-                          className="border-b last:border-0 hover:bg-gray-50"
+                          className="border-b border-gray-50 last:border-0 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200 group"
                         >
-                          <td className="py-4 px-6">
+                          <td className="py-5 px-6">
                             <div className="flex items-center">
-                              <Store className="h-5 w-5 text-primary mr-2" />
+                              <div className="bg-primary/10 p-2 rounded-lg mr-3 group-hover:bg-primary/15 transition-colors duration-200">
+                                <Store className="h-5 w-5 text-primary" />
+                              </div>
                               <div>
-                                <div className="font-medium">
+                                <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors duration-200">
                                   {seller.cliente.nome}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  Vendedor #{index + 1}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="py-4 px-6">{seller.cliente.email}</td>
-                          <td className="py-4 px-6">
-                            <span className="text-sm text-gray-500">
+                          <td className="py-5 px-6">
+                            <div className="text-gray-700">
+                              {seller.cliente.email}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Email de contato
+                            </div>
+                          </td>
+                          <td className="py-5 px-6">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 font-mono">
                               {seller.cliente.id}
                             </span>
                           </td>
-                          <td className="py-4 px-6">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="py-5 px-6">
+                            <div className="flex items-center justify-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  setIsEditModalOpen(true)
-                                  setSelectedSeller(seller)
+                                  setIsEditModalOpen(true);
+                                  setSelectedSeller(seller);
                                   setFormData({
-                                    nome: seller?.cliente?.nome || 'S/N',
-                                    email: seller?.cliente?.email || 'S/N',
-                                    senha: '', // por segurança, nunca preencha senha vinda do backend
-                                    confirmpassword: 'S/N',
-                                    id: seller?.id_seller || 'S/N',
-                                    taxa_padrao: seller?.cliente?.id_juros || 'S/N',
-                                    taxa_repasse_juros: seller?.cliente?.taxa_repasse_juros || 'S/N',
-                                    contactPerson: seller?.cliente?.contactPerson || 'S/N',
-                                    phone: seller?.cliente?.phone || 'S/N',
-                                    website: seller?.cliente?.website || 'S/N',
-                                   
-                                      street: seller?.cliente?.address?.street || 'S/N',
-                                      number: seller?.cliente?.address?.number || 'S/N',
-                                      complement: seller?.cliente?.address?.complement || 'S/N',
-                                      neighborhood: seller?.cliente?.address?.neighborhood || 'S/N',
-                                      city: seller?.cliente?.address?.city || 'S/N',
-                                      state: seller?.cliente?.address?.state || 'S/N',
-                                      zipCode: seller?.cliente?.address?.zipCode || 'S/N',
-                                      country: seller?.cliente?.address?.country || 'S/N',
-                                    },
-                                  );
+                                    nome: seller?.cliente?.nome || "S/N",
+                                    email: seller?.cliente?.email || "S/N",
+                                    senha: '',
+                                    confirmpassword: "S/N",
+                                    id: seller?.id_seller || "S/N",
+                                    taxa_padrao:
+                                      seller?.cliente?.id_juros || "S/N",
+                                    taxa_repasse_juros:
+                                      seller?.cliente?.taxa_repasse_juros ||
+                                      "S/N",
+                                    contactPerson:
+                                      seller?.cliente?.contactPerson || "S/N",
+                                    phone: seller?.cliente?.phone || "S/N",
+                                    website: seller?.cliente?.website || "S/N",
+                                    street:
+                                      seller?.cliente?.address?.street || "S/N",
+                                    number:
+                                      seller?.cliente?.address?.number || "S/N",
+                                    complement:
+                                      seller?.cliente?.address?.complement ||
+                                      "S/N",
+                                    neighborhood:
+                                      seller?.cliente?.address?.neighborhood ||
+                                      "S/N",
+                                    city:
+                                      seller?.cliente?.address?.city || "S/N",
+                                    state:
+                                      seller?.cliente?.address?.state || "S/N",
+                                    zipCode:
+                                      seller?.cliente?.address?.zipCode ||
+                                      "S/N",
+                                    country:
+                                      seller?.cliente?.address?.country ||
+                                      "S/N",
+                                  });
                                 }}
                                 icon={<Pencil className="h-4 w-4" />}
+                                className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
                               >
                                 Editar
                               </Button>
@@ -822,7 +884,7 @@ const MarketplaceSellers: React.FC = () => {
                                 loading={isRemoveSeller}
                                 variant="outline"
                                 size="sm"
-                                className="text-error"
+                                className="text-red-600 hover:bg-red-50 hover:border-red-200 transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
                                 onClick={() =>
                                   handleRemoveSeller(
                                     seller.id,
@@ -840,35 +902,172 @@ const MarketplaceSellers: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-
-                {filteredSellers.length === 0 && (
-                  <div className="text-center py-12">
-                    <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Nenhum vendedor encontrado</p>
-                    <Button
-                      onClick={() => setIsAddModalOpen(true)}
-                      icon={<Plus className="h-4 w-4" />}
-                      className="mt-4"
-                    >
-                      Adicionar Vendedor
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {filteredSellers?.map((seller, index) => (
+                <Card
+                  key={seller.id}
+                  className="bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary hover:border-l-primary-600"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex flex-col space-y-4">
+                      {/* Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center flex-1 min-w-0">
+                          <div className="bg-primary/10 p-2 rounded-lg mr-3 flex-shrink-0">
+                            <Store className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-gray-900 truncate text-lg">
+                              {seller.cliente.nome}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              Vendedor #{index + 1}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary font-medium ml-2">
+                          ID: {seller.cliente.id}
+                        </span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                          <span className="truncate">
+                            {seller.cliente.email}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditModalOpen(true);
+                            setSelectedSeller(seller);
+                            setFormData({
+                              nome: seller?.cliente?.nome || "S/N",
+                              email: seller?.cliente?.email || "S/N",
+                              senha: "",
+                              confirmpassword: "S/N",
+                              id: seller?.id_seller || "S/N",
+                              taxa_padrao: seller?.cliente?.id_juros || "S/N",
+                              taxa_repasse_juros:
+                                seller?.cliente?.taxa_repasse_juros || "S/N",
+                              contactPerson:
+                                seller?.cliente?.contactPerson || "S/N",
+                              phone: seller?.cliente?.phone || "S/N",
+                              website: seller?.cliente?.website || "S/N",
+                              street: seller?.cliente?.address?.street || "S/N",
+                              number: seller?.cliente?.address?.number || "S/N",
+                              complement:
+                                seller?.cliente?.address?.complement || "S/N",
+                              neighborhood:
+                                seller?.cliente?.address?.neighborhood || "S/N",
+                              city: seller?.cliente?.address?.city || "S/N",
+                              state: seller?.cliente?.address?.state || "S/N",
+                              zipCode:
+                                seller?.cliente?.address?.zipCode || "S/N",
+                              country:
+                                seller?.cliente?.address?.country || "S/N",
+                            });
+                          }}
+                          icon={<Pencil className="h-4 w-4" />}
+                          className="flex-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200"
+                        >
+                          Editar Vendedor
+                        </Button>
+                        <Button
+                          loading={isRemoveSeller}
+                          variant="outline"
+                          className="flex-1 text-red-600 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
+                          onClick={() =>
+                            handleRemoveSeller(seller.id, seller.cliente?.id)
+                          }
+                          icon={<Trash2 className="h-4 w-4" />}
+                        >
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {filteredSellers.length === 0 && (
+              <Card className="bg-white/80 backdrop-blur-sm shadow-sm border-0">
+                <CardContent className="text-center py-16">
+                  <div className="bg-gray-100 rounded-full p-4 w-20 h-20 mx-auto mb-6">
+                    <Store className="h-12 w-12 text-gray-400 mx-auto" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {searchTerm
+                      ? "Nenhum vendedor encontrado"
+                      : "Nenhum vendedor cadastrado"}
+                  </h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    {searchTerm
+                      ? `Não encontramos vendedores que correspondam à busca "${searchTerm}". Tente com outros termos.`
+                      : "Comece adicionando seu primeiro vendedor para gerenciar suas vendas."}
+                  </p>
+                  {searchTerm ? (
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        onClick={() => {
+                          setSearchTerm("");
+                          setCurrentPage(1);
+                        }}
+                        variant="outline"
+                        icon={<X className="h-4 w-4" />}
+                      >
+                        Limpar Busca
+                      </Button>
+                      <Button
+                        onClick={() => setIsAddModalOpen(true)}
+                        icon={<Plus className="h-4 w-4" />}
+                        className="bg-gradient-to-r from-primary to-primary-600"
+                      >
+                        Adicionar Vendedor
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => setIsAddModalOpen(true)}
+                      icon={<Plus className="h-4 w-4" />}
+                      className="bg-gradient-to-r from-primary to-primary-600 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                      size="lg"
+                    >
+                      Adicionar Primeiro Vendedor
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pagination */}
             {filteredSellers.length > ITEMS_PER_PAGE && (
-              <div className="mt-6">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+              <div className="mt-8 flex justify-center">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-2">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
               </div>
             )}
           </div>
         </div>
       </main>
+
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => {
@@ -918,83 +1117,7 @@ const MarketplaceSellers: React.FC = () => {
           </div>
         </div>
       </Modal>
-      {/* <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Adicionar Vendedor"
-      >
-        <div className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2">
-          <Input
-            label="ID do Vendedor ( Zoop )"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            placeholder="ex: seller-123"
-            fullWidth
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
-            fullWidth
-          />
-          <Input
-            label="Senha"
-            type="password"
-            value={formData.password}
-            onChange={(e) =>
-              setFormData({ ...formData, password: e.target.value })
-            }
-            fullWidth
-          />
-          <Input
-            label="Confirme a senha"
-            type="password"
-            value={formData.confirmpassword}
-            onChange={(e) =>
-              setFormData({ ...formData, confirmpassword: e.target.value })
-            }
-            fullWidth
-          />
 
-          <Input
-            label="ID de Juros PayLink (vínculo ao vendedor)"
-            value={formData.taxa_padrao}
-            onChange={(e) =>
-              setFormData({ ...formData, taxa_padrao: e.target.value })
-            }
-            placeholder="ex: juros-001"
-            fullWidth
-          />
-          <Input
-            label="ID Plano Repasse Zoop"
-            value={formData.taxa_repasse_juros}
-            onChange={(e) =>
-              setFormData({ ...formData, taxa_repasse_juros: e.target.value })
-            }
-            placeholder="Inserir o ID do plano repasse na zoop"
-            fullWidth
-          />
-
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddSeller}>Adicionar</Button>
-          </div>
-        </div>
-      </Modal> */}
-
-      {/* Edit Seller Modal */}
       {/* Edit Seller Modal */}
       <Modal
         isOpen={isEditModalOpen}
@@ -1047,74 +1170,6 @@ const MarketplaceSellers: React.FC = () => {
           </div>
         </div>
       </Modal>
-
-      {/* <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Editar Vendedor"
-      >
-        <div className="space-y-4">
-          <Input
-            label="ID do Vendedor ( Zoop )"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            placeholder="ex: seller-123"
-            fullWidth
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
-            fullWidth
-          />
-          <Input
-            label="Nova Senha (opcional)"
-            type="password"
-            value={formData.password}
-            onChange={(e) =>
-              setFormData({ ...formData, password: e.target.value })
-            }
-            fullWidth
-          />
- 
-          <Input
-            label="ID de Juros PayLink (vínculo ao vendedor)"
-            value={formData.taxa_padrao}
-            onChange={(e) =>
-              setFormData({ ...formData, taxa_padrao: e.target.value })
-            }
-            placeholder="ex: juros-001"
-            fullWidth
-          />
-          <Input
-            label="ID Plano Repasse Zoop"
-            value={formData.taxa_repasse_juros}
-            onChange={(e) =>
-              setFormData({ ...formData, taxa_repasse_juros: e.target.value })
-            }
-            placeholder="Inserir o ID do plano repasse na zoop"
-            fullWidth
-          />
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={() => handleEditSeller(selectedSeller?.id)}>
-              Salvar
-            </Button>
-          </div>
-        </div>
-      </Modal> */}
     </div>
   );
 };

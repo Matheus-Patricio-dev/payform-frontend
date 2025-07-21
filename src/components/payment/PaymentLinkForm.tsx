@@ -1,34 +1,39 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import * as yup from 'yup';
-import toast from 'react-hot-toast';
-import { ArrowLeft, CreditCard, Smartphone, Check, Loader2, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { PaymentMethod } from '../../types';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import api from '../../api/api';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import * as yup from "yup";
+import toast from "react-hot-toast";
+import {
+  ArrowLeft,
+  CreditCard,
+  Smartphone,
+  Check,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { PaymentMethod } from "../../types";
+import Button from "../ui/Button";
+import Input from "../ui/Input";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import api from "../../api/api";
 
 // Validation schema with Yup
 const validationSchema = yup.object().shape({
   amount: yup
     .number()
-    .required('O valor é obrigatório')
-    .positive('O valor deve ser maior que zero')
-    .min(0.01, 'O valor mínimo é R$ 0,01')
-    .max(999999.99, 'O valor máximo é R$ 999.999,99'),
+    .required("O valor é obrigatório")
+    .positive("O valor deve ser maior que zero")
+    .min(0.01, "O valor mínimo é R$ 0,01")
+    .max(999999.99, "O valor máximo é R$ 999.999,99"),
   description: yup
     .string()
-    .max(100, 'A descrição deve ter no máximo 100 caracteres'),
-  customerEmail: yup
-    .string()
-    .email('Digite um email válido'),
+    .max(100, "A descrição deve ter no máximo 100 caracteres"),
+  customerEmail: yup.string().email("Digite um email válido"),
   paymentMethods: yup
     .array()
-    .min(1, 'Selecione pelo menos um método de pagamento')
-    .required('Selecione pelo menos um método de pagamento')
+    .min(1, "Selecione pelo menos um método de pagamento")
+    .required("Selecione pelo menos um método de pagamento"),
 });
 
 interface FormData {
@@ -50,51 +55,53 @@ const PaymentLinkForm: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
-    amount: '',
-    description: '',
-    customerEmail: '',
-    parcelasSemJuros: '',
-    paymentMethods: ['pix']
+    amount: "",
+    description: "",
+    customerEmail: "",
+    parcelasSemJuros: "",
+    paymentMethods: ["pix"],
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState<boolean>(false);
-  const [generatedLink, setGeneratedLink] = useState<string>('');
+  const [generatedLink, setGeneratedLink] = useState<string>("");
 
   const paymentMethodOptions = [
     {
-      id: 'pix' as PaymentMethod,
-      name: 'PIX',
-      description: 'Transferência instantânea',
+      id: "pix" as PaymentMethod,
+      name: "PIX",
+      description: "Transferência instantânea",
       icon: <Smartphone className="h-5 w-5" />,
       popular: true,
-      color: 'from-green-500 to-emerald-600'
+      disabled: true,
+      color: "from-green-500 to-emerald-600",
     },
     {
-      id: 'credit_card' as PaymentMethod,
-      name: 'Cartão de Crédito',
-      description: 'Visa, Mastercard, Elo',
+      id: "credit_card" as PaymentMethod,
+      name: "Cartão de Crédito",
+      description: "Visa, Mastercard, Elo",
       icon: <CreditCard className="h-5 w-5" />,
       popular: true,
-      color: 'from-blue-500 to-indigo-600'
+      disabled: true,
+      color: "from-blue-500 to-indigo-600",
     },
     {
-      id: 'bank_slip' as PaymentMethod,
-      name: 'Boleto Bancário',
-      description: 'Pagamento aprovado em até 1 dia',
+      id: "bank_slip" as PaymentMethod,
+      name: "Boleto Bancário",
+      description: "Pagamento aprovado em até 1 dia",
       icon: <CreditCard className="h-5 w-5" />,
       popular: false,
-      disabled: true,
-      color: 'from-purple-500 to-violet-600'
-    }
+      disabled: false,
+      color: "from-purple-500 to-violet-600",
+    },
   ];
 
   const validateField = async (field: keyof FormData, value: any) => {
     try {
       await validationSchema.validateAt(field, { ...formData, [field]: value });
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     } catch (error) {
       if (error instanceof yup.ValidationError) {
-        setErrors(prev => ({ ...prev, [field]: error.message }));
+        setErrors((prev) => ({ ...prev, [field]: error.message }));
       }
     }
   };
@@ -126,7 +133,7 @@ const PaymentLinkForm: React.FC = () => {
 
     const isValid = await validateForm();
     if (!isValid) {
-      toast.error('Por favor, corrija os erros no formulário');
+      toast.error("Por favor, corrija os erros no formulário");
       return;
     }
 
@@ -137,21 +144,20 @@ const PaymentLinkForm: React.FC = () => {
       const formDataNew = {
         ...formData,
         marketplaceId: userData?.marketplaceId,
-        seller_id: userData?.id
-      }
+        seller_id: userData?.id,
+      };
 
-      const response = await api.post('/register-payment', formDataNew);
+      const response = await api.post("/register-payment", formDataNew);
 
       if (response?.data) {
         const baseUrl = window.location.origin;
         const paymentUrl = `${baseUrl}/pay/${response?.data?.payment?.id}`;
         setGeneratedLink(paymentUrl);
 
-        toast.success('Link de pagamento criado com sucesso!');
+        toast.success("Link de pagamento criado com sucesso!");
       }
-
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ocorreu um erro');
+      toast.error(error instanceof Error ? error.message : "Ocorreu um erro");
     } finally {
       setLoading(false);
     }
@@ -159,55 +165,55 @@ const PaymentLinkForm: React.FC = () => {
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(generatedLink);
-    toast.success('Link copiado para a área de transferência!');
+    toast.success("Link copiado para a área de transferência!");
   };
 
   const handleCreateNewLink = () => {
     setFormData({
-      amount: '',
-      description: '',
-      customerEmail: '',
-      parcelasSemJuros: '',
-      paymentMethods: ['pix']
+      amount: "",
+      description: "",
+      customerEmail: "",
+      parcelasSemJuros: "",
+      paymentMethods: ["pix"],
     });
     setErrors({});
-    setGeneratedLink('');
+    setGeneratedLink("");
   };
 
   const togglePaymentMethod = (method: PaymentMethod) => {
     const newMethods = formData.paymentMethods.includes(method)
-      ? formData.paymentMethods.filter(m => m !== method)
+      ? formData.paymentMethods.filter((m) => m !== method)
       : [...formData.paymentMethods, method];
 
-    setFormData(prev => ({ ...prev, paymentMethods: newMethods }));
-    validateField('paymentMethods', newMethods);
+    setFormData((prev) => ({ ...prev, paymentMethods: newMethods }));
+    validateField("paymentMethods", newMethods);
   };
 
   const formatCurrency = (value: string) => {
     const numValue = parseFloat(value);
-    if (isNaN(numValue)) return '';
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    if (isNaN(numValue)) return "";
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(numValue);
   };
 
   const handleAmountChange = (value: string) => {
-    setFormData(prev => ({ ...prev, amount: value }));
-    validateField('amount', parseFloat(value));
+    setFormData((prev) => ({ ...prev, amount: value }));
+    validateField("amount", parseFloat(value));
   };
 
   const handleDescriptionChange = (value: string) => {
-    setFormData(prev => ({ ...prev, description: value }));
-    validateField('description', value);
+    setFormData((prev) => ({ ...prev, description: value }));
+    validateField("description", value);
   };
 
   const handleEmailChange = (value: string) => {
-    setFormData(prev => ({ ...prev, customerEmail: value }));
+    setFormData((prev) => ({ ...prev, customerEmail: value }));
     if (value) {
-      validateField('customerEmail', value);
+      validateField("customerEmail", value);
     } else {
-      setErrors(prev => ({ ...prev, customerEmail: undefined }));
+      setErrors((prev) => ({ ...prev, customerEmail: undefined }));
     }
   };
 
@@ -225,7 +231,7 @@ const PaymentLinkForm: React.FC = () => {
             <div className="mb-6 sm:mb-8">
               <Button
                 variant="ghost"
-                onClick={() => navigate('/payments')}
+                onClick={() => navigate("/payments")}
                 icon={<ArrowLeft className="h-4 w-4" />}
                 className="mb-4 hover:bg-white/80 transition-colors"
               >
@@ -236,14 +242,18 @@ const PaymentLinkForm: React.FC = () => {
                   Criar link de pagamento
                 </h1>
                 <p className="text-gray-600 text-sm sm:text-base">
-                  Configure os detalhes do seu link de pagamento de forma simples e rápida
+                  Configure os detalhes do seu link de pagamento de forma
+                  simples e rápida
                 </p>
               </div>
             </div>
 
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardContent className="p-6 sm:p-8 lg:p-12">
-                <form onSubmit={handleSubmit} className="space-y-8 lg:space-y-10">
+                <form
+                  onSubmit={handleSubmit}
+                  className="space-y-8 lg:space-y-10"
+                >
                   {/* Amount Section */}
                   <motion.div
                     className="space-y-4"
@@ -266,8 +276,11 @@ const PaymentLinkForm: React.FC = () => {
                           placeholder="0,00"
                           value={formData.amount}
                           onChange={(e) => handleAmountChange(e.target.value)}
-                          className={`w-full pl-12 sm:pl-14 pr-4 py-4 sm:py-5 text-xl sm:text-2xl lg:text-3xl font-bold border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.amount ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                            }`}
+                          className={`w-full pl-12 sm:pl-14 pr-4 py-4 sm:py-5 text-xl sm:text-2xl lg:text-3xl font-bold border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                            errors.amount
+                              ? "border-red-300 bg-red-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
                           required
                         />
                       </div>
@@ -307,13 +320,16 @@ const PaymentLinkForm: React.FC = () => {
                       <Input
                         placeholder="Ex: Assinatura Premium, Consultoria, Produto..."
                         value={formData.description}
-                        onChange={(e) => handleDescriptionChange(e.target.value)}
+                        onChange={(e) =>
+                          handleDescriptionChange(e.target.value)
+                        }
                         error={errors.description}
                         fullWidth
                         className="py-3 sm:py-4 text-base border-2 hover:border-gray-300 transition-colors"
                       />
                       <p className="text-xs sm:text-sm text-gray-500 mt-2">
-                        Máximo de 100 caracteres ({formData.description.length}/100)
+                        Máximo de 100 caracteres ({formData.description.length}
+                        /100)
                       </p>
                     </div>
 
@@ -348,65 +364,82 @@ const PaymentLinkForm: React.FC = () => {
                         Métodos de pagamento aceitos *
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                        {paymentMethodOptions.map((option, index) => (
-                          <motion.div
-                            key={option.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 + index * 0.1 }}
-                            className={`relative border-2 rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-300 group ${formData.paymentMethods.includes(option.id)
-                              ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-lg transform scale-105'
-                              : 'border-gray-200 hover:border-gray-300 hover:shadow-md hover:bg-gray-50/50 hover:transform hover:scale-102'
+                        {paymentMethodOptions
+                          ?.filter((item) => item.disabled === true)
+                          ?.map((option, index) => (
+                            <motion.div
+                              key={option.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.4 + index * 0.1 }}
+                              className={`relative border-2 rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-300 group ${
+                                formData.paymentMethods.includes(option.id)
+                                  ? "border-primary bg-gradient-to-br from-primary/5 to-primary/10 ring-2 ring-primary/20 shadow-lg transform scale-105"
+                                  : "border-gray-200 hover:border-gray-300 hover:shadow-md hover:bg-gray-50/50 hover:transform hover:scale-102"
                               }`}
-                            onClick={() => togglePaymentMethod(option.id)}
-                            whileHover={{ y: -2 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <div className={`p-2 sm:p-3 rounded-lg transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                                  ? `bg-gradient-to-r ${option.color} text-white shadow-lg`
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
-                                  }`}>
-                                  {option.icon}
-                                </div>
-                                <div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="font-semibold text-gray-900 text-sm sm:text-base">
-                                      {option.name}
-                                    </span>
-                                    {option.popular && (
-                                      <motion.span
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        className="px-2 py-1 text-xs font-medium bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-sm"
-                                      >
-                                        Popular
-                                      </motion.span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                                    {option.description}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${formData.paymentMethods.includes(option.id)
-                                ? 'border-primary bg-primary shadow-lg'
-                                : 'border-gray-300 group-hover:border-gray-400'
-                                }`}>
-                                {formData.paymentMethods.includes(option.id) && (
-                                  <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                              onClick={() => togglePaymentMethod(option.id)}
+                              whileHover={{ y: -2 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div
+                                    className={`p-2 sm:p-3 rounded-lg transition-all duration-300 ${
+                                      formData.paymentMethods.includes(
+                                        option.id
+                                      )
+                                        ? `bg-gradient-to-r ${option.color} text-white shadow-lg`
+                                        : "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
+                                    }`}
                                   >
-                                    <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
-                                  </motion.div>
-                                )}
+                                    {option.icon}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-semibold text-gray-900 text-sm sm:text-base">
+                                        {option.name}
+                                      </span>
+                                      {option.popular && (
+                                        <motion.span
+                                          initial={{ scale: 0 }}
+                                          animate={{ scale: 1 }}
+                                          className="px-2 py-1 text-xs font-medium bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-sm"
+                                        >
+                                          Popular
+                                        </motion.span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                                      {option.description}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div
+                                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                                    formData.paymentMethods.includes(option.id)
+                                      ? "border-primary bg-primary shadow-lg"
+                                      : "border-gray-300 group-hover:border-gray-400"
+                                  }`}
+                                >
+                                  {formData.paymentMethods.includes(
+                                    option.id
+                                  ) && (
+                                    <motion.div
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 500,
+                                        damping: 30,
+                                      }}
+                                    >
+                                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                                    </motion.div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        ))}
+                            </motion.div>
+                          ))}
                       </div>
                       {errors.paymentMethods && (
                         <motion.div
@@ -420,33 +453,35 @@ const PaymentLinkForm: React.FC = () => {
                       )}
                     </div>
                   </motion.div>
-                  {formData.paymentMethods.includes('credit_card') && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="mt-4"
-                  >
-                    <label className="block text-sm sm:text-base font-semibold text-gray-900 mb-2">
-                      Parcelas isentas de juros (opcional)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={21}
-                      value={formData.parcelasSemJuros || ''}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, parcelasSemJuros: e.target.value }))
-                      }
-                      placeholder="Ex: 3"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Quantidade de parcelas no cartão sem cobrança de juros
-                    </p>
-                  </motion.div>
-                )}
-
+                  {formData.paymentMethods.includes("credit_card") && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="mt-4"
+                    >
+                      <label className="block text-sm sm:text-base font-semibold text-gray-900 mb-2">
+                        Parcelas isentas de juros (opcional)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={21}
+                        value={formData.parcelasSemJuros || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            parcelasSemJuros: e.target.value,
+                          }))
+                        }
+                        placeholder="Ex: 3"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Quantidade de parcelas no cartão sem cobrança de juros
+                      </p>
+                    </motion.div>
+                  )}
 
                   {/* Submit Button */}
                   <motion.div
@@ -459,11 +494,22 @@ const PaymentLinkForm: React.FC = () => {
                       type="submit"
                       fullWidth
                       loading={loading}
-                      disabled={loading || Object.keys(errors).some(key => errors[key as keyof FormErrors])}
+                      disabled={
+                        loading ||
+                        Object.keys(errors).some(
+                          (key) => errors[key as keyof FormErrors]
+                        )
+                      }
                       className="py-4 sm:py-5 text-base sm:text-lg font-semibold bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
-                      icon={loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                      icon={
+                        loading ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <CreditCard className="h-5 w-5" />
+                        )
+                      }
                     >
-                      {loading ? 'Gerando link...' : 'Gerar link de pagamento'}
+                      {loading ? "Gerando link..." : "Gerar link de pagamento"}
                     </Button>
                   </motion.div>
                 </form>
@@ -486,7 +532,9 @@ const PaymentLinkForm: React.FC = () => {
                 >
                   <Check className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
                 </motion.div>
-                <CardTitle className="text-xl sm:text-2xl lg:text-3xl">Link criado com sucesso!</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl">
+                  Link criado com sucesso!
+                </CardTitle>
                 <p className="text-gray-600 text-sm sm:text-base">
                   Seu link de pagamento está pronto para ser compartilhado
                 </p>
@@ -529,22 +577,32 @@ const PaymentLinkForm: React.FC = () => {
                     </h3>
                     <div className="space-y-3 text-sm sm:text-base">
                       <div className="flex flex-col sm:flex-row sm:justify-between">
-                        <span className="text-gray-600 font-medium">Valor:</span>
+                        <span className="text-gray-600 font-medium">
+                          Valor:
+                        </span>
                         <span className="font-bold text-lg sm:text-xl text-primary">
                           {formatCurrency(formData.amount)}
                         </span>
                       </div>
                       {formData.description && (
                         <div className="flex flex-col sm:flex-row sm:justify-between">
-                          <span className="text-gray-600 font-medium">Descrição:</span>
-                          <span className="font-medium">{formData.description}</span>
+                          <span className="text-gray-600 font-medium">
+                            Descrição:
+                          </span>
+                          <span className="font-medium">
+                            {formData.description}
+                          </span>
                         </div>
                       )}
                       <div className="flex flex-col sm:flex-row sm:justify-between">
-                        <span className="text-gray-600 font-medium">Métodos aceitos:</span>
+                        <span className="text-gray-600 font-medium">
+                          Métodos aceitos:
+                        </span>
                         <div className="flex flex-wrap gap-2 mt-1 sm:mt-0">
-                          {formData.paymentMethods.map(method => {
-                            const option = paymentMethodOptions.find(opt => opt.id === method);
+                          {formData.paymentMethods.map((method) => {
+                            const option = paymentMethodOptions.find(
+                              (opt) => opt.id === method
+                            );
                             return (
                               <span
                                 key={method}
@@ -567,7 +625,7 @@ const PaymentLinkForm: React.FC = () => {
                     className="flex flex-col sm:flex-row gap-3 sm:gap-4"
                   >
                     <Button
-                      onClick={() => window.open(generatedLink, '_blank')}
+                      onClick={() => window.open(generatedLink, "_blank")}
                       variant="outline"
                       fullWidth
                       className="border-2 hover:bg-blue-50 hover:border-blue-300 transition-all"
@@ -591,7 +649,7 @@ const PaymentLinkForm: React.FC = () => {
                   >
                     <Button
                       variant="ghost"
-                      onClick={() => navigate('/payments')}
+                      onClick={() => navigate("/payments")}
                       icon={<ArrowLeft className="h-4 w-4" />}
                       className="hover:bg-gray-100 transition-colors"
                     >

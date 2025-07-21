@@ -60,11 +60,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                 icon: <Store className="h-5 w-5" />,
                 path: "/admin/sellers",
               },
-              // {
-              //   label: 'Pagamentos',
-              //   icon: <Wallet className="h-5 w-5" />,
-              //   path: '/payments'
-              // },
               {
                 label: "Transações",
                 icon: <History className="h-5 w-5" />,
@@ -171,7 +166,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   return (
     <>
       {/* Mobile Menu Button */}
-
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-md lg:hidden"
@@ -207,169 +201,156 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
         transition={{ duration: 0.3 }}
         className={`fixed top-0 left-0 h-screen bg-white border-r border-border z-40 ${
           isMobileMenuOpen ? "shadow-xl" : ""
-        }`}
+        } overflow-hidden`}
       >
+        {/* Container principal com scroll */}
         <div className="flex flex-col h-full">
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-8">
-              <CreditCard className="h-8 w-8 text-primary shrink-0" />
+          {/* Header da sidebar - fixo no topo */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
               <AnimatePresence mode="wait">
                 {!isCollapsed && (
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-xl font-bold"
+                    className="text-lg sm:text-xl font-bold"
                   >
                     PayLink
                   </motion.span>
                 )}
               </AnimatePresence>
             </div>
+          </div>
 
-            <nav className="space-y-6">
-              {menuItems.map((section, index) => (
-                <div key={index}>
-                  <AnimatePresence mode="wait">
-                    {!isCollapsed && (
-                      <motion.h3
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3"
-                      >
-                        {section.title}
-                      </motion.h3>
-                    )}
-                  </AnimatePresence>
-                  <div className="space-y-1">
-                    {/* {section.items.map((item, itemIndex) => (
-                      <Link
-                        key={itemIndex}
-                        to={item.path}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${isActive(item.path)
-                          ? 'text-primary bg-primary/5'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                          }`}
-                      >
-                        <div className={`shrink-0 ${isActive(item.path) ? 'text-primary' : ''}`}>
-                          {item.icon}
-                        </div>
-                        <AnimatePresence mode="wait">
-                          {!isCollapsed && (
-                            <motion.span
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="text-sm font-medium"
+          {/* Área de navegação com scroll */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="p-4 sm:p-6">
+              <nav className="space-y-4 sm:space-y-6">
+                {menuItems.map((section, index) => (
+                  <div key={index}>
+                    <AnimatePresence mode="wait">
+                      {!isCollapsed && (
+                        <motion.h3
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3"
+                        >
+                          {section.title}
+                        </motion.h3>
+                      )}
+                    </AnimatePresence>
+                    <div className="space-y-1">
+                      {section.items.map((item, itemIndex) => {
+                        const isItemDisabled = item.disabled;
+
+                        // Se for disabled, renderiza um div ao invés do Link, bloqueando o clique
+                        if (isItemDisabled) {
+                          return (
+                            <div
+                              key={itemIndex}
+                              className="group flex items-center gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors relative text-gray-400 cursor-not-allowed bg-gray-50"
+                              title="Em breve"
                             >
-                              {item.label}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                        {isCollapsed && (
-                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                            {item.label}
-                          </div>
-                        )}
-                      </Link>
-                    ))} */}
-                    {section.items.map((item, itemIndex) => {
-                      const isItemDisabled = item.disabled;
+                              <div className="shrink-0 text-sm sm:text-base">
+                                {item.icon}
+                              </div>
+                              <AnimatePresence mode="wait">
+                                {!isCollapsed && (
+                                  <motion.span
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="text-sm font-medium flex items-center gap-2 min-w-0"
+                                  >
+                                    <span className="truncate">
+                                      {item.label}
+                                    </span>
+                                    <span className="px-1.5 sm:px-2 py-0.5 bg-gray-300 text-gray-800 rounded text-xs font-semibold whitespace-nowrap">
+                                      Em breve
+                                    </span>
+                                  </motion.span>
+                                )}
+                              </AnimatePresence>
+                              {isCollapsed && (
+                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                  {item.label}{" "}
+                                  <span className="ml-1 text-yellow-300">
+                                    Em breve
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
 
-                      // Se for disabled, renderiza um div ao invés do Link, bloqueando o clique
-                      if (isItemDisabled) {
+                        // Caso normal, renderiza o Link
                         return (
-                          <div
+                          <Link
                             key={itemIndex}
-                            className="group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative text-gray-400 cursor-not-allowed bg-gray-50"
-                            title="Em breve"
+                            to={item.path}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`group flex items-center gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors relative ${
+                              isActive(item.path)
+                                ? "text-primary bg-primary/5"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                            }`}
                           >
-                            <div className="shrink-0">{item.icon}</div>
+                            <div
+                              className={`shrink-0 text-sm sm:text-base ${
+                                isActive(item.path) ? "text-primary" : ""
+                              }`}
+                            >
+                              {item.icon}
+                            </div>
                             <AnimatePresence mode="wait">
                               {!isCollapsed && (
                                 <motion.span
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
-                                  className="text-sm font-medium flex items-center gap-2"
+                                  className="text-sm font-medium truncate"
                                 >
                                   {item.label}
-                                  <span className="px-2 py-0.5 bg-gray-300 text-gray-800 rounded text-xs font-semibold">
-                                    Em breve
-                                  </span>
                                 </motion.span>
                               )}
                             </AnimatePresence>
                             {isCollapsed && (
-                              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                                {item.label}{" "}
-                                <span className="ml-1 text-yellow-300">
-                                  Em breve
-                                </span>
+                              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                {item.label}
                               </div>
                             )}
-                          </div>
+                          </Link>
                         );
-                      }
-
-                      // Caso normal, renderiza o Link
-                      return (
-                        <Link
-                          key={itemIndex}
-                          to={item.path}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative ${
-                            isActive(item.path)
-                              ? "text-primary bg-primary/5"
-                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                          }`}
-                        >
-                          <div
-                            className={`shrink-0 ${
-                              isActive(item.path) ? "text-primary" : ""
-                            }`}
-                          >
-                            {item.icon}
-                          </div>
-                          <AnimatePresence mode="wait">
-                            {!isCollapsed && (
-                              <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="text-sm font-medium"
-                              >
-                                {item.label}
-                              </motion.span>
-                            )}
-                          </AnimatePresence>
-                          {isCollapsed && (
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                              {item.label}
-                            </div>
-                          )}
-                        </Link>
-                      );
-                    })}
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </nav>
+                ))}
+              </nav>
+            </div>
           </div>
 
-          <div className="mt-auto p-6">
+          {/* Footer da sidebar - fixo no fundo */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-t border-gray-100">
             <AnimatePresence mode="wait">
               {!isCollapsed && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="mb-4"
+                  className="mb-3 sm:mb-4"
                 >
-                  <p className="text-sm text-gray-500">Logado como</p>
-                  <p className="font-medium truncate">{user?.nome}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Logado como
+                  </p>
+                  <p
+                    className="text-sm sm:text-base font-medium truncate"
+                    title={user?.nome}
+                  >
+                    {user?.nome}
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -379,6 +360,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                 onClick={logout}
                 icon={<LogOut className="h-4 w-4" />}
                 fullWidth
+                className="min-h-[2.5rem] sm:min-h-[2.75rem]"
               >
                 <AnimatePresence mode="wait">
                   {!isCollapsed && (
@@ -386,6 +368,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
+                      className="text-sm font-medium"
                     >
                       Sair
                     </motion.span>
@@ -393,7 +376,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                 </AnimatePresence>
               </Button>
               {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                   Sair
                 </div>
               )}
@@ -405,7 +388,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       {/* Toggle Button - Only visible on desktop */}
       <button
         onClick={() => handleCollapse(!isCollapsed)}
-        className={`fixed top-6 z-40 bg-white rounded-full shadow-lg p-1.5 transition-all duration-300 hidden lg:block ${
+        className={`fixed top-6 z-40 bg-white rounded-full shadow-lg p-1.5 transition-all duration-300 hidden lg:block hover:shadow-xl ${
           isCollapsed ? "left-[4.5rem]" : "left-60"
         }`}
       >

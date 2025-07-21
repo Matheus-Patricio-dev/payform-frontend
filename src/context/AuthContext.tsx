@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from "react";
 import { User } from "../types";
 import api from "../api/api";
+import toast from "react-hot-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -105,12 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const response = await api.post("/register", {
-        id_seller: formData.id,
+        // id_seller: formData.id,
         nome: formData.nome,
         email: formData.email,
         password: formData.password,
         confirmpassword: formData.confirmpassword,
-        marketplaceId: myMarketplaceId || "",
+        marketplaceId: formData?.myMarketplaceId || "",
         contactPerson: formData.contactPerson || "",
         phone: formData.phone || "",
         website: formData.website || "",
@@ -137,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return { data: response.data, error: null };
     } catch (err) {
       console.error("Erro durante o registro:", err);
-
+      toast.error(error?.response?.data?.error)
       if (err.response) {
         // O servidor respondeu com um erro
         const status = err.response.status;

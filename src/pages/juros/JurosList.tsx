@@ -221,7 +221,7 @@ const JuroList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background ">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
 
       <main

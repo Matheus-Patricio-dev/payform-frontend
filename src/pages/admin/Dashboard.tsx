@@ -180,7 +180,6 @@ const AdminDashboard: React.FC = () => {
   }, [user]);
 
   const sellers = getAllSellers();
-  console.log(marketplaces);
 
   // Get all transactions for chart data
   const allTransactions = transactions?.dados?.transacoes || [];

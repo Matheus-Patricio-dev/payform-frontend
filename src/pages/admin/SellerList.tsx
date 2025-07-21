@@ -9,6 +9,10 @@ import {
   Phone,
   User,
   MapPin,
+  Users,
+  Mail,
+  X,
+  ChevronDownIcon,
 } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -532,12 +536,12 @@ const SellerList: React.FC = () => {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="ID do Vendedor *"
+                label="ID Zoop *"
                 value={formData.id}
                 onChange={(e) =>
                   setFormData({ ...formData, id: e.target.value })
                 }
-                placeholder="ex: seller-123"
+                placeholder="ID Zoop do Vendedor"
                 fullWidth
                 disabled={isEditModalOpen}
                 error={formErrors.id}
@@ -853,10 +857,400 @@ const SellerList: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background ">
       <Sidebar onCollapse={(collapsed) => setIsCollapsed(collapsed)} />
-
       <main
+        className={`flex-1 transition-all duration-300 ${
+          isCollapsed ? "lg:ml-20" : "lg:ml-64"
+        }`}
+      >
+        <div className="p-2 sm:p-4 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
+          <div className="max-w-[2000px] mx-auto w-full">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+              <div className="flex items-center min-w-0 flex-1">
+                <div className="bg-primary/10 p-2 rounded-lg mr-3 flex-shrink-0">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
+                    Meus Vendedores
+                  </h1>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">
+                    {filteredSellers?.length || 0} vendedor(es){" "}
+                    {searchTerm && `encontrado(s) para "${searchTerm}"`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto flex-shrink-0">
+                {/* <Button
+                  loading={isRefresh}
+                  disabled={isRefresh}
+                  variant="outline"
+                  onClick={() => fetchSellers()}
+                  icon={
+                    <RefreshCw
+                      className={`h-4 w-4 ${isRefresh ? "animate-spin" : ""}`}
+                    />
+                  }
+                  className="hover:bg-gray-50 transition-all duration-200 hover:shadow-md order-2 sm:order-1"
+                >
+                  {isRefresh ? "Atualizando" : "Recarregar"}
+                </Button> */}
+                <Button
+                  loading={isCreateSeller}
+                  onClick={() => setIsAddModalOpen(true)}
+                  icon={<Plus className="h-4 w-4" />}
+                  className="bg-gradient-to-r from-primary to-primary-600 hover:from-primary-600 hover:to-primary-700 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5 order-1 sm:order-2 text-sm"
+                >
+                  <span className="hidden sm:inline">Adicionar Vendedor</span>
+                  <span className="sm:hidden">Adicionar</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Search Section */}
+            <div className="mb-4 sm:mb-6">
+              <div className="relative">
+                <Input
+                  placeholder="Buscar por nome, email ou ID..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  icon={<Search className="h-4 w-4" />}
+                  fullWidth
+                  className="bg-white shadow-sm border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-sm"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCurrentPage(1);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop Table View */}
+            <Card className="hidden lg:block shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                          Vendedor
+                        </th>
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                          ID referencia do documento
+                        </th>
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                          Email
+                        </th>
+                        <th className="text-left py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                          ID Marketplace
+                        </th>
+                        <th className="text-center py-5 px-6 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredSellers?.map((seller, index) => (
+                        <tr
+                          key={seller.id}
+                          className="border-b border-gray-50 last:border-0 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200 group"
+                        >
+                          <td className="py-5 px-6">
+                            <div className="flex items-center">
+                              <div className="bg-primary/10 p-2 rounded-lg mr-3 group-hover:bg-primary/15 transition-colors duration-200">
+                                <Store className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors duration-200">
+                                  {seller.cliente.nome}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  ID Zoop #{seller.id_seller}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-5 px-6">
+                            <div className="text-gray-700">{seller?.id}</div>
+                            <div className="text-sm text-gray-500">
+                              ID PayLink
+                            </div>
+                          </td>
+                          <td className="py-5 px-6">
+                            <div className="text-gray-700">
+                              {seller.cliente.email}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Email de contato
+                            </div>
+                          </td>
+                          <td className="py-5 px-6">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 font-mono">
+                              {seller?.marketplaceId}
+                            </span>
+                          </td>
+                          <td className="py-5 px-6">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setIsEditModalOpen(true);
+                                  setSelectedSeller(seller);
+                                  setFormData({
+                                    id: seller.id,
+                                    nome: seller.cliente.nome,
+                                    email: seller.cliente.email,
+                                    password: "",
+                                    confirmpassword: "",
+                                    marketplaceId: seller.marketplaceId || "",
+                                    contactPerson: seller.contactPerson || "",
+                                    phone: seller?.cliente?.phone || "",
+                                    website: seller?.cliente?.website || "",
+                                    street: seller.address?.street || "",
+                                    number: seller.address?.number || "",
+                                    complement:
+                                      seller.address?.complement || "",
+                                    neighborhood:
+                                      seller.address?.neighborhood || "",
+                                    city: seller.address?.city || "",
+                                    state: seller.address?.state || "",
+                                    zipCode: seller.address?.zipCode || "",
+                                    country: seller.address?.country || "",
+                                    taxa_padrao:
+                                      seller?.cliente?.id_juros || "",
+                                    taxa_repasse_juros:
+                                      seller?.cliente?.taxa_repasse_juros || "",
+                                  });
+                                }}
+                                icon={<Pencil className="h-4 w-4" />}
+                                className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                loading={isRemoveSeller}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:bg-red-50 hover:border-red-200 transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
+                                onClick={() =>
+                                  handleRemoveSeller(
+                                    seller.id,
+                                    seller.cliente?.id
+                                  )
+                                }
+                                icon={<Trash2 className="h-4 w-4" />}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-3 sm:space-y-4 w-full">
+              {filteredSellers?.map((seller, index) => (
+                <Card
+                  key={seller.id}
+                  className="bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary hover:border-l-primary-600 w-full"
+                >
+                  <CardContent className="p-3 sm:p-5 w-full">
+                    <div className="flex flex-col space-y-3 sm:space-y-4 w-full">
+                      {/* Header */}
+                      <div className="flex items-start justify-between w-full">
+                        <div className="flex items-center flex-1 min-w-0 mr-2">
+                          <div className="bg-primary/10 p-1.5 sm:p-2 rounded-lg mr-2 sm:mr-3 flex-shrink-0">
+                            <Store className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base lg:text-lg">
+                              {seller.cliente.nome}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-500 truncate">
+                              Id Zoop #{seller.id_seller}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center px-1.5 sm:px-2 py-1 rounded-full text-xs bg-primary/10 text-primary font-medium flex-shrink-0">
+                          <span className="hidden xs:inline">ID PayLink: </span>
+                          <span className="xs:hidden">ID: </span>
+                          {seller?.id}
+                        </span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 w-full">
+                        <div className="flex items-center text-xs sm:text-sm text-gray-600 min-w-0">
+                          <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <span className="truncate flex-1">
+                            {seller.cliente.email}
+                          </span>
+                        </div>
+                        {seller?.marketplaceId && (
+                          <div className="flex items-center text-xs sm:text-sm text-gray-600 mt-2 min-w-0">
+                            <div className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0"></div>
+                            <span className="text-gray-500 mr-2 flex-shrink-0">
+                              Marketplace:
+                            </span>
+                            <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded truncate">
+                              {seller.marketplaceId}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 w-full">
+                        <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 w-full">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setIsEditModalOpen(true);
+                              setSelectedSeller(seller);
+                              setFormData({
+                                id: seller.id,
+                                nome: seller.cliente.nome,
+                                email: seller.cliente.email,
+                                password: "",
+                                confirmpassword: "",
+                                marketplaceId: seller.marketplaceId || "",
+                                contactPerson: seller.contactPerson || "",
+                                phone: seller?.cliente?.phone || "",
+                                website: seller?.cliente?.website || "",
+                                street: seller.address?.street || "",
+                                number: seller.address?.number || "",
+                                complement: seller.address?.complement || "",
+                                neighborhood:
+                                  seller.address?.neighborhood || "",
+                                city: seller.address?.city || "",
+                                state: seller.address?.state || "",
+                                zipCode: seller.address?.zipCode || "",
+                                country: seller.address?.country || "",
+                                taxa_padrao: seller?.cliente?.id_juros || "",
+                                taxa_repasse_juros:
+                                  seller?.cliente?.taxa_repasse_juros || "",
+                              });
+                            }}
+                            icon={<Pencil className="h-3 w-3 sm:h-4 sm:w-4" />}
+                            className="hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all duration-200 text-xs sm:text-sm w-full"
+                          >
+                            <span className="xs:hidden">Editar</span>
+                            <span className="hidden xs:inline">
+                              Editar Vendedor
+                            </span>
+                          </Button>
+                          <Button
+                            loading={isRemoveSeller}
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:bg-red-50 hover:border-red-200 transition-all duration-200 text-xs sm:text-sm w-full"
+                            onClick={() =>
+                              handleRemoveSeller(seller.id, seller.cliente?.id)
+                            }
+                            icon={<Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {filteredSellers.length === 0 && (
+              <Card className="bg-white/80 backdrop-blur-sm shadow-sm border-0 w-full">
+                <CardContent className="text-center py-12 sm:py-16 px-4">
+                  <div className="bg-gray-100 rounded-full p-3 sm:p-4 w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6">
+                    <Store className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                    {searchTerm
+                      ? "Nenhum vendedor encontrado"
+                      : "Nenhum vendedor cadastrado"}
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto px-4">
+                    {searchTerm
+                      ? `Não encontramos vendedores que correspondam à busca "${searchTerm}". Tente com outros termos.`
+                      : "Comece adicionando seu primeiro vendedor para gerenciar suas vendas."}
+                  </p>
+                  {searchTerm ? (
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center max-w-sm mx-auto">
+                      <Button
+                        onClick={() => {
+                          setSearchTerm("");
+                          setCurrentPage(1);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        icon={<X className="h-4 w-4" />}
+                        className="w-full sm:w-auto"
+                      >
+                        Limpar Busca
+                      </Button>
+                      <Button
+                        onClick={() => setIsAddModalOpen(true)}
+                        size="sm"
+                        icon={<Plus className="h-4 w-4" />}
+                        className="bg-gradient-to-r from-primary to-primary-600 w-full sm:w-auto"
+                      >
+                        Adicionar Vendedor
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => setIsAddModalOpen(true)}
+                      icon={<Plus className="h-4 w-4" />}
+                      className="bg-gradient-to-r from-primary to-primary-600 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                      size="lg"
+                    >
+                      <span className="hidden xs:inline">
+                        Adicionar Primeiro Vendedor
+                      </span>
+                      <span className="xs:hidden">Adicionar Vendedor</span>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pagination */}
+            {filteredSellers.length > ITEMS_PER_PAGE && (
+              <div className="mt-6 sm:mt-8 flex justify-center w-full">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm p-2 w-full max-w-sm sm:max-w-none sm:w-auto">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+      {/* <main
         className={`flex-1 transition-all duration-300 ${
           isCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
@@ -960,17 +1354,6 @@ const SellerList: React.FC = () => {
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center justify-end gap-2">
-                                {/* <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedSellerForReport(seller.id);
-                                    setIsReportModalOpen(true);
-                                  }}
-                                  icon={<ChartBar className="h-4 w-4" />}
-                                >
-                                  Ver Relatório
-                                </Button> */}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1059,8 +1442,9 @@ const SellerList: React.FC = () => {
             )}
           </div>
         </div>
-      </main>
+      </main> */}
 
+      {/* Add Seller Modal */}
       {/* Add Seller Modal */}
       <Modal
         isOpen={isAddModalOpen}
@@ -1070,15 +1454,15 @@ const SellerList: React.FC = () => {
         }}
         title="Adicionar Vendedor"
       >
-        <div className="space-y-6">
-          {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+        <div className="space-y-4 lg:space-y-6">
+          {/* Tabs - Desktop */}
+          <div className="hidden md:block border-b border-gray-200">
+            <nav className="-mb-px flex space-x-6 lg:space-x-8">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm lg:text-base transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? "border-primary text-primary"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1093,19 +1477,58 @@ const SellerList: React.FC = () => {
                   >
                     {tab.icon}
                   </span>
-                  {tab.label}
+                  <span className="hidden lg:inline">{tab.label}</span>
+                  <span className="lg:hidden">
+                    {tab.shortLabel || tab.label}
+                  </span>
                 </button>
               ))}
             </nav>
           </div>
 
+          {/* Tabs - Mobile (Horizontal Scroll) */}
+          <div className="md:hidden">
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex space-x-1 p-1 bg-gray-100 rounded-lg min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all ${
+                      activeTab === tab.id
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="mr-2">{tab.icon}</span>
+                    <span className="text-xs sm:text-sm">
+                      {tab.shortLabel || tab.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Tab Content */}
-          <div className="min-h-[300px]">{renderTabContent()}</div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+          <div className="min-h-[250px] md:min-h-[300px] lg:min-h-[350px]">
+            <div className="px-1 md:px-0">{renderTabContent()}</div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddModalOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Cancelar
             </Button>
-            <Button onClick={handleAddSeller} loading={isCreateSeller}>
+            <Button
+              onClick={handleAddSeller}
+              loading={isCreateSeller}
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
               Adicionar
             </Button>
           </div>
@@ -1122,15 +1545,15 @@ const SellerList: React.FC = () => {
         }}
         title="Editar Vendedor"
       >
-        <div className="space-y-6">
-          {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+        <div className="space-y-4 lg:space-y-6">
+          {/* Tabs - Desktop */}
+          <div className="hidden md:block border-b border-gray-200">
+            <nav className="-mb-px flex space-x-6 lg:space-x-8">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm lg:text-base transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? "border-primary text-primary"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1145,20 +1568,57 @@ const SellerList: React.FC = () => {
                   >
                     {tab.icon}
                   </span>
-                  {tab.label}
+                  <span className="hidden lg:inline">{tab.label}</span>
+                  <span className="lg:hidden">
+                    {tab.shortLabel || tab.label}
+                  </span>
                 </button>
               ))}
             </nav>
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[300px]">{renderTabContent()}</div>
+          {/* Tabs - Mobile (Horizontal Scroll) */}
+          <div className="md:hidden">
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex space-x-1 p-1 bg-gray-100 rounded-lg min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all ${
+                      activeTab === tab.id
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="mr-2">{tab.icon}</span>
+                    <span className="text-xs sm:text-sm">
+                      {tab.shortLabel || tab.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+          {/* Tab Content */}
+          <div className="min-h-[250px] md:min-h-[300px] lg:min-h-[350px]">
+            <div className="px-1 md:px-0">{renderTabContent()}</div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Cancelar
             </Button>
-            <Button onClick={() => handleEditSeller(selectedSeller.id)}>
+            <Button
+              onClick={() => handleEditSeller(selectedSeller.id)}
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
               Salvar
             </Button>
           </div>
