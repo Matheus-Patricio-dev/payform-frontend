@@ -145,6 +145,7 @@ const PaymentLinkForm: React.FC = () => {
         ...formData,
         marketplaceId: userData?.marketplaceId,
         seller_id: userData?.id,
+        id_juros: userData?.id_juros
       };
 
       const response = await api.post("/register-payment", formDataNew);

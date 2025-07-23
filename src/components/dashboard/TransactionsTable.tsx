@@ -13,6 +13,8 @@ const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
         return "bg-success/10 text-success";
       case "pendente":
         return "bg-warning/10 text-warning";
+      case "pendente_pix":
+        return "bg-warning/10 text-warning";
       case "falha":
         return "bg-error/10 text-error";
       default:
@@ -26,6 +28,8 @@ const StatusBadge: React.FC<{ status: TransactionStatus }> = ({ status }) => {
         return "Completada";
       case "pendente":
         return "Pendente";
+      case "pendente_pix":
+        return "Pendente Pix";
       case "falha":
         return "Recusada";
       default:
@@ -170,9 +174,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                     {formatCurrency(transaction?.valor)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getPaymentMethodName(
-                      transaction?.paymentMethod
-                    )}
+                    {getPaymentMethodName(transaction?.paymentMethod)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {transaction?.cliente?.nome || "Anônimo"}

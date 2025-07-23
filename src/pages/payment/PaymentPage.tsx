@@ -329,15 +329,13 @@ const PaymentPage: React.FC = () => {
   function calculateInstallments(
     amount: number,
     maxInstallments: number,
-    user: { juros: { parcelas: any[] } },
+    user: any[],
     parcelasSemJuros: number
   ) {
     const installments = [];
 
     // Filtra as parcelas com taxa maior que 0
-    const validInstallments = user?.juros?.parcelas?.filter(
-      (parcel) => parcel.taxa > 0
-    );
+    const validInstallments = user?.filter((parcel) => parcel.taxa > 0);
 
     // Adiciona parcelas sem juros
     for (let i = 1; i <= Math.min(parcelasSemJuros, maxInstallments); i++) {
@@ -371,13 +369,14 @@ const PaymentPage: React.FC = () => {
 
   useEffect(() => {
     if (link?.amount) {
+      console.log(link);
       const maxInstallments = 21;
       const parcelasSemJuros = link?.parcelasSemJuros || 0; // Pega o número de parcelas sem juros
       setInstallmentValue(
         calculateInstallments(
           link.amount,
           maxInstallments,
-          user,
+          link?.juros?.parcelas,
           parcelasSemJuros
         )
       );
@@ -495,7 +494,7 @@ const PaymentPage: React.FC = () => {
       const payload = {
         ...cardData,
         amount: link?.amount,
-        id_juros: user?.id_juros,
+        id_juros: link?.id_juros,
         paymentMethod: "credit_card",
         taxa_repasse_juros: user?.juros?.id_zoop,
         number_installments: user?.juros?.parcelas?.filter(
