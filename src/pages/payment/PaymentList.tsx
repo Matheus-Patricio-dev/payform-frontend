@@ -143,11 +143,6 @@ const PaymentList: React.FC = () => {
     : [];
 
   const handleEditPayment = async () => {
-    // if (!selectedPayment || selectedPayment.status !== 'pending') {
-    //   toast.error('Apenas links pendentes podem ser editados');
-    //   return;
-    // }
-
     try {
       const response = await api.put(
         `/payment-update/${selectedPayment.id}`,
@@ -468,6 +463,15 @@ const PaymentList: React.FC = () => {
                           className="flex-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
                         >
                           Ver Link
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(payment)}
+                          icon={<Copy className="h-4 w-4" />}
+                          className="flex-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
+                        >
+                          Copiar Link
                         </Button>
                         <Button
                           variant="outline"

@@ -579,6 +579,8 @@ const JuroList: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         title="Editar Juros"
       >
+        <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
+
         <Input
           label="ID do Plano na Zoop"
           value={formData.planoIdZoop || ""}
@@ -588,7 +590,6 @@ const JuroList: React.FC = () => {
           placeholder="ID do plano na Zoop"
           fullWidth
         />
-        <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
           <Input
             label="Nome"
             value={formData.nome}
