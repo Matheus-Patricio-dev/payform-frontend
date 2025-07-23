@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { BarChart3, Check, Clock, CreditCard, DollarSign, Wallet, XCircle } from 'lucide-react';
-import { Card, CardContent } from '../ui/Card';
-import { formatCurrency } from '../../utils/formatters';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  BarChart3,
+  Check,
+  Clock,
+  CreditCard,
+  DollarSign,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import { Card, CardContent } from "../ui/Card";
+import { formatCurrency } from "../../utils/formatters";
 
 interface StatsCardsProps {
   stats: {
@@ -18,63 +26,62 @@ interface StatsCardsProps {
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ stats, userData }) => {
-
   const items = [
     {
-      title: 'Receita Total',
+      title: "Receita Total",
       value: formatCurrency(stats.totalAmount || 0),
       icon: <DollarSign className="h-5 w-5 text-primary" />,
-      color: 'bg-primary/10',
+      color: "bg-primary/10",
     },
     {
-      title: 'Saldo Disponível',
-      value: formatCurrency(Number(stats.accountBalance || 0)),
+      title: "Saldo Disponível",
+      value: formatCurrency(stats.accountBalance || 0),
       icon: <Wallet className="h-5 w-5 text-primary" />,
-      color: 'bg-primary/10',
-      cargo: "seller"
+      color: "bg-primary/10",
+      cargo: "seller",
     },
     {
-      title: 'Saldo Futuro',
+      title: "Saldo Futuro",
       value: formatCurrency(stats.currentBlockedBalance + stats.currentBalance),
       icon: <Wallet className="h-5 w-5 text-primary" />,
-      color: 'bg-primary/10',
-      cargo: "seller"
+      color: "bg-primary/10",
+      cargo: "seller",
     },
     {
-      title: 'Total de Transações',
+      title: "Total de Transações",
       value: stats.totalTransactions,
       icon: <CreditCard className="h-5 w-5 text-secondary" />,
-      color: 'bg-secondary/10',
-      cargo: "marketplace"
-
+      color: "bg-secondary/10",
+      cargo: "marketplace",
     },
     {
-      title: 'Aprovadas',
+      title: "Aprovadas",
       value: stats.completed,
       icon: <Check className="h-5 w-5 text-success" />,
-      color: 'bg-success/10',
-      cargo: "marketplace"
-
+      color: "bg-success/10",
+      cargo: "marketplace",
     },
     {
-      title: 'Pré Autorizadas',
+      title: "Pré Autorizadas",
       value: stats.pending,
       icon: <Clock className="h-5 w-5 text-warning" />,
-      color: 'bg-warning/10',
-      cargo: "marketplace"
-
+      color: "bg-warning/10",
+      cargo: "marketplace",
     },
     {
-      title: 'Recusadas',
+      title: "Recusadas",
       value: stats.declined,
       icon: <XCircle className="h-5 w-5 text-error" />,
-      color: 'bg-error/10',
-      cargo: "marketplace"
+      color: "bg-error/10",
+      cargo: "marketplace",
     },
   ];
 
-  const filteredItems = items.filter(item => {
-    if ((item.title === 'Saldo Disponível' || item.title === 'Saldo Futuro') && userData.cargo === 'marketplace') {
+  const filteredItems = items.filter((item) => {
+    if (
+      (item.title === "Saldo Disponível" || item.title === "Saldo Futuro") &&
+      userData.cargo === "marketplace"
+    ) {
       return false;
     }
     return true;
@@ -93,8 +100,12 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, userData }) => {
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">{item.title}</p>
-                  <h3 className="text-lg sm:text-2xl font-bold mt-1">{item.value}</h3>
+                  <p className="text-sm font-medium text-gray-500">
+                    {item.title}
+                  </p>
+                  <h3 className="text-lg sm:text-2xl font-bold mt-1">
+                    {item.value}
+                  </h3>
                 </div>
                 <div className={`p-2 rounded-full ${item.color}`}>
                   {item.icon}
