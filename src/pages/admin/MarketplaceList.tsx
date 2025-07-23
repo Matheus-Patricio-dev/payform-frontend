@@ -169,7 +169,6 @@ const contactInfoSchema = yup.object().shape({
       /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
       "Telefone inválido (ex: (11) 99999-9999)"
     ),
-  website: yup.string().url("Website deve ser uma URL válida"),
 });
 
 const addressInfoSchema = yup.object().shape({
@@ -576,26 +575,26 @@ const MarketplaceList: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  // Função para formatar CPF ou CNPJ
-  const formatCpfCnpj = (value) => {
-    // Remove caracteres não numéricos
-    const cleaned = value.replace(/\D/g, "");
+ const formatCpfCnpj = (value: string): string => {
+  const cleaned = value.replace(/\D/g, '');
 
-    if (cleaned.length <= 11) {
-      // Formatar CPF
-      return cleaned
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-    } else {
-      // Formatar CNPJ
-      return cleaned
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d{1,2})$/, "$1/$2")
-        .replace(/(\d{4})(\d{2})$/, "$1-$2");
-    }
-  };
+  if (cleaned.length <= 11) {
+    // CPF (máx. 11 dígitos)
+    const cpf = cleaned.slice(0, 11);
+    return cpf
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  } else {
+    // CNPJ (máx. 14 dígitos)
+    const cnpj = cleaned.slice(0, 14);
+    return cnpj
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+  }
+};
 
   const handleChange = (e) => {
     const { value } = e.target;
@@ -1665,7 +1664,7 @@ const MarketplaceList: React.FC = () => {
       </main> */}
 
       {/* Add Marketplace Modal */}
-      <Modal
+ <Modal
         isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
@@ -1674,9 +1673,10 @@ const MarketplaceList: React.FC = () => {
         title="Adicionar Marketplace"
       >
         <div className="space-y-4">
-          {/* Tabs */}
+          {/* Tabs - Responsivas */}
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            {/* Desktop Tabs */}
+            <nav className="hidden sm:flex -mb-px space-x-8">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -1700,66 +1700,52 @@ const MarketplaceList: React.FC = () => {
                 </button>
               ))}
             </nav>
+            
+            {/* Mobile Tabs - Scrollable */}
+            <nav className="sm:hidden -mb-px flex space-x-6 overflow-x-auto scrollbar-hide pb-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex-shrink-0 ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`mr-2 transition-colors ${
+                      activeTab === tab.id
+                        ? "text-primary"
+                        : "text-gray-400 group-hover:text-gray-500"
+                    }`}
+                  >
+                    {tab.icon}
+                  </span>
+                  <span className="text-xs sm:text-sm">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[300px]">{renderTabContent()}</div>
-          {/* <Input
-            label="ID do Marketplace"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            placeholder="ex: marketplace-123"
-            fullWidth
-          />
-          <Input
-            label="Nome"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Senha"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            fullWidth
-          />
-          <Input
-            label="Confirme a senha"
-            type="password"
-            value={formData.confirmpassword}
-            onChange={(e) => setFormData({ ...formData, confirmpassword: e.target.value })}
-            fullWidth
-          />
-          <Select
-            label="Status"
-            options={[
-              { value: 'active', label: 'Ativo' },
-              { value: 'inactive', label: 'Inativo' },
-            ]}
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-            fullWidth
-          /> */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2">
+          {/* Tab Content - Área scrollável para mobile */}
+          <div className="h-[250px] sm:min-h-[300px] sm:h-auto overflow-y-auto">
+            <div className="pr-2">{renderTabContent()}</div>
+          </div>
+          
+          {/* Botões - Sempre empilhados em mobile, lado a lado em desktop */}
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <Button
               variant="outline"
               onClick={() => setIsAddModalOpen(false)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               Cancelar
             </Button>
             <Button
               loading={isCreateMKT}
               onClick={handleAddMarketplace}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               Adicionar
             </Button>
@@ -1776,9 +1762,10 @@ const MarketplaceList: React.FC = () => {
         title="Editar Marketplace"
       >
         <div className="space-y-4">
-          {/* Tabs */}
+          {/* Tabs - Responsivas */}
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            {/* Desktop Tabs */}
+            <nav className="hidden sm:flex -mb-px space-x-8">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -1802,15 +1789,45 @@ const MarketplaceList: React.FC = () => {
                 </button>
               ))}
             </nav>
+            
+            {/* Mobile Tabs - Scrollable */}
+            <nav className="sm:hidden -mb-px flex space-x-6 overflow-x-auto scrollbar-hide pb-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group inline-flex items-center py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex-shrink-0 ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`mr-2 transition-colors ${
+                      activeTab === tab.id
+                        ? "text-primary"
+                        : "text-gray-400 group-hover:text-gray-500"
+                    }`}
+                  >
+                    {tab.icon}
+                  </span>
+                  <span className="text-xs sm:text-sm">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[300px]">{renderTabContent()}</div>
-          <div className="flex flex-col sm:flex-row justify-end gap-2">
+          {/* Tab Content - Área scrollável para mobile */}
+          <div className="h-[250px] sm:min-h-[300px] sm:h-auto overflow-y-auto">
+            <div className="pr-2">{renderTabContent()}</div>
+          </div>
+          
+          {/* Botões - Sempre empilhados em mobile, lado a lado em desktop */}
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <Button
               variant="outline"
               onClick={() => setIsEditModalOpen(false)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               Cancelar
             </Button>
@@ -1819,7 +1836,7 @@ const MarketplaceList: React.FC = () => {
               onClick={() =>
                 handleEditMarketplace(selectedMarketplace?.cliente_id)
               }
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               Salvar
             </Button>
@@ -1833,56 +1850,157 @@ const MarketplaceList: React.FC = () => {
         onClose={() => setIsAddSellerModalOpen(false)}
         title="Adicionar Vendedor"
       >
+        <div className="flex flex-col h-full">
+          {/* Área de campos com scroll */}
+          <div className="flex-1 overflow-y-auto max-h-[60vh] sm:max-h-none">
+            <div className="space-y-4 pr-2">
+              {/* Grid responsivo para os campos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="ID"
+                  value={sellerFormData.id}
+                  onChange={(e) =>
+                    setSellerFormData({ ...sellerFormData, id: e.target.value })
+                  }
+                  className="sm:col-span-1"
+                />
+                <Input
+                  label="Nome"
+                  value={sellerFormData.nome}
+                  onChange={(e) =>
+                    setSellerFormData({ ...sellerFormData, nome: e.target.value })
+                  }
+                  className="sm:col-span-1"
+                />
+              </div>
+              
+              {/* Email ocupa largura total */}
+              <Input
+                label="Email"
+                type="email"
+                value={sellerFormData.email}
+                onChange={(e) =>
+                  setSellerFormData({ ...sellerFormData, email: e.target.value })
+                }
+              />
+              
+              {/* Senhas em grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Senha"
+                  type="password"
+                  value={sellerFormData.password}
+                  onChange={(e) =>
+                    setSellerFormData({ ...sellerFormData, password: e.target.value })
+                  }
+                />
+                <Input
+                  label="Confirmar Senha"
+                  type="password"
+                  value={sellerFormData.confirmpassword}
+                  onChange={(e) =>
+                    setSellerFormData({
+                      ...sellerFormData,
+                      confirmpassword: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Botões fixos na parte inferior */}
+          <div className="flex-shrink-0 flex flex-col sm:flex-row justify-end gap-2 pt-4 mt-4 border-t border-gray-100 sm:border-t-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddSellerModalOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddSeller} 
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
+              Adicionar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Seller Modal */}
+      <Modal
+        isOpen={isAddSellerModalOpen}
+        onClose={() => setIsAddSellerModalOpen(false)}
+        title="Adicionar Vendedor"
+      >
         <div className="space-y-4">
-          <Input
-            label="ID"
-            value={sellerFormData.id}
-            onChange={(e) =>
-              setSellerFormData({ ...sellerFormData, id: e.target.value })
-            }
-          />
-          <Input
-            label="Nome"
-            value={sellerFormData.nome}
-            onChange={(e) =>
-              setSellerFormData({ ...sellerFormData, nome: e.target.value })
-            }
-          />
+          {/* Grid responsivo para os campos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="ID"
+              value={sellerFormData.id}
+              onChange={(e) =>
+                setSellerFormData({ ...sellerFormData, id: e.target.value })
+              }
+              className="sm:col-span-1"
+            />
+            <Input
+              label="Nome"
+              value={sellerFormData.nome}
+              onChange={(e) =>
+                setSellerFormData({ ...sellerFormData, nome: e.target.value })
+              }
+              className="sm:col-span-1"
+            />
+          </div>
+          
+          {/* Email ocupa largura total */}
           <Input
             label="Email"
+            type="email"
             value={sellerFormData.email}
             onChange={(e) =>
               setSellerFormData({ ...sellerFormData, email: e.target.value })
             }
           />
-          <Input
-            label="Senha"
-            type="password"
-            value={sellerFormData.password}
-            onChange={(e) =>
-              setSellerFormData({ ...sellerFormData, password: e.target.value })
-            }
-          />
-          <Input
-            label="Confirmar Senha"
-            type="password"
-            value={sellerFormData.confirmpassword}
-            onChange={(e) =>
-              setSellerFormData({
-                ...sellerFormData,
-                confirmpassword: e.target.value,
-              })
-            }
-          />
-          <div className="flex flex-col sm:flex-row justify-end gap-2">
+          
+          {/* Senhas em grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Senha"
+              type="password"
+              value={sellerFormData.password}
+              onChange={(e) =>
+                setSellerFormData({ ...sellerFormData, password: e.target.value })
+              }
+            />
+            <Input
+              label="Confirmar Senha"
+              type="password"
+              value={sellerFormData.confirmpassword}
+              onChange={(e) =>
+                setSellerFormData({
+                  ...sellerFormData,
+                  confirmpassword: e.target.value,
+                })
+              }
+            />
+          </div>
+          
+          {/* Botões - Sempre empilhados em mobile, lado a lado em desktop */}
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
             <Button
               variant="outline"
               onClick={() => setIsAddSellerModalOpen(false)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               Cancelar
             </Button>
-            <Button onClick={handleAddSeller} className="w-full sm:w-auto">
+            <Button 
+              onClick={handleAddSeller} 
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
               Adicionar
             </Button>
           </div>

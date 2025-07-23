@@ -153,7 +153,6 @@ const contactInfoSchema = yup.object().shape({
       /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
       "Telefone inválido (ex: (11) 99999-9999)"
     ),
-  website: yup.string().url("Website deve ser uma URL válida"),
 });
 
 const addressInfoSchema = yup.object().shape({
@@ -580,25 +579,26 @@ const SellerList: React.FC = () => {
   };
 
   // Função para formatar CPF ou CNPJ
-  const formatCpfCnpj = (value) => {
-    // Remove caracteres não numéricos
-    const cleaned = value.replace(/\D/g, "");
+ const formatCpfCnpj = (value: string): string => {
+  const cleaned = value.replace(/\D/g, '');
 
-    if (cleaned.length <= 11) {
-      // Formatar CPF
-      return cleaned
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-    } else {
-      // Formatar CNPJ
-      return cleaned
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d{1,2})$/, "$1/$2")
-        .replace(/(\d{4})(\d{2})$/, "$1-$2");
-    }
-  };
+  if (cleaned.length <= 11) {
+    // CPF (máx. 11 dígitos)
+    const cpf = cleaned.slice(0, 11);
+    return cpf
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  } else {
+    // CNPJ (máx. 14 dígitos)
+    const cnpj = cleaned.slice(0, 14);
+    return cnpj
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+  }
+};
 
   const handleChange = (e) => {
     const { value } = e.target;
@@ -1635,8 +1635,7 @@ const SellerList: React.FC = () => {
       </main> */}
 
       {/* Add Seller Modal */}
-      {/* Add Seller Modal */}
-      <Modal
+     <Modal
         isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
@@ -1644,80 +1643,81 @@ const SellerList: React.FC = () => {
         }}
         title="Adicionar Vendedor"
       >
-        <div className="space-y-4 lg:space-y-6">
-          {/* Tabs - Desktop */}
-          <div className="hidden md:block border-b border-gray-200">
-            <nav className="-mb-px flex space-x-6 lg:space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm lg:text-base transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-primary text-primary"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`mr-2 transition-colors ${
-                      activeTab === tab.id
-                        ? "text-primary"
-                        : "text-gray-400 group-hover:text-gray-500"
-                    }`}
-                  >
-                    {tab.icon}
-                  </span>
-                  <span className="hidden lg:inline">{tab.label}</span>
-                  <span className="lg:hidden">
-                    {tab.shortLabel || tab.label}
-                  </span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tabs - Mobile (Horizontal Scroll) */}
-          <div className="md:hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <div className="flex space-x-1 p-1 bg-gray-100 rounded-lg min-w-max">
+        <div className="flex flex-col h-full">
+          {/* Tabs - Desktop com Scroll Horizontal */}
+          <div className="hidden sm:block border-b border-gray-200 flex-shrink-0 mb-6">
+            <div className="overflow-x-auto">
+              <nav className="flex space-x-6 min-w-max">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all ${
+                    className={`flex items-center py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 transition-colors ${
+                        activeTab === tab.id
+                          ? "text-primary"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {tab.icon}
+                    </span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          {/* Tabs - Mobile (Scrollable Pills) */}
+          <div className="sm:hidden flex-shrink-0 mb-4">
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex space-x-2 p-1 bg-gray-100 rounded-lg min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                       activeTab === tab.id
                         ? "bg-white text-primary shadow-sm"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
-                    <span className="mr-2">{tab.icon}</span>
-                    <span className="text-xs sm:text-sm">
-                      {tab.shortLabel || tab.label}
-                    </span>
+                    <span className="mr-2 text-sm">{tab.icon}</span>
+                    <span className="text-xs">{tab.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[250px] md:min-h-[300px] lg:min-h-[350px]">
-            <div className="px-1 md:px-0">{renderTabContent()}</div>
+          {/* Tab Content - Área scrollável */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-[50vh] sm:h-auto sm:min-h-[300px] overflow-y-auto">
+              <div className="pr-2 sm:pr-0">
+                {renderTabContent()}
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
+          {/* Action Buttons - Fixos na parte inferior */}
+          <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+            <Button 
+              variant="outline" 
               onClick={() => setIsAddModalOpen(false)}
-              className="w-full sm:w-auto order-2 sm:order-1"
+              className="w-full sm:w-auto px-6 py-2"
             >
               Cancelar
             </Button>
-            <Button
-              onClick={handleAddSeller}
+            <Button 
+              onClick={handleAddSeller} 
               loading={isCreateSeller}
-              className="w-full sm:w-auto order-1 sm:order-2"
+              className="w-full sm:w-auto px-6 py-2"
             >
               Adicionar
             </Button>
@@ -1735,79 +1735,80 @@ const SellerList: React.FC = () => {
         }}
         title="Editar Vendedor"
       >
-        <div className="space-y-4 lg:space-y-6">
-          {/* Tabs - Desktop */}
-          <div className="hidden md:block border-b border-gray-200">
-            <nav className="-mb-px flex space-x-6 lg:space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm lg:text-base transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-primary text-primary"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`mr-2 transition-colors ${
-                      activeTab === tab.id
-                        ? "text-primary"
-                        : "text-gray-400 group-hover:text-gray-500"
-                    }`}
-                  >
-                    {tab.icon}
-                  </span>
-                  <span className="hidden lg:inline">{tab.label}</span>
-                  <span className="lg:hidden">
-                    {tab.shortLabel || tab.label}
-                  </span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tabs - Mobile (Horizontal Scroll) */}
-          <div className="md:hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <div className="flex space-x-1 p-1 bg-gray-100 rounded-lg min-w-max">
+        <div className="flex flex-col h-full">
+          {/* Tabs - Desktop com Scroll Horizontal */}
+          <div className="hidden sm:block border-b border-gray-200 flex-shrink-0 mb-6">
+            <div className="overflow-x-auto">
+              <nav className="flex space-x-6 min-w-max">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all ${
+                    className={`flex items-center py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 transition-colors ${
+                        activeTab === tab.id
+                          ? "text-primary"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {tab.icon}
+                    </span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          {/* Tabs - Mobile (Scrollable Pills) */}
+          <div className="sm:hidden flex-shrink-0 mb-4">
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex space-x-2 p-1 bg-gray-100 rounded-lg min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                       activeTab === tab.id
                         ? "bg-white text-primary shadow-sm"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
-                    <span className="mr-2">{tab.icon}</span>
-                    <span className="text-xs sm:text-sm">
-                      {tab.shortLabel || tab.label}
-                    </span>
+                    <span className="mr-2 text-sm">{tab.icon}</span>
+                    <span className="text-xs">{tab.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[250px] md:min-h-[300px] lg:min-h-[350px]">
-            <div className="px-1 md:px-0">{renderTabContent()}</div>
+          {/* Tab Content - Área scrollável */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-[50vh] sm:h-auto sm:min-h-[300px] overflow-y-auto">
+              <div className="pr-2 sm:pr-0">
+                {renderTabContent()}
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
+          {/* Action Buttons - Fixos na parte inferior */}
+          <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+            <Button 
+              variant="outline" 
               onClick={() => setIsEditModalOpen(false)}
-              className="w-full sm:w-auto order-2 sm:order-1"
+              className="w-full sm:w-auto px-6 py-2"
             >
               Cancelar
             </Button>
-            <Button
-              onClick={() => handleEditSeller(selectedSeller.id)}
-              className="w-full sm:w-auto order-1 sm:order-2"
+            <Button 
+              onClick={() => handleEditSeller(selectedSeller?.id)}
+              className="w-full sm:w-auto px-6 py-2"
             >
               Salvar
             </Button>
