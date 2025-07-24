@@ -295,52 +295,40 @@ const JuroList: React.FC = () => {
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          ID documento
-                        </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          ID Zoop
-                        </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          Nome
-                        </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          Data Criação
-                        </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          Descrição
-                        </th>
-                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">
-                          Status
-                        </th>
-                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredPayments?.length > 0 &&
-                        filteredPayments?.map((payment) => (
-                          <tr
-                            key={payment.id}
-                            className="border-b last:border-0 hover:bg-gray-50"
-                          >
-                            <td className="py-4 px-6">{payment?.id}</td>
-                            <td className="py-4 px-6">
-                              {payment?.id_zoop || "Sem Informação"}
-                            </td>
-                            <td className="py-4 px-6">{payment?.nome}</td>
-                            <td className="py-4 px-6">
-                              {formatDate(payment?.createdAt)}
-                            </td>
-                            <td className="py-4 px-6">{payment.description}</td>
-                            <td className="py-4 px-6">
+                {/* MOBILE: Cards Verticais refinados */}
+                <div className="block lg:hidden space-y-4 p-4">
+                  {filteredPayments?.length > 0 ? (
+                    filteredPayments.map((payment) => (
+                      <div
+                        key={payment.id}
+                        className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+                      >
+                        <div className="space-y-2 text-sm text-gray-700">
+                          <div>
+                            <span className="font-semibold">ID documento:</span>
+                            <p className="break-all">{payment?.id}</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">ID Zoop:</span>
+                            <p>{payment?.id_zoop || "Sem Informação"}</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Nome:</span>
+                            <p>{payment?.nome || "-"}</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Data Criação:</span>
+                            <p>{formatDate(payment?.createdAt)}</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Descrição:</span>
+                            <p className="break-words">{payment?.description || "-"}</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Status:</span>
+                            <p>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                                   payment.status === "ativo"
                                     ? "bg-success/10 text-success"
                                     : payment.status === "pendente"
@@ -354,51 +342,123 @@ const JuroList: React.FC = () => {
                                   ? "Pendente"
                                   : "Inativo"}
                               </span>
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openEditModal(payment)}
-                                  icon={<Pencil className="h-4 w-4" />}
-                                >
-                                  Editar
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-error"
-                                  onClick={() => openDeleteModal(payment)}
-                                  icon={<Trash2 className="h-4 w-4" />}
-                                >
-                                  Remover
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            onClick={() => openEditModal(payment)}
+                            icon={<Pencil className="h-4 w-4" />}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-error w-full sm:w-auto"
+                            onClick={() => openDeleteModal(payment)}
+                            icon={<Trash2 className="h-4 w-4" />}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500">Nenhum Plano Encontrado</p>
+                      <Button
+                        icon={<Plus className="h-4 w-4" />}
+                        className="mt-4"
+                        onClick={() => {
+                          resetForm();
+                          setIsAddModalOpen(true);
+                        }}
+                      >
+                        Criar Juros
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP: Tabela padrão */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID documento</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">ID Zoop</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Nome</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Data Criação</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Descrição</th>
+                        <th className="text-left py-4 px-6 bg-gray-50 font-medium">Status</th>
+                        <th className="text-right py-4 px-6 bg-gray-50 font-medium">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPayments?.map((payment) => (
+                        <tr
+                          key={payment.id}
+                          className="border-b last:border-0 hover:bg-gray-50"
+                        >
+                          <td className="py-4 px-6">{payment?.id}</td>
+                          <td className="py-4 px-6">
+                            {payment?.id_zoop || "Sem Informação"}
+                          </td>
+                          <td className="py-4 px-6">{payment?.nome}</td>
+                          <td className="py-4 px-6">{formatDate(payment?.createdAt)}</td>
+                          <td className="py-4 px-6">{payment?.description}</td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                payment.status === "ativo"
+                                  ? "bg-success/10 text-success"
+                                  : payment.status === "pendente"
+                                  ? "bg-warning/10 text-warning"
+                                  : "bg-error/10 text-error"
+                              }`}
+                            >
+                              {payment.status === "ativo"
+                                ? "Ativo"
+                                : payment.status === "pendente"
+                                ? "Pendente"
+                                : "Inativo"}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditModal(payment)}
+                                icon={<Pencil className="h-4 w-4" />}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-error"
+                                onClick={() => openDeleteModal(payment)}
+                                icon={<Trash2 className="h-4 w-4" />}
+                              >
+                                Remover
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-
-                {filteredPayments?.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">Nenhum Plano Encontrado</p>
-                    <Button
-                      icon={<Plus className="h-4 w-4" />}
-                      className="mt-4"
-                      onClick={() => {
-                        resetForm();
-                        setIsAddModalOpen(true);
-                      }}
-                    >
-                      Criar Juros
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
+
+
           </div>
         </div>
       </main>
