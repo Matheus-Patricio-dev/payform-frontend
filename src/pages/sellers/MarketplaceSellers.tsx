@@ -539,27 +539,43 @@ const formatCpfCnpj = (value: string): string => {
     // Aqui você pode adicionar a lógica de validação para definir erros
     // setFormErrors({ ...formErrors, cpf_cnpj: validateCpfOrCnpj(formattedValue) });
   };
-  // Função para formatar o telefone
+    // Função para formatar o telefone
   const formatPhone = (value) => {
-    // Remove caracteres não numéricos
-    const cleaned = value.replace(/\D/g, "");
+    if (!value) return "";
 
-    if (cleaned.length <= 11) {
-      return cleaned
-        .replace(/(\d{2})(\d)/, "($1) $2")
-        .replace(/(\d)(\d{4})$/, "$1-$2")
-        .replace(/(\d)(\d{5})$/, "$1-$2"); // Formato para 9 dígitos
-    }
-    return value; // Retorna o valor original se exceder 11 dígitos
+    const cleaned = value.replace(/\D/g, "").slice(0, 11);
+
+    const length = cleaned.length;
+
+    if (length < 3) return cleaned;
+
+    if (length < 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+
+    if (length <= 10)
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
   };
 
+  // Validação: verifica se o telefone está no formato esperado (DDD + 9 dígitos)
+  const validatePhone = (phone) => {
+    const regex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
+    return regex.test(phone) ? "" : "Telefone inválido";
+  };
+
+  // onChange com formatação e validação
   const handlePhoneChange = (e) => {
     const { value } = e.target;
+
+    // Formata o telefone digitado
     const formattedValue = formatPhone(value);
+
+    // Atualiza o estado com o valor formatado (NUNCA com o erro)
     setFormData({ ...formData, phone: formattedValue });
 
-    // Aqui você pode adicionar a lógica de validação para definir erros
-    // setFormErrors({ ...formErrors, phone: validatePhone(formattedValue) });
+    // Valida e atualiza o estado de erro
+    const phoneError = validatePhone(formattedValue);
+    setFormErrors({ ...formErrors, phone: phoneError });
   };
 
   const handleWebsiteChange = (e) => {
