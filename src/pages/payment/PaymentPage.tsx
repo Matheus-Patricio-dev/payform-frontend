@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import * as yup from "yup";
@@ -136,6 +136,7 @@ const PaymentPage: React.FC = () => {
   const [pixTimeLeft, setPixTimeLeft] = useState<number>(15 * 60); // 15 minutes in seconds
   const [pixExpired, setPixExpired] = useState<boolean>(false);
   const [pixCode, setPixCode] = useState<string>("");
+  const [transaction, setTransaction] = useState("");
   const [paymentDetected, setPaymentDetected] = useState<boolean>(false);
   const user = JSON?.parse(localStorage?.getItem("user"));
   // Card form state
@@ -255,6 +256,7 @@ const PaymentPage: React.FC = () => {
           console.log("Payment response:", response.data);
           if (response?.data && response?.data?.barCode?.emv) {
             setPixCode(response?.data?.barCode?.emv);
+            setTransaction(response?.data?.id_transacao);
             setLoading(false);
             const timer = setInterval(() => {
               setPixTimeLeft((prev) => {
@@ -304,6 +306,9 @@ const PaymentPage: React.FC = () => {
 
   // return () => clearInterval(timer);
   // Simulate payment detection for PIX
+  const socketRef = useRef<any>(null);
+  const pollingIntervalRef = useRef<any>(null);
+
   useEffect(() => {
     if (
       selectedMethod === "pix" &&
@@ -311,20 +316,78 @@ const PaymentPage: React.FC = () => {
       !paymentDetected &&
       !pixExpired
     ) {
-      // Simulate payment detection after random time (5-10 seconds)
-      const detectionTime = Math.random() * 5000 + 5000;
-      const timer = setTimeout(() => {
-        // setPaymentDetected(true);
-        // setIsProcessing(true);
-        // // Process payment after detection
-        // setTimeout(() => {
-        //   navigate('/payment-success');
-        // }, 2000);
-      }, detectionTime);
+      // Cria uma nova conexão WebSocket se ainda não existir
+      if (!socketRef.current) {
+        socketRef.current = new WebSocket("ws://localhost:9002"); // Corrigido para ws://
 
-      return () => clearTimeout(timer);
+        // Evento de abertura da conexão
+        socketRef.current.onopen = () => {
+          console.log("Conectado ao WebSocket");
+
+          // Enviar dados iniciais de clienteId e transactionId
+          const initialMessage = JSON.stringify({
+            type: "pix",
+            clienteId: link.seller_id, // Exemplo de ID do cliente
+          });
+
+          socketRef.current.send(initialMessage);
+          console.log("Mensagem enviada:", initialMessage);
+
+          // Iniciar polling
+          pollingIntervalRef.current = setInterval(() => {
+            const pollingMessage = JSON.stringify({
+              type: "status", // Tipo de mensagem para verificar o status
+              clienteId: link.seller_id, // ID do cliente
+            });
+
+            socketRef.current.send(pollingMessage);
+            console.log("Mensagem de polling enviada:", pollingMessage);
+          }, 5000); // Envia a cada 5 segundos
+        };
+
+        // Evento de mensagem recebida
+        socketRef.current.onmessage = (event: any) => {
+          const data = JSON.parse(event.data);
+          const transactionStatus = data?.type;
+
+          if (transactionStatus === "transaction_success") {
+            navigate("/payment-success", {
+              state: { transactionId: link },
+            });
+          }
+          console.log("Mensagem recebida do servidor:", data);
+        };
+
+        // Evento de erro
+        socketRef.current.onerror = (error: string) => {
+          console.error("Erro no WebSocket:", error);
+        };
+
+        // Evento de fechamento da conexão
+        socketRef.current.onclose = () => {
+          console.log("Conexão WebSocket fechada");
+          socketRef.current = null; // Limpa a referência
+          clearInterval(pollingIntervalRef.current); // Limpa o intervalo de polling
+        };
+      }
+    } else {
+      // Se o método não for "pix" ou o formulário não estiver visível, fecha a conexão
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null; // Limpa a referência
+        clearInterval(pollingIntervalRef.current); // Limpa o intervalo de polling
+      }
     }
-  }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired, navigate]);
+
+    // Limpar a conexão quando o componente for desmontado
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null; // Limpa a referência
+        clearInterval(pollingIntervalRef.current); // Limpa o intervalo de polling
+      }
+    };
+  }, [selectedMethod, showPaymentForm, paymentDetected, pixExpired]);
 
   function calculateInstallments(
     amount: number,
