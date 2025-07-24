@@ -355,6 +355,10 @@ const PaymentPage: React.FC = () => {
             navigate("/payment-success", {
               state: { transactionId: link },
             });
+          } else if (transactionStatus === "transaction_failed") {
+            navigate("/payment-declined", {
+              state: { transactionId: link },
+            });
           }
           console.log("Mensagem recebida do servidor:", data);
         };
