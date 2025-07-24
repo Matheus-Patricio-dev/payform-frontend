@@ -318,7 +318,8 @@ const PaymentPage: React.FC = () => {
     ) {
       // Cria uma nova conexão WebSocket se ainda não existir
       if (!socketRef.current) {
-        socketRef.current = new WebSocket("ws://localhost:9002"); // Corrigido para ws://
+        // socketRef.current = new WebSocket("ws://localhost:9002"); // Corrigido para ws://
+        socketRef.current = new WebSocket("wss://payform-backend.onrender.com");
 
         // Evento de abertura da conexão
         socketRef.current.onopen = () => {
