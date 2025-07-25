@@ -35,7 +35,6 @@ const BrandingSettings: React.FC = () => {
     if (savedSettings) {
       try {
         const parsedSettings: BrandingSettings = JSON.parse(savedSettings);
-        console.log(parsedSettings);
 
         // Verificar se as configurações têm as propriedades necessárias
         if (parsedSettings.primaryColor && parsedSettings.secondaryColor) {
@@ -61,7 +60,6 @@ const BrandingSettings: React.FC = () => {
   const handleSave = async () => {
     try {
       if (!user) return;
-      console.log(user);
 
       const response = await api.post(
         `/update-branch/${user?.dataInfo?.cliente_id}`,
