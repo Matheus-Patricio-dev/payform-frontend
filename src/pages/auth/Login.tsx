@@ -1,21 +1,28 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import * as yup from 'yup';
-import toast from 'react-hot-toast';
-import { CreditCard, Eye, EyeOff, ArrowRight, Shield, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import Logo from '../../assets/logoAdmin.jpeg'
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import * as yup from "yup";
+import toast from "react-hot-toast";
+import {
+  CreditCard,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Shield,
+  CheckCircle,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import Logo from "../../assets/logoAdmin.jpeg";
 // Validation schema
 const loginSchema = yup.object().shape({
   email: yup
     .string()
-    .required('Email é obrigatório')
-    .email('Digite um email válido'),
+    .required("Email é obrigatório")
+    .email("Digite um email válido"),
   password: yup
     .string()
-    .required('Senha é obrigatória')
-    .min(3, 'A senha deve ter pelo menos 3 caracteres')
+    .required("Senha é obrigatória")
+    .min(3, "A senha deve ter pelo menos 3 caracteres"),
 });
 
 interface FormData {
@@ -29,10 +36,12 @@ interface FormErrors {
 }
 
 const Login: React.FC = () => {
+  const setting = JSON.parse(localStorage.getItem("settings-brand"));
+
   const { login } = useAuth();
   const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
@@ -41,10 +50,10 @@ const Login: React.FC = () => {
   const validateField = async (field: keyof FormData, value: string) => {
     try {
       await loginSchema.validateAt(field, { ...formData, [field]: value });
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     } catch (error) {
       if (error instanceof yup.ValidationError) {
-        setErrors(prev => ({ ...prev, [field]: error.message }));
+        setErrors((prev) => ({ ...prev, [field]: error.message }));
       }
     }
   };
@@ -73,7 +82,7 @@ const Login: React.FC = () => {
 
     const isValid = await validateForm();
     if (!isValid) {
-      toast.error('Por favor, corrija os erros no formulário');
+      toast.error("Por favor, corrija os erros no formulário");
       return;
     }
 
@@ -81,16 +90,16 @@ const Login: React.FC = () => {
 
     try {
       await login(formData.email, formData.password);
-      toast.success('Login realizado com sucesso!');
+      toast.success("Login realizado com sucesso!");
     } catch (error) {
-      toast.error('Email ou senha incorretos');
+      toast.error("Email ou senha incorretos");
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     validateField(field, value);
   };
 
@@ -112,7 +121,10 @@ const Login: React.FC = () => {
             className="text-center "
           >
             <div className="inline-flex items-center justify-center w-32 h-full">
-              <img src={Logo} alt="PayForm" />
+              <img
+                src={setting?.logo ? `${setting.logo}` : Logo}
+                alt="PayForm"
+              />
             </div>
             <p className="text-gray-600">Faça login na sua conta</p>
           </motion.div>
@@ -134,12 +146,13 @@ const Login: React.FC = () => {
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="seu@email.com"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-900 placeholder-gray-400 ${errors.email
-                        ? 'border-red-300 bg-red-50 focus:ring-red-200'
-                        : 'border-gray-200 hover:border-gray-300 focus:border-primary'
-                      }`}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-900 placeholder-gray-400 ${
+                      errors.email
+                        ? "border-red-300 bg-red-50 focus:ring-red-200"
+                        : "border-gray-200 hover:border-gray-300 focus:border-primary"
+                    }`}
                     required
                   />
                   {formData.email && !errors.email && (
@@ -170,14 +183,17 @@ const Login: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
                     placeholder="••••••••"
-                    className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-900 placeholder-gray-400 ${errors.password
-                        ? 'border-red-300 bg-red-50 focus:ring-red-200'
-                        : 'border-gray-200 hover:border-gray-300 focus:border-primary'
-                      }`}
+                    className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-gray-900 placeholder-gray-400 ${
+                      errors.password
+                        ? "border-red-300 bg-red-50 focus:ring-red-200"
+                        : "border-gray-200 hover:border-gray-300 focus:border-primary"
+                    }`}
                     required
                   />
                   <button
@@ -216,7 +232,12 @@ const Login: React.FC = () => {
               {/* Submit Button */}
               <motion.button
                 type="submit"
-                disabled={loading || Object.keys(errors).some(key => errors[key as keyof FormErrors])}
+                disabled={
+                  loading ||
+                  Object.keys(errors).some(
+                    (key) => errors[key as keyof FormErrors]
+                  )
+                }
                 className="w-full bg-gradient-to-r from-primary to-primary-dark text-white py-3 px-6 rounded-xl font-semibold text-lg hover:from-primary-dark hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
                 whileHover={{ scale: loading ? 1 : 1.02 }}
                 whileTap={{ scale: loading ? 1 : 0.98 }}
