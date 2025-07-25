@@ -34,6 +34,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const setting = JSON.parse(localStorage.getItem("settings-brand"));
+  console.log(setting?.primaryColor);
+
   const handleCollapse = (collapsed: boolean) => {
     setIsCollapsed(collapsed);
     onCollapse?.(collapsed);
@@ -201,20 +204,20 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           x: isMobileMenuOpen ? 0 : window.innerWidth < 1024 ? -256 : 0,
         }}
         transition={{ duration: 0.3 }}
-        className={`fixed top-0 left-0 h-screen bg-white border-r border-border z-40 ${
+        style={{ backgroundColor: setting?.primaryColor }}
+        className={`fixed top-0 left-0 h-screen border-r border-border z-40 ${
           isMobileMenuOpen ? "shadow-xl" : ""
         } overflow-hidden`}
       >
         {/* Container principal com scroll */}
         <div className="flex flex-col h-full">
           {/* Header da sidebar - fixo no topo */}
-          {/* Header da sidebar - fixo no topo */}
-          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100">
+          <div className="flex-shrink-0 p-4 sm:p-6 ">
             <div className="flex items-center gap-3">
               {/* Logo Mini - visível apenas quando a sidebar está fechada */}
               {isCollapsed && (
                 <img
-                  src={LogoMini}
+                  src={setting?.logoMini ? `${setting.logoMini}` : LogoMini}
                   alt="PayForm"
                   className="h-10 w-10 sm:h-12 sm:w-12 text-primary shrink-0" // Aumentando o tamanho quando a sidebar está fechada
                 />
@@ -230,10 +233,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                     className="text-lg sm:text-xl font-bold flex items-center"
                   >
                     <img
-                      src={Logo}
+                      src={setting?.logo ? `${setting.logo}` : Logo}
                       alt="PayForm"
                       className="h-full w-full sm:h-full sm:w-full"
-                    />{" "}
+                    />
                     {/* Ajuste o tamanho conforme necessário */}
                   </motion.span>
                 )}
@@ -253,6 +256,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
+                          style={{ color: setting?.secondaryColor }}
                           className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3"
                         >
                           {section.title}
@@ -309,10 +313,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                             key={itemIndex}
                             to={item.path}
                             onClick={() => setIsMobileMenuOpen(false)}
+                            style={{ color: setting?.secondaryColor }}
                             className={`group flex items-center gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors relative ${
                               isActive(item.path)
                                 ? "text-primary bg-primary/5"
-                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-40"
                             }`}
                           >
                             <div
@@ -350,7 +355,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           </div>
 
           {/* Footer da sidebar - fixo no fundo */}
-          <div className="flex-shrink-0 p-4 sm:p-6 border-t border-gray-100">
+          <div className="flex-shrink-0 p-4 sm:p-6 ">
             <AnimatePresence mode="wait">
               {!isCollapsed && (
                 <motion.div
@@ -359,7 +364,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                   exit={{ opacity: 0 }}
                   className="mb-3 sm:mb-4"
                 >
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <p
+                    style={{ color: setting?.secondaryColor }}
+                    className="text-xs sm:text-sm text-gray-500"
+                  >
                     Logado como
                   </p>
                   <p
