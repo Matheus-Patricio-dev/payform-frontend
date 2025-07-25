@@ -35,7 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const setting = JSON.parse(localStorage.getItem("settings-brand"));
-  console.log(setting?.primaryColor);
 
   const handleCollapse = (collapsed: boolean) => {
     setIsCollapsed(collapsed);
@@ -167,7 +166,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       ],
     });
   }
-
+  
   return (
     <>
       {/* Mobile Menu Button */}
@@ -190,7 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 z-40 lg:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}
@@ -204,26 +203,28 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
           x: isMobileMenuOpen ? 0 : window.innerWidth < 1024 ? -256 : 0,
         }}
         transition={{ duration: 0.3 }}
-        style={{ backgroundColor: setting?.primaryColor }}
+        style={{
+          backgroundColor: setting?.primaryColor || "rgba(255, 255, 255, 0.85)",
+        }}
         className={`fixed top-0 left-0 h-screen border-r border-border z-40 ${
           isMobileMenuOpen ? "shadow-xl" : ""
-        } overflow-hidden`}
+        } overflow-hidden backdrop-blur-md`}
       >
-        {/* Container principal com scroll */}
+        {/* Conteúdo da Sidebar */}
         <div className="flex flex-col h-full">
-          {/* Header da sidebar - fixo no topo */}
-          <div className="flex-shrink-0 p-4 sm:p-6 ">
+          {/* Header da sidebar */}
+          <div className="flex-shrink-0 p-4 sm:p-6">
             <div className="flex items-center gap-3">
-              {/* Logo Mini - visível apenas quando a sidebar está fechada */}
+              {/* Logo Mini */}
               {isCollapsed && (
                 <img
-                  src={setting?.logoMini ? `${setting.logoMini}` : LogoMini}
+                  src={setting?.logoMini || LogoMini}
                   alt="PayForm"
-                  className="h-10 w-10 sm:h-12 sm:w-12 text-primary shrink-0" // Aumentando o tamanho quando a sidebar está fechada
+                  className="h-10 w-10 sm:h-12 sm:w-12 shrink-0"
                 />
               )}
 
-              {/* Logo Grande - visível apenas quando a sidebar está aberta */}
+              {/* Logo Grande */}
               <AnimatePresence mode="wait">
                 {!isCollapsed && (
                   <motion.span
@@ -233,17 +234,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                     className="text-lg sm:text-xl font-bold flex items-center"
                   >
                     <img
-                      src={setting?.logo ? `${setting.logo}` : Logo}
+                      src={setting?.logo || Logo}
                       alt="PayForm"
-                      className="h-full w-full sm:h-full sm:w-full"
+                      className="h-full w-full"
                     />
-                    {/* Ajuste o tamanho conforme necessário */}
                   </motion.span>
                 )}
               </AnimatePresence>
             </div>
           </div>
-
           {/* Área de navegação com scroll */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             <div className="p-4 sm:p-6">
@@ -256,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          style={{ color: setting?.secondaryColor }}
+                          style={{ color: setting?.secondaryColor  || 'bg-black'}}
                           className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3"
                         >
                           {section.title}
@@ -313,7 +312,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                             key={itemIndex}
                             to={item.path}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            style={{ color: setting?.secondaryColor }}
+                            style={{ color: setting?.secondaryColor || "bg-black" }}
                             className={`group flex items-center gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors relative ${
                               isActive(item.path)
                                 ? "text-primary bg-primary/5"

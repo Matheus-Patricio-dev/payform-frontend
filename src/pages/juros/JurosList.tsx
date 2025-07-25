@@ -214,12 +214,12 @@ const JuroList: React.FC = () => {
       >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[2000px] mx-auto">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 text-center sm:text-left">
               <h1 className="text-2xl font-bold">
                 {isAdmin ? "Todos os Links de Pagamento" : "Planos de taxas"}
               </h1>
               {!isAdmin && (
-                <div className="flex gap-2 ml-auto">
+                <div className="flex flex-col sm:flex-row gap-2 justify-center sm:justify-end">
                   <Button
                     loading={isRefresh}
                     disabled={isRefresh}
