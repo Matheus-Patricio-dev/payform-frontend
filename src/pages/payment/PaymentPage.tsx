@@ -318,7 +318,8 @@ const PaymentPage: React.FC = () => {
     ) {
       // Cria uma nova conexão WebSocket se ainda não existir
       if (!socketRef.current) {
-        socketRef.current = new WebSocket("ws://localhost:9002"); // Corrigido para ws://
+        // socketRef.current = new WebSocket("ws://localhost:9002"); // Corrigido para ws://
+        socketRef.current = new WebSocket("wss://payform-backend.onrender.com");
 
         // Evento de abertura da conexão
         socketRef.current.onopen = () => {
@@ -352,6 +353,10 @@ const PaymentPage: React.FC = () => {
 
           if (transactionStatus === "transaction_success") {
             navigate("/payment-success", {
+              state: { transactionId: link },
+            });
+          } else if (transactionStatus === "transaction_failed") {
+            navigate("/payment-declined", {
               state: { transactionId: link },
             });
           }
